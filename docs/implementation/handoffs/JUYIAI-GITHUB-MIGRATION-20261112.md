@@ -9,7 +9,7 @@ Runtime includes its engine, required runtime payload descriptor, skills, instal
 ## Source pins
 
 - api: commit `6e57eead938c6cb1c5d26736b53a82999ac30ca0`, tree `c94ab5ee666abd1ff35ffbbfd086bd3319f7c746`.
-- web: commit `db5085e2ff484c442a0832f9a4923e7a128d6208`, tree `25fd17fa07e907ce457e4edbcb518915a5df2c95`.
+- web: commit `f5f7114ac9083be14e97538ea775fb46a0af957c`, tree `1278209edb9313a8e1e12fd06b22e9e8e598ee08`.
 - runtime: commit `fb1ef101c2255c280e5bc53ba78fcd0c76d6cc63`, tree `d220e1fdc63d8d8518b4ff5d261f38cb2531cbcd`.
 
 ## Verification
@@ -29,3 +29,5 @@ No production installation directory, database, service, account, wallet or runt
 ## Security correction
 
 A supplementary review found a potentially sensitive literal in an old API encryption test that automated scanning missed. The test now uses synthetic round-trip data; this migration’s public API snapshot and root component reference were rewritten. Remote branch verification does not establish removal from GitHub caches or revoke a credential. The owner must revoke/rotate the old credential if still active; its validity was not tested.
+
+Local workspace verification found a test-only `node_modules` symlink accidentally tracked in Web; it is removed and both directory and symlink forms are ignored. Existing workspace dependencies are retained, not overwritten.
