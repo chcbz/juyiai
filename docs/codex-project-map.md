@@ -1,4 +1,4 @@
-# CYF 项目地图
+# 聚义 JuyiAI 项目地图
 
 导航核对：2026-11-10。先读[根规则](../AGENTS.md)与[文档总入口](README.md)。本页只定位仓库与责任，不复制发布规则或全部业务状态。
 
@@ -11,7 +11,7 @@
 | `api/` | Java/Gradle业务、持久化、接口、后台任务 | [API规则](../api/AGENTS.md)、[后端知识](knowledge-base/03-backend-architecture.md) |
 | `runtime/`（juyiai-runtime） | CYF Runtime/bridge源码和打包 | [技能执行合同](../specs/juyiting-skill-execution/spec.md)、[Runtime自托管](../specs/runtime-self-host-onboarding/spec.md) |
 
-API/Web为独立Git仓/子模块，root gitlinks是某次集成候选，不等于本地HEAD、远端develop或当前线上；分别记录，不互相替代。Runtime独立开发任务须显式携带CYF规则和接口合同，不假设从工作区自动继承。
+API/Web/Runtime为独立Git仓/子模块，root gitlinks是某次集成候选，不等于本地HEAD、远端develop或当前线上；分别记录，不互相替代。Runtime独立开发任务须显式携带CYF规则和接口合同，不假设从工作区自动继承。
 
 Runtime安装固定实体根为 `/home/isp/apps/cyf-agent-runtime-v1/app/`，内部组件名为 `codex-bridge`；状态、身份、授权和私有HOME不是可清理旧程序。精确源码路径按当前任务实际checkout核实，不把历史worktree作为固定开发入口。
 

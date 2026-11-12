@@ -1,10 +1,19 @@
 > **JuyiAI 开源迁移（2026-11-12）**：组件现在位于 `api/`、`web/`、`runtime/`；内部运行证据与会话历史不公开。下方历史证据链接可能不可达，不作为公开候选的通过证明。配置见根 README。
 
-# CYF 文档总入口
+# 聚义 JuyiAI 文档总入口
 
 导航核对：2026-11-10。**本页负责发现与分流，不是全库实现/线上已验真的声明。** 当前规则以[根AGENTS](../AGENTS.md)和用户明确决定为准。规格、实现、测试、发布状态分别取证，日期新不自动更权威。
 
 [仓库README](../README.md) · [本目录维护规则](AGENTS.md)
+
+## 首次了解聚义
+
+- **先体验产品**：[产品介绍](../README.md) → [在线 Demo](https://juyi.chcbz.net/demo) → [使用指南与 FAQ](product-guide.md)。公开 Demo 是模拟示例，不是实时模型执行。
+- **准备参与开发**：[贡献指南](../CONTRIBUTING.md) → [项目地图](codex-project-map.md) → [工作区 Git](workspace-git.md)。
+- **准备自行部署**：先阅读 [API 配置](../api/OPEN_SOURCE.md)、[Web 配置](../web/OPEN_SOURCE.md)和 [Runtime 指南](../runtime/README.md)。当前不是经过干净环境验证的一键发行版。
+- **查看英文介绍**：[English README](../README.en.md)。
+
+公开文档核对：2026-11-12。本次补充产品入口与公开页面截图，没有重验全部历史合同或部署生产。开源导出未包含 `sdd-document-map.json`，因此原全量文档检查目前不能直接运行；不要把本次修改的定向链接检查当作全库通过。
 
 ## Agent 最短阅读路径
 
