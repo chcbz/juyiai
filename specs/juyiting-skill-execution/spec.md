@@ -21,6 +21,12 @@ RB-1和原生详设优先于旧runner协议；旧执行/恢复单轨退役，历
 
 技能商品的GENERAL/POSITION分类由同一tenant/client共享目录统一维护；所有Owner普通目录及新旧安装入口使用同一事实，不能因某Owner缺少岗位定义而放开岗位技能。岗位关联版本、任命、资源权限、自动安装/移除需求仍按Owner隔离，不复制其他Owner授权。岗位生命周期读取共享分类，旧JSON类型仅作历史兼容载体，不作为另一份权威定义。既有库通过获授权的受控迁移回填，不在启动时自动转换。详见[管理合同](management-contract.md#岗位技能与普通手动安装边界2026-11-08修订)。本条规格更新不代表生产已迁移或发布。
 
+### 原生附件读取与Office交付（2026-11-12）
+
+规划回合未提供资料carrier不等于已授权availableSource不可执行：若既有EXECUTE_NATIVE/EXECUTE_SKILL接受该资料MIME及数量，由模型返回精确actionId/sourceRefIds的ACTION_REQUEST，在独立授权执行内读取并交付；不在规划回合猜正文，不要求用户重复粘贴已授权资料。无可读carrier且无接受该资料的已公布动作时才如实说明限制。
+
+PPTX与DOCX/XLSX共用原生Office工具边界：依赖闭包包含python-pptx，隔离readiness真实生成/重开中文幻灯片通过后才公布PPTX MIME；成果适配核对OOXML容器，内容、页数和版式仍由工具及验收负责。网页仅使用已授权安装配置的精确HTTPS origin，不放开任意网络。实现/测试/部署与新录屏分别见[本轮handoff](../../docs/implementation/handoffs/JUYITING-TUTORIAL-UNBLOCK-20261112.md)，此处不是上线通过声明。
+
 ### 验收落点
 
 核心流程长期回归：[17项真实UI用例](core-ui-regression.md)及[2026-11-10通过基线](core-ui-regression-baseline.json)。仅此核心范围通过，JYT-17限定区域和oracle修正说明见用例；不替代下方未执行的其他验收。
