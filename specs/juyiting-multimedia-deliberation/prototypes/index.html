@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>聚义厅 · 多媒体协作原型</title>
+<link rel="stylesheet" href="prototype.css?v=2">
+<script src="prototype.js?v=2" defer></script>
+</head>
+<body>
+<div class="preview-bar"><span>交互原型 <em>示意数据 · 不连接真实 Agent</em></span></div>
+<div class="app-shell">
+<aside class="sidebar"><div class="brand"><span class="seal">聚</span><div>聚义厅<small>把想法变成成果</small></div></div><button class="new-request" data-action="new">＋ 提需求</button><div class="nav-label">我的协作</div><button class="side-link is-current" data-page="chat">悬赏议事 <span>1</span></button><button class="side-link" data-page="space">工作空间</button><div class="sidebar-bottom"><span class="user-avatar">我</span><div>我的空间<small>资料由你掌握</small></div></div></aside>
+<div class="main-shell"><header class="app-header"><div><span class="mobile-brand">聚义厅</span><span class="breadcrumb">聚义厅 <span>/</span> <b id="breadcrumb-current">提需求</b></span></div><span class="private-note">仅你和参与的 Agent 可见</span></header><main id="main"></main><nav class="bottom-menu" aria-label="底部菜单"><button type="button" data-page="request" data-bottom="overview">办事</button><button type="button" data-action="task-list" data-bottom="tasks">事项</button><button type="button" data-page="space" data-bottom="treasure">资料</button><button type="button" data-action="mine" data-bottom="mine">我的</button></nav></div>
+</div>
+<dialog id="dialog" aria-labelledby="dialog-title"><div id="dialog-body"></div></dialog>
+<div id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>

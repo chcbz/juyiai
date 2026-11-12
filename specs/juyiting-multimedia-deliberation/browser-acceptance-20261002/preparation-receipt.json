@@ -1,0 +1,61 @@
+{
+  "status": "PREPARED_NOT_EXECUTED",
+  "preparedAt": "2026-10-02",
+  "sourcePins": {
+    "webCommit": "c74a3864b0909c8db4489c5938a590952a56d555",
+    "webTree": "fd23ba55cc1294523b62b7f3d44618fe6d3719a9"
+  },
+  "tooling": {
+    "cdpReuse": "operator-injected existing Web scripts/juyiting/e13/lib/cdp-harness.mjs; attach only",
+    "browserLauncher": "none",
+    "playwrightOrPuppeteer": "not added"
+  },
+  "offlineChecks": [
+    {
+      "command": "node offline-selfcheck.mjs",
+      "status": "PASS",
+      "browserAttached": false,
+      "browserLaunched": false
+    },
+    {
+      "command": "node offline-behavior-selfcheck.mjs",
+      "status": "PASS",
+      "browserAttached": false,
+      "browserLaunched": false,
+      "assertions": [
+        "signed URL query not persisted",
+        "failed selector stops later mutation"
+      ]
+    },
+    {
+      "command": "node run-browser-acceptance.mjs --plan",
+      "status": "PREPARED_NOT_EXECUTED",
+      "browserAttached": false,
+      "browserLaunched": false
+    },
+    {
+      "command": "node run-browser-acceptance.mjs --execute --primary with live gate absent",
+      "status": "expected BLOCKED_LIVE_AUTHORIZATION_GATE",
+      "browserAttached": false,
+      "browserLaunched": false
+    }
+  ],
+  "executionNotPerformed": [
+    "no browser process started",
+    "no live model/provider request",
+    "no task or assignment created",
+    "no deployment or Flow action",
+    "no credential/profile/storage copied"
+  ],
+  "remainingHumanRuntimeItems": [
+    "deploy exact source/tree with all three UI flags proven effective",
+    "operator-owned pre-authenticated CDP endpoint",
+    "authorized real server and local Agent runs with separate roots",
+    "real event/ID/screenshot/artifact evidence and Owner outcome correlation"
+  ],
+  "executionSafety": [
+    "structured url/src/href evidence retains only origin/path",
+    "failed click/fill or readiness checkpoint stops remaining actions",
+    "readiness is explicit DOM condition/recoverable checkpoint; no blind sleep or timeout-and-continue"
+  ]
+}

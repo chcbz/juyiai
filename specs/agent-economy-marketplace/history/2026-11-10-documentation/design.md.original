@@ -1,0 +1,760 @@
+# Agent 银两悬赏结算与技能市场 design
+
+<!-- CYF-CURRENT-CONTRACT-20261107 -->
+## 现行设计边界（2026-11-07）
+
+**本专题：内测文钱包与人民币成本账。**
+**文档与交付状态（2026-11-08）：** 内测固定报价资金闭环已上线并完成真实浏览器/SQL验收：3500文赠送幂等、推荐报价、承办预占、验收扣款及取消释放。API1.1.42/a1aefc9；证据与精确范围见[专项细则](beta-wen-billing.md)及BETA-WEN-BILLING-20261105 handoff接续56。原生执行usage仍PENDING、MEDIA收费工具未启用，不宣称Provider成本核销全部完成。
+
+### 最小责任链
+economy负责报价/预占/扣款/释放；事项模块提供确认/验收/取消事实；usage成本账独立核算。
+
+推荐产生工作量与候选报价→显式确认并原子预占→正常执行/修改→验收扣固定预占或取消全额释放；成本回执独立补齐。
+
+### 实施约束
+同范围以beta-wen-billing.md为准：整数文、人民币6位小数、无充值提现分账；不为报价增加一次模型调用，不逐token记账，不按旧SILVER合同继续开发。生产资金迁移另按已授权Owner计划执行。
+
+性能/安全/可靠性/审计/运维按[统一开发约束](../architecture-convergence/development-principles.md)分工；只在真实网络/存储/进程边界做其必要检查，不在可信调用链重复认证、重算整份合同或新增通用兜底层。
+
+只在本专题实际改变协议或数据语义时同步生产者/消费者/必要迁移；接口不变的内部修复不默认修改Web、API、Runtime全链。表/索引修改须说明其查询或一致性职责，不新建CHECK/触发器代替业务规则。
+
+**入口：** [需求](spec.md) · [设计](design.md) · [实施](tasks.md) · [验收](acceptance.md) · [当前专项细则](beta-wen-billing.md)
+
+**下文适用方式：** 业务细则中未被本节或后续明确合同替代的条款继续有效；原日期的状态、版本、日程、Owner安排、测试/发布记录仅作历史，不授予今天的执行权限。冲突按本节指定的继任合同和根AGENTS处理，不按文件名的新旧或旧任务勾选状态猜测。
+<!-- /CYF-CURRENT-CONTRACT-20261107 -->
+
+## 原有材料的适用范围
+
+旧SILVER经济方案及其范围，冻结历史合同仍供取证；新内测同范围只实施beta-wen-billing，不并存两套资金语义。 后文所有旧“当前/最新/待实施”仅指其原时间，不是2026-11-07状态。
+
+
+
+## 1. 核心决策
+
+1. **银两是新币种 `SILVER`，不直接等同旧积分。** 第一版不读写 `user.point`，避免旧礼品兑换与新悬赏并发消费同一余额。未来若要统一，必须另做停写、审计、一次性迁移和对账 SDD。
+2. **MVP 使用总包价 `GROSS_INCLUSIVE`。** 张榜人只设置一笔总悬赏金；任务成功后，实际模型费、平台费和 Agent 净所得都从该总额内分配。Agent 在揭榜前比较预估/最坏模型成本和最低可接受收益。未来可另加 `REWARD_PLUS_USAGE`，但不得在同一字段中混用。
+3. **资金真相归独立 economy 域。** 新增 `api/economy/` 的 core/api/mapper/service 模块；Agent 域只保存任务资金投影。旧 `point_record/user.point` 继续隔离，不能成为悬赏或技能订单的资金权威。
+4. **购买授权不等于运行时安装。** `agent_skill_entitlement` 表示商业授权；货款捕获必须依赖绑定到具体订单、商品版本和包摘要的签名安装证明，不能用自由文本 `abilities` 证明。现有 `agent_runtime.abilities` 仍是调度标签快照。
+5. **显式 Agent 始终优先。** 揭榜、点将、技能购买和安装命令都必须携带 canonical `agentId`；不得依赖前端隐藏选中态、roster fallback 或 `/agent/active`。
+
+## 2. 角色与账户
+
+| 角色 | 说明 | 资金账户 |
+| --- | --- | --- |
+| 张榜人 | 当前认证用户，创建并资助悬赏 | `USER:<jiacn>` 银两钱包 |
+| 承接 Agent | 显式揭榜/被点将的 canonical Agent | `AGENT:<agentId>` 收益子钱包 |
+| 技能商店 | 平台自营销售；可署名 `creatorAgentId`，但 MVP 不产生第三方卖家应收 | `SYSTEM:SKILL_STORE` |
+| 技能买家 | 为自己拥有的目标 Agent 购买技能的当前认证用户 | `USER:<jiacn>`；Agent 钱包支付延后 |
+| 系统清算 | 平台费、调整、补偿和发行 | 受控 `SYSTEM:*` 钱包；发行专用 `SYSTEM:SILVER_ISSUANCE` |
+
+所有账户按 `(tenantId, clientId, ownerType, ownerId, purpose, currency)` 唯一。前端可把 USER/AGENT 可用账户称为“钱包”；后端的冻结操作统一由任务/订单 escrow 表示。Agent 收益账户必须绑定已验证 canonical identity；解绑/离线不删除余额。
+
+## 3. 用户流程
+
+### 3.1 张榜并托管
+
+1. 用户填写标题、描述、建议能力标签、可选结构化 `requiredSkillRequirements`（skill key + version range）和总悬赏金 `grossBountyAmount`。
+2. 前端说明总悬赏金将被全额托管，并在成功后分配为模型成本、平台费和 Agent 净所得。
+3. `POST /agent/tasks` 在一个本地数据库事务内：
+   - 创建任务及资金投影；
+   - 锁定张榜人可用账户；
+   - 创建不可变交易单和 ACTIVE escrow；
+   - 将任务置为 `open`、资金状态置为 `funded`；
+   - 写 outbox，提交后发布 `bounty.funded`。
+4. 余额不足、重复幂等键或任何一方写入失败时整笔回滚，不能出现“有榜无钱”或“扣钱无榜”。
+
+### 3.2 揭榜前报价
+
+1. 用户/Agent 在榜文详情选择明确目标 Agent 与模型偏好。
+2. `POST /agent/tasks/{taskId}/quotes` 读取任务快照、目标 Agent 自报 runtime 能力（仅建议信号）、active entitlement + signed installed skill 版本（硬门禁）、上下文摘要尺寸、预期工具轮次、模型路由策略和版本化价目表，并生成 `taskInputHash`、`skillSetHash`、`modelRouteVersion`。
+3. 服务使用任务总额、目标 Agent/工作项分配额和 Agent 最低收益策略返回：
+   - 预估输入、缓存输入、输出、推理 token；
+   - 预估/最坏模型费、平台费、预估/最坏 Agent 净所得；
+   - 最低可接受收益、预算覆盖率、剩余缓冲、`payoutToEstimatedCostRatio`；
+   - `recommended | caution | reject` 和结构化 reason codes；
+   - `quoteId`、`taskVersion`、`priceBookVersion`、`expiresAt`。
+4. 报价只用于决策和后续 CAS，不冻结第二份资金，不包含模型思维过程。
+
+### 3.3 揭榜/点将
+
+1. `POST /agent/tasks/{taskId}/claim` 显式提交 `agentId`、`quoteId`、`taskVersion` 和 `Idempotency-Key`。
+2. 同一事务按固定锁序执行：
+   - 幂等记录；
+   - task root；
+   - bounty funding/allocation 与 escrow；
+   - canonical Agent identity/binding；
+   - runtime 能力快照；
+   - member/work item；
+   - 任务和资金投影 CAS。
+3. 校验任务仍可承接、报价未过期、task/context/skill/model-route 快照未漂移、价目表仍可结算、Agent 属于当前 scope、结构化 verified skill requirements 满足、最坏净所得不低于最低可接受收益。自由文本 `abilities` 只影响建议/risk reason，不是 claim、资金或 ACL 的硬门禁。
+4. 成功后任务进入现有 `assigned/planning` 流程，报价置为 `accepted`。重复请求返回同一结果；竞争者得到 `TASK_ALREADY_CLAIMED` 或新 taskVersion。
+5. 资金化 MVP 只允许单 Agent/单工作项揭榜；现有多人点将和 `/auto-assign` 仅对 `LEGACY_UNFUNDED` 任务保留。funded task 的 group/auto 操作返回 `FUNDED_TEAM_NOT_SUPPORTED`。后续多人资金化必须先定义批量报价、逐 work item allocation 和原子 team claim，所有 allocation 之和不得超过总悬赏。
+
+### 3.4 执行、预算门禁与实际结算
+
+1. 每次模型调用前先创建 `usage authorization`，按本次最大输入/输出/推理 token 预留费用上限；只有 allocation 剩余额度条件更新成功后才能进入 provider egress。Gateway 必须先把最终 provider application request 的 canonical bytes（不含 Authorization/API-key 等 transport secret）使用平台 Provider Egress Broker 的版本化 KMS/public wrapping key 加密写入同一事务数据库中的 `llm_provider_invocation_blob` STAGED row，取得 `providerRequestBlobRef/requestDigest`；`keyEnvelope` 必须绑定 `egressKeyId/providerAccountNamespaceId/providerOperationNamespace/requestDigest`，只有受管 Egress Broker identity 可 unwrap。authorization 创建事务锁该 row，验证 invocation/scope/creator owner/digest 后将其 FROZEN 并绑定 authorization，任何 bytes/ref/digest 不可再改。blob ciphertext/nonce/key-envelope 不进入事件/日志，保留到终态审计期结束；Gateway 实例没有 provider credential、没有到 provider 域名的网络 egress，也没有 unwrap 权限，因此即使缓存旧 plaintext 也不能绕过 Broker 外呼。创建事务必须按全局锁序锁 task root + funding/allocation，复核任务仍可执行、`executionEpoch` 与请求一致、escrow ACTIVE、accepted quote/allocation 仍有效且未禁止新 authorization，再冻结 blob ref/digest 并条件预留。Gateway 只生成唯一 `invocationId` 和 provider 原生 idempotency key，并提交调用级 token ceiling 请求；Economy 服务从 accepted quote、allocation 和受信 route registry **服务端派生** `priceBookVersion/modelRouteVersion/routeDigest/provider/providerAccountNamespaceId/providerOperationNamespace/allowedActualModelIds/agent/workItem` 与可用 ceiling，调用方副本若存在必须 byte-exact 相等，否则拒绝。`providerAccountNamespaceId` 是非秘密的稳定凭据/账户指纹，`providerOperationNamespace` 对应 provider 实际幂等作用域（API operation/endpoint）；`egressKeyId` 是全局唯一且不可复用的 wrapping-key 版本标识，必须引用持久化 key-registry row。authorization 创建事务按 `(provider, providerAccountNamespaceId, providerOperationNamespace, providerIdempotencyKey)` 唯一并冻结这些字段、`providerRequestBlobRef/requestDigest/egressKeyId`、Gateway `ownerId/ownerEpoch/ownerLeaseUntil` 与单调 `fencingToken`。owner 可在 lease 内续租；lease 到期后新 Gateway 通过 owner-claim CAS 递增 ownerEpoch/fencingToken 并接管同一 blob/key，旧 owner 的数据库编排操作被 fence；真正 provider I/O 只能由 Broker 的短时 egress lease 驱动。
+2. 调用前，Gateway dispatch 事务把 authorization 从 `RESERVED` CAS 为 `DISPATCHED`，同时写 immutable dispatch record + provider-egress outbox；数据库提交后由受管 Broker 取得 egress lease，先 durable `SEND_STARTED` 再在事务外调用 provider。结束后由 Broker/provider-proof 生成内部用量凭证，记录 invocation/dispatch/egress lease、provider request ID、实际模型、token 分类、price book、任务/Agent/work item、时间和摘要哈希。
+3. 服务端按冻结价目表重新计算实际成本；有效 receipt 可执行 `DISPATCHED|UNKNOWN -> CONSUMED`，并在同一事务释放“上限 − consumedUserCharge”的差额。凭证按 `(provider, providerAccountNamespaceId, providerOperationNamespace, providerRequestId)`、`invocationId` 和 authorization 唯一；provider request ID 的去重 namespace 必须与 provider 契约一致，独立 provider 账户可合法复用同一 request ID，而共享同一凭据的不同 Gateway owner 不可复用同一 idempotency key。重复回调不重复计费。
+4. 每个 authorization 只有一个冻结的 `invocationId/providerAccountNamespaceId/providerOperationNamespace/providerIdempotencyKey/providerRequestBlobRef/requestDigest/egressKeyId`。Gateway owner 的 dispatch 事务只提交 immutable dispatch record + durable provider-egress outbox，不向 Gateway 返回可直接外呼的 credential/permission。受管 Egress Broker 是唯一持有 provider credential、唯一可 unwrap blob 且唯一允许访问 provider 网络的主体；Broker worker 无 raw KMS decrypt IAM，必须取得绑定 exact authorization/ownerEpoch/fence/dispatchVersion/requestDigest 的单次短 `egressLease`，再由受管 unwrap adapter消费同 lease/blob 唯一的 audited at-most-once authorization后从同一 frozen blob 解密、复算 digest并写出相同请求。owner claim、取消、void/CLOSED 转换在 active egress lease 存在时必须等待或转 UNKNOWN，Broker 在 socket write 前以本地单调时钟复核 lease，过期即销毁 plaintext并放弃调用。允许因 Broker 崩溃或网络未知而由新 dispatch/outbox **用同一 key + 同一 request bytes 做 provider 幂等重放**，但绝不允许新 key、变更请求或 Gateway/旧 Broker 绕过 egress lease 外呼。只有从未进入 DISPATCHED 且无 dispatch/outbox/egress lease 的 `RESERVED` 才能普通 `VOIDED_CONFIRMED_UNUSED`。`DISPATCHED` 超时、调用成功但 receipt 落库前崩溃或 provider 状态不可查询时转 `UNKNOWN`，由 owner lease/fence 串行编排同 key replay/status/receipt reconciliation；迟到 receipt 只能通过 `UNKNOWN -> CONSUMED` 结算其精确匹配 dispatch/egress lease。provider 明确证明未执行时经双人审批可 void；若冻结 SLA 后仍无法证明结果，则只能转 `CLOSED_SYSTEM_RISK`，释放用户预算且未来账单全部由 SYSTEM variance 承担。已 VOIDED/CLOSED 后再出现 receipt 永不重新向用户收费。正常 wrapping-key 轮换不得破坏重放：旧版本只能从 `ACTIVE_WRAP_UNWRAP` 原子转为 `RETIRED_UNWRAP_ONLY`，并至少保持 Broker unwrap 能力至所有引用它的 STAGED blob `stagedExpiresAt` 与 FROZEN authorization `providerReplaySafeUntil` 的最大值；新 blob/authorization 只能使用当前 ACTIVE 版本。外部 KMS disable/delete 必须晚于服务内 fail-closed 引用扫描、双人审批和 `DESTROYED` 状态。若 key 进入 `COMPROMISE_PENDING/COMPROMISED_BLOCKED`，必须阻断新的 blob GET/unwrap authorization、lease、dispatch 和 authorization；在 fence 前已由 blob GET 事务授权的 Broker decrypt 可能于 fence 后完成，但绝不再取得 SEND_STARTED/provider egress permission，必须零化 plaintext。关联的已 SEND_STARTED/DISPATCHED/UNKNOWN 调用只允许 provider status/签名 callback 对账并最终 `CLOSED_SYSTEM_RISK`；禁止生成新 unwrap grant、rewrap 或修改 frozen request，用户不承担无法证明的费用。
+5. 预算达到软阈值时发布 `bounty.budget.warning`；预计下一调用会越过硬上限时停止新模型调用，任务转 `blocked` 并请求补充总悬赏/重新分配。
+6. `POST /agent/tasks/{taskId}/budget/top-ups` 在同一 task escrow root 下新增不可变 funding lot，并增加 gross/allocation 投影；不得创建第二个 task escrow root，也不得修改历史 funding lot、报价或分录。accepted quote 冻结 `feeBps/feeCap/rounding/minimumAcceptedPayout`，top-up 后按最终 allocationGross 重算唯一总平台费，增量为 `fee(finalGross)-fee(previousGross)`；`requestedModelCapIncrease <= topUpAmount - incrementalFee`，未分配增量进入 payout buffer；MVP top-up 只覆盖后续预算，不能追溯转嫁已记录 provider variance，并再次满足 `modelCostCap <= finalGross - finalFee - minimumAcceptedPayout`。
+7. Agent 回报完成时：
+   - 需要复核的任务先进入 `reviewing`，不结算；
+   - 验收/免复核完成事务先锁 task root，递增 `executionEpoch`、禁止新 authorization，并在同一事务将全部 `RESERVED` 转为 `VOIDED_CONFIRMED_UNUSED`、释放预算；若存在 `DISPATCHED/UNKNOWN` 则保持 `SETTLEMENT_EVIDENCE_PENDING`，不得分配 escrow；
+   - 只有确认 authorization 守恒且不存在 `RESERVED/DISPATCHED/UNKNOWN` 后，任务 allocation 才全额分配为实际模型费、平台费和 Agent 净所得；
+   - `Agent payout = allocation gross − actual model cost − platform fee`；
+   - 无需复核的任务可在合法 `completed` 转换中结算。
+8. 失败/取消策略：
+   - 取消/退款事务先锁 task root，递增 `executionEpoch`、禁止新 authorization，并在同一事务将全部 `RESERVED` void；只要存在 `DISPATCHED/UNKNOWN` 就不得释放对应预算或完成退款；
+   - dispatch 事务使用同一锁序锁 task root + funding/allocation + authorization，复核 task 可执行、executionEpoch 未变、escrow ACTIVE 后才 CAS 为 DISPATCHED；
+   - 未开始且无 DISPATCHED/UNKNOWN：释放全部托管；
+   - 已产生权威模型用量：仅捕获实际合规用量和政策批准的部分劳务费，退回其余；
+   - 平台/provider 故障导致的可归责重试，由 SYSTEM adjustment 补偿，不向用户重复收费；
+   - 争议状态冻结剩余托管，必须通过受审计的人工决议命令处理。
+
+### 3.5 技能商品购买
+
+1. MVP 商品由平台自营并经过审核；商品可记录 `creatorAgentId` 用于署名，但卖方账户固定为 `SYSTEM:SKILL_STORE`，不做跨 tenant 或第三方分成。
+2. 商品不可变版本包含技能标识/版本、价格、package/manifest digest、权限清单、兼容范围、发布者和审核状态。
+3. 买家显式指定自己拥有的 `targetAgentId`，并对商品所需权限逐项批准；服务创建不可变 `permissionGrantVersion/permissionGrantDigest`，批准集合不得超过平台 policy 与商品 manifest 的交集。grant payload exact closed 为 `{orderId,targetAgentId,productVersionId,permissionGrantVersion,approvedPermissions}`，permissions byte-exact 排序去重，`permissionGrantDigest=SHA-256("CYF_SKILL_PERMISSION_GRANT_V1\0" || RFC 8785 JCS(payload))`。`POST /agent/skill-orders` 先锁 publisher-key/product-version security root 并复核 approved/key active，再锁定买家可用账户，创建支付 escrow、订单、`pending_delivery` entitlement 和带 attempt/fencing token 的 durable command；order、entitlement、installation 与命令都冻结 permission grant 版本/摘要；installation 初始 `deliveryEpoch="1"`，每次 attempt supersede、isolation fence 或 retry 必须 CAS 递增，command/ticket/session/installation attestation/isolation attestation 全部绑定 exact epoch。
+4. 安装 dispatch 事务同样先锁 publisher-key/product-version security root 并复核 approved/key active/package digests，再使用现有唯一执行入口 `messageType=command.dispatch`、`commandType=SKILL_INSTALL`。Agent 通过 `command.ack` 和安装结果回传；命令按 `commandId + attempt + fencingToken` 幂等、可重放，超时不等于未执行。
+5. Skill package v1 只接受 single-disk non-encrypted non-ZIP64 ZIP，method 仅 store/deflate，UTF-8 flag 必须开启；禁止 data descriptor、extra field、file/comment、duplicate EOCD、trailing bytes、overlapping entry ranges。每个 local header 与 central-directory 的 name/flags/method/CRC/compressed+uncompressed size/offset 必须 exact 一致，EOCD 必须恰在 EOF。仅 regular-file entries；路径匹配 lowercase portable ASCII `[a-z0-9._/-]+`，禁止 leading slash/backslash、空/`.`/`..` segment、目录 entry，单 path <=120 bytes，byte-exact 唯一。最多 256 files、单文件 16 MiB、总解压 64 MiB、ratio <=100。固定 manifest entry 为 `cyf-skill-manifest.json`；其 raw bytes 必须恰为 RFC8785 JCS exact closed `{schemaVersion:1,skillKey,skillVersion,files:[{path,size,mode,digest}]}`，files 不含 manifest 自身、任何 `files[].path` 与 ZIP entry 都不得等于保留根路径 `.cyf-installation.json`、不得以 `.cyf-installation.json/` 起始；整个 ZIP regular-file entry set（含固定 manifest）必须 prefix-free，即任意两个不同 path `p/q` 均须同时满足 `!q.startsWith(p + "/") && !p.startsWith(q + "/")`，并按 path 排序，size 为十进制字符串、mode 仅 `0644|0755`、digest 为 canonical sha256。ZIP regular-file entry 集合必须 byte-exact 等于 `{cyf-skill-manifest.json} ∪ manifest.files.path`，不得有未列出的额外 entry；提取目标与重启恢复时同样要求目录中的 filesystem entry 集合恰等于 manifest 路径隐含目录 + 固定 marker `.cyf-installation.json` + manifest 声明文件，出现额外 entry 即隔离冲突。marker raw bytes 必须是 RFC8785 JCS exact closed `{schemaVersion:1,installationId,productVersionId,packageDigest,manifestDigest,permissionGrantDigest,filesDigest}`，`filesDigest=SHA-256("CYF_SKILL_FILES_V1\0" || JCS(manifest.files))`，mode 固定 `0644`；marker 在 staging 中最后写入并 fsync，随后 staging dir fsync/no-replace rename/parent fsync，恢复时与全部文件同等重验。`manifestDigest=SHA-256("CYF_SKILL_MANIFEST_V1\0" || raw canonical manifest bytes)`；`packageDigest=SHA-256(raw ZIP bytes)`。客户端从申请 PACKAGE_GET challenge 前即取得跨进程 installationId 级互斥锁，并持有到完整 stream、同一已打开 file descriptor 的 package signature/digest 验证、提取、staging fsync或失败清理结束；isolation 扫描/证明也使用同一锁且持有至服务端 proof ACK。客户端下载到 content-addressed、只读且不可替换的 staging object；使用 directory-FD relative `openat2(RESOLVE_BENEATH|NO_SYMLINKS)+O_CREAT|O_EXCL|O_NOFOLLOW` 或平台等价 fail-closed 机制，拒绝 symlink/hardlink/special file/manifest disagreement。发布前 durable local install journal 记录 installationId/targetPath/packageDigest/manifestDigest/permissionGrantDigest。每文件 fsync、staging 目录 fsync 后以 no-replace rename 发布，再 fsync parent。重启发现目标已存在时，用 directory-FD 安全重验固定 installation marker + 全部 manifest/file digests：完全匹配同 installationId 则幂等完成并继续 snapshot/attestation；不匹配则隔离并返回 `INSTALL_TARGET_CONFLICT`，绝不覆盖 active version。平台无法保证 no-follow/no-replace 时失败。验证平台 package signature、package/manifest digest、permissionGrantVersion/digest、权限和兼容范围后原子安装，并用受管绑定设备密钥签署 canonical installation attestation，至少覆盖 scope、canonicalAgentId、binding/runtime、bindingEpoch、observedSnapshotSequence/observedSnapshotDigest、orderId、installationId、commandId、attempt、fencingToken、deliveryEpoch、serverChallenge、attestationProtocolVersion、productVersionId、skillKey/version、packageDigest、manifestDigest、permissionGrantVersion/permissionGrantDigest。challenge 单次使用且有时效，防止跨订单/跨 runtime 重放。
+6. `agent.register`/`agent.presence` 新增有界 `installedSkills` 结构化快照；整份快照携带并签署 `bindingEpoch + snapshotSequence + previousSnapshotDigest + snapshotDigest`，逐项携带版本/摘要/installation identity/permission grant digest。服务端对每个 binding/runtime 只接受严格递增 sequence 和正确前序 digest；相同 sequence + digest + canonical bytes/signature 的重放幂等返回已提交 head，不同内容冲突拒绝。每次接收均返回 authenticated `installedSkills.snapshot.ack`（binding/runtime/epoch、accepted sequence/digest）；Agent 将待发送 canonical 快照保存在 durable local outbox，重连先查询服务端 head，再从 `head+1` 重放。若本地无法提供服务端所需链段，只能执行由当前旧私钥证明的受管 rotate，递增 bindingEpoch 并以新 epoch genesis 重建全量快照；旧 epoch 被 fence，禁止静默跳号。若旧绑定私钥不可用，binding 进入 `BINDING_KEY_LOST_QUARANTINED`：MVP 不提供 rebind/re-enrollment/entitlement migration，不得生成新 key、激活/下载/安装/签 capability lease；仅恢复原私钥可解除，否则只能撤销旧 Agent 并另建新的 canonical Agent且不迁移 entitlement。未捕获订单也不得仅因撤销 Agent、人工判断或 key loss 退款；原 key 无法恢复并提交 exact isolation proof 时保持 delivery_unknown/escrowed。自由文本 `abilities` 不参与付款门禁。
+7. 激活与 `CAPTURE_SKILL` 必须属于**同一数据库事务**，并按全局锁序取得：idempotency（如有）→ publisher-key/product-version security root → order root → order funding/allocation → 买方/商店 economy accounts（canonical key 排序）→ order escrow → canonical Agent binding/key root → runtime root → installed-snapshot root → exact skill-installation root → durable command/ACK root → skill-isolation proof（涉及时）→ entitlement/projection → exact download ticket/session rows（如存在，按 PK 排序）→ economy_stream_head（如产生 principal event）→ outbox finalize；取得全部锁后才写双式 capture 分录和终态，禁止先锁 binding 再回头锁 account/escrow，也禁止释放 binding 后另事务 capture。binding revoke/rotate 也必须锁同一 binding/key root 并递增 `bindingEpoch`。在 capture/CAS 前锁内重新读取并验证 scope、ownership、canonical Agent、runtime binding、keyId/algorithm/key status、未撤销状态和 **恰好等于当前值** 的 bindingEpoch，禁止使用事务外预验结果。attestation 绑定首次观察该安装的 `bindingEpoch/deliveryEpoch/observedSnapshotSequence/observedSnapshotDigest`；当前最高 snapshot 可具有更大 sequence/digest，但必须仍包含完全相同的 installationId、商品/技能版本、digests 和 permissionGrantDigest。无关技能的后续 presence 不使证明失效；目标条目被卸载/替换才阻止激活。锁内必须 current-read exact installation row 的 `installationId/commandId/attempt/fencingToken/deliveryEpoch/attestationDigest/status/version`，仅 `ATTESTED_PENDING_ACTIVATION` 可参与；再以 binding/snapshot expectedVersion + installation expectedVersion + order expectedVersion CAS 决出唯一终态：installation `ACTIVE`、entitlement `active`、捕获货款、订单 `completed`。重放、CAS 失败或事务回滚必须产生零分录、零终态变化。capture 前退款以及暂停/撤销若修改资金或 capabilityEpoch，同样在单事务按 publisher-key/product-version security root → order root → funding/allocation → sorted economy accounts → escrow → binding/key → runtime → snapshot → exact skill installation → durable command/ACK → skill isolation proof（退款依赖时）→ entitlement → exact download ticket/session rows（如存在）→ economy_stream_head（如有）→ outbox finalize 取所需行锁；不涉及某类行时跳过但不得逆序。capture 前退款提交时先递增 capabilityEpoch，再 REFUND_SKILL/终态 CAS；completed 后暂停/撤销只改 capability/终态且资金退款按 6.2 稳定拒绝。退款后所有旧 attempt/fencingToken/challenge/lease 永久失效，迟到 ACK/result/attestation 只能记录审计，不能重新激活或扣款。
+8. 安装命令已 dispatch 但 ACK/result 缺失时先转 `delivery_unknown`，不得把超时当作未执行、不得立即重试或退款；必须先对 durable inbox、服务端 snapshot head、客户端 durable snapshot outbox 和 binding runtime 做 reconciliation。只有服务端接受下述 exact signed isolation attestation，证明该 exact installation/attempt/fence 为 `ABSENT|QUARANTINED`，并复核当前 snapshot head 不含该 installation 后，才可在**不触碰资金或订单资金终态**的证明接受事务中把 installation 置 `ISOLATED_CONFIRMED`、递增 deliveryEpoch并物理 revoke ticket/session；该事务提交后，单独的无资金 reconciliation transaction 才可把订单从 `delivery_unknown` CAS 为 `delivery_failed`；后续独立退款事务必须按完整全局锁序重新 current-read accepted proof、当前 snapshot head、order/escrow/capture 状态、exact attempt/fence、该 fenced deliveryEpoch 的全部 ticket/session 已写入物理 `revokedReason=ISOLATION` 与 `revokedDeliveryEpoch` 且不存在可授权 session、current deliveryEpoch 与 capabilityEpoch，才可把订单转 `refund_pending` 并写 REFUND_SKILL；retry-delivery 也必须先满足同一隔离 revocation fence 与无可授权会话门禁。历史 ticket/session 可保留 `CONSUMED|EXPIRED` lifecycle status，但不得缺少独立 isolation revocation fence。snapshot 缺项或人工决议本身都不能替代隔离证明；退款/暂停/撤销时服务端递增 entitlement `capabilityEpoch` 并投递 `SKILL_CAPABILITY_REVOKE` 控制命令。客户端收到命令立即终止租约/隔离版本；即使离线或命令丢失，旧 capability lease 也在最长 30 秒内过期且不可续签。调度器只允许 active entitlement + active binding/current epoch + 当前 installed snapshot 的交集。MVP 只对支持结构化 installed-skill attestation、短租约 capability broker 和 durable snapshot replay 的 Agent 开放购买；旧客户端只能浏览。
+9. attestation protocol v1 冻结 byte-exact transcript：
+   - canonical `work.result` 中结果只允许位于 `payload.skillInstallResult`：
+
+```json
+{
+  "resultType": "SKILL_INSTALL_RESULT",
+  "status": "completed",
+  "installationAttestation": {
+    "protocolVersion": 1,
+    "algorithm": "Ed25519",
+    "keyId": "binding-key-id",
+    "payload": {
+      "tenantId": "tenant-id",
+      "clientId": "client-id",
+      "canonicalAgentId": "agent-id",
+      "bindingId": "binding-id",
+      "runtimeInstanceId": "runtime-id",
+      "bindingEpoch": "3",
+      "observedSnapshotSequence": "42",
+      "observedSnapshotDigest": "sha256:...",
+      "orderId": "so_...",
+      "installationId": "si_...",
+      "commandId": "cmd_...",
+      "attempt": 1,
+      "fencingToken": "7",
+      "deliveryEpoch": "1",
+      "serverChallenge": "nonce_...",
+      "attestationProtocolVersion": 1,
+      "productVersionId": "spv_...",
+      "skillKey": "repo-test",
+      "skillVersion": "2.1.0",
+      "packageDigest": "sha256:...",
+      "manifestDigest": "sha256:...",
+      "permissionGrantVersion": "1",
+      "permissionGrantDigest": "sha256:..."
+    },
+    "signature": "base64url-no-padding"
+  }
+}
+```
+
+   - wrapper/payload property names、nesting、mandatory set 与上例完全一致；未知/缺失字段、outer/nested 保留字段冲突、重复 JSON key、trailing token、非 UTF-8、NUL/control 或类型不符全部拒绝。禁止 trim、case-fold 或 Unicode normalization。`protocolVersion/attestationProtocolVersion` v1 恰为 JSON integer `1`；`attempt` 是 `1..2147483647` 的 JSON integer；Protocol envelope 的 `issuedAt/expiresAt` 是 `0..9007199254740991` 的毫秒 epoch JSON integer 且 `issuedAt < expiresAt`；epoch/sequence/fence 是无前导零的正十进制字符串并在服务端 `BIGINT` 范围内；digest 是小写 `sha256:<64 hex>`。
+   - `algorithm` v1 固定 `Ed25519`，`keyId` 必须解析到该 bindingEpoch 的受管公钥；signature 是无 padding base64url。签名字节固定为 UTF-8 `CYF_SKILL_INSTALL_ATTESTATION_V1\0` 拼接 RFC 8785 JCS(`installationAttestation.payload`)。
+   - `agent.register/agent.presence` 中快照只允许位于 `payload.installedSkillsSnapshot`，exact schema 为：
+
+```json
+{
+  "protocolVersion": 1,
+  "algorithm": "Ed25519",
+  "keyId": "binding-key-id",
+  "payload": {
+    "tenantId": "tenant-id",
+    "clientId": "client-id",
+    "canonicalAgentId": "agent-id",
+    "bindingId": "binding-id",
+    "runtimeInstanceId": "runtime-id",
+    "bindingEpoch": "3",
+    "snapshotSequence": "42",
+    "previousSnapshotDigest": "sha256:...",
+    "installedSkills": [
+      {
+        "installationId": "si_...",
+        "productVersionId": "spv_...",
+        "skillKey": "repo-test",
+        "skillVersion": "2.1.0",
+        "packageDigest": "sha256:...",
+        "manifestDigest": "sha256:...",
+        "permissionGrantVersion": "1",
+        "permissionGrantDigest": "sha256:..."
+      }
+    ]
+  },
+  "snapshotDigest": "sha256:...",
+  "signature": "base64url-no-padding"
+}
+```
+
+   - snapshot wrapper/payload 同样 exact/closed schema。`installedSkills` 按 byte-exact `(skillKey,skillVersion,installationId)` 升序且 tuple 唯一。genesis 固定 `snapshotSequence="1"`、`previousSnapshotDigest="sha256:" + 64 个 0`；后续 sequence 严格 +1 且 previous 等于服务端当前 digest。
+   - `snapshotDigest = SHA-256("CYF_INSTALLED_SKILLS_SNAPSHOT_V1\0" || JCS(installedSkillsSnapshot.payload))`；snapshot signature 字节为 UTF-8 `CYF_INSTALLED_SKILLS_SNAPSHOT_ATTESTATION_V1\0` 拼接 JCS(`{"payload":...,"snapshotDigest":"..."}`)。服务端保存 canonical bytes/hash；installation attestation 按同 order/installation/challenge 的同字节重放幂等；snapshot 按同 binding/runtime/bindingEpoch/snapshotSequence 的同 canonical bytes/digest/signature 重放幂等，冲突返回 `ATTESTATION_CONFLICT`。challenge 只在激活事务成功时消费，旧 bindingEpoch/fence、非递增 snapshot 或已退款 order 永不重开。
+10. package provenance v1 冻结：商品版本保存 exact closed `skillPackageSignature={protocolVersion:1,algorithm:"Ed25519",keyId,payload,signature}`；payload 必须恰含 `productVersionId/skillKey/skillVersion/packageDigest/manifestDigest/permissionsDigest/compatibilityDigest/publishedAt`，其中 publishedAt 是规范十进制毫秒字符串。权限名 byte-exact 排序去重，`permissionsDigest=SHA-256("CYF_SKILL_PERMISSIONS_V1\0" || JCS(permissions))`；compatibility 使用同样 exact closed object 与 `CYF_SKILL_COMPATIBILITY_V1\0` domain。签名字节为 UTF-8 `CYF_SKILL_PACKAGE_V1\0` || RFC 8785 JCS(payload)，signature 为无 padding base64url。平台维护版本化 publisher key registry；publisher key status exact enum 为 `ACTIVE|RETIRED|REVOKED|COMPROMISED`，只有 `ACTIVE|RETIRED` 且签发时间落在有效区间的记录可验证历史包，`REVOKED|COMPROMISED` 一律 fail closed。交付命令必须携带完整 `skillPackageSignature`、由离线 platform root 签署的 exact closed `publisherKeyRecord={protocolVersion:1,algorithm:"Ed25519",keyId,payload,signature}`、完整 permissions/compatibility objects 与 digests、approvedPermissions/grant digest；`packageSignatureDigest=SHA-256("CYF_SKILL_PACKAGE_SIGNATURE_RECORD_V1\0" || JCS(skillPackageSignature))`，`publisherKeyRecordDigest=SHA-256("CYF_PUBLISHER_KEY_RECORD_V1\0" || JCS(publisherKeyRecord))`。publisherKeyRecord payload 恰含 `publisherKeyId/algorithm/publicKey/validFrom/validUntil/status/registryVersion`；`validFrom/validUntil/registryVersion` 均为无前导零的规范正十进制字符串、在 signed BIGINT 范围内且 `validFrom < validUntil`，package `publishedAt` 同型并须落在闭区间；outer `keyId` 必须 byte-exact 命中 Agent 预置、状态为 TRUSTED 的 Ed25519 platform-root trust anchor，root verifier 算法只由该本地 trust anchor 决定，绝不由 wrapper/payload 字段协商；root trust-anchor public key 与 payload `publicKey` 都必须是无 padding canonical base64url，解码后恰 32 raw bytes，payload `algorithm` 必须恰为 `Ed25519`。root-record 签名字节固定为 `CYF_PUBLISHER_KEY_RECORD_ATTESTATION_V1\0 || JCS(payload)`。Agent 先按本地 root 验证 wrapper，再强制 `skillPackageSignature.algorithm == publisherKeyRecord.algorithm == publisherKeyRecord.payload.algorithm == "Ed25519"`、`skillPackageSignature.keyId == publisherKeyRecord.payload.publisherKeyId`、`validFrom <= skillPackageSignature.payload.publishedAt <= validUntil`，再验证 package signature，复算 permissions/compatibility/grant 摘要并确认 `approvedPermissions ⊆ signed permissions ∩ platform policy`；任一对象缺失/漂移/过期/跨 key fail closed。稳定错误至少为 `PUBLISHER_KEY_RECORD_WRAPPER_INVALID|PUBLISHER_ROOT_KEY_UNKNOWN_OR_UNTRUSTED|PUBLISHER_KEY_ALGORITHM_INVALID|PUBLISHER_PUBLIC_KEY_INVALID|PUBLISHER_KEY_RECORD_STATUS_INVALID|SKILL_PACKAGE_SIGNATURE_INVALID`；API 与 Agent client 共享 byte-exact 正反向 golden vectors，覆盖 outer/payload 算法错配、root-record algorithm confusion、padding/noncanonical base64url、root/publisher raw-key 非 32 bytes。
+11. capability authorization v1：每次技能执行前，在线 runtime 向受保护 endpoint 请求最长 30 秒、不可离线续签的 server-signed lease。wrapper exact closed 为 `{protocolVersion:1,algorithm:"Ed25519",keyId,payload,signature}`；payload 恰含 `tenantId/clientId/canonicalAgentId/bindingId/runtimeInstanceId/bindingEpoch/entitlementId/entitlementVersion/installationId/productVersionId/permissionGrantVersion/permissionGrantDigest/capabilities/capabilityEpoch/leaseId/issuedAt/expiresAt`；capabilities byte-exact 排序去重，issuedAt/expiresAt 遵守 Protocol safe integer 边界。签名字节为 UTF-8 `CYF_SKILL_CAPABILITY_LEASE_V1\0` || RFC 8785 JCS(payload)，平台 signing key registry 可轮换/撤销。服务端每次签发都按 publisher security→binding/key→binding PoP challenge→runtime→installed snapshot→exact installation→durable command/ACK→entitlement 的全局顺序锁/current-read，原子消费 purpose=`CAPABILITY_LEASE` 的 fresh proof，并复核 active binding/current epoch、active entitlement/current capabilityEpoch、当前 installed snapshot、installation 与 current STARTED/active command fence一致且 package key未撤销；权限只取 `平台 policy ∩ manifest ∩ buyer grant`。broker 对每次危险操作验证 lease、scope/runtime/epoch/capability/expiry；断网、验签失败、epoch 不符或过期立即 fail closed，运行中进程在 revoke push 或最迟 lease 过期时失去 capability。
+
+12. binding proof-of-possession v1：初次绑定之外，所有 `agent.register/reconnect/persona-bind`、runtime token/refresh、mTLS credential 签发、download-session 创建、每次 package GET、SKILL_INSTALL 开始、isolation attestation 提交和 capability-lease 请求都必须提交 current binding Ed25519 key 的 fresh PoP；仅 owner/session/mTLS 不足以通过。
+   - challenge API 固定为 `POST /internal/agent/bindings/{bindingId}/proof-challenges`，header 必须含 actor-scoped `Idempotency-Key`；body exact closed 为 `{purpose,requestBinding}`。purpose 仅 `INITIAL_BINDING_ENROLL|REGISTER_RECONNECT|RUNTIME_CREDENTIAL_ISSUE|DOWNLOAD_SESSION|PACKAGE_GET|SKILL_INSTALL_START|SKILL_ISOLATION_ATTESTATION|CAPABILITY_LEASE`。`requestBinding` 按 purpose 使用互斥 exact closed schema：INITIAL=`{canonicalAgentId,runtimeInstanceId,candidateKeyId,candidatePublicKey,pendingBindingVersion,pendingBindingEpoch}`；REGISTER_RECONNECT=`{runtimeInstanceId,messageType,messageDigest}`，messageType 仅 `agent.register|agent.reconnect|persona.bind`；RUNTIME_CREDENTIAL_ISSUE=`{runtimeInstanceId,credentialType,credentialRequestDigest}`，credentialType 仅 `ACCESS_TOKEN|REFRESH_TOKEN|MTLS`；DOWNLOAD_SESSION=`{runtimeInstanceId,installationId,downloadTicketDigest}`；PACKAGE_GET=`{runtimeInstanceId,installationId,downloadSessionId}`；SKILL_INSTALL_START=`{runtimeInstanceId,installationId,commandEnvelopeDigest,downloadTicketDigest}`；SKILL_ISOLATION_ATTESTATION=`{runtimeInstanceId,installationId,isolationAttestationDigest,isolationChallenge}`；CAPABILITY_LEASE=`{runtimeInstanceId,installationId,leaseRequestDigest}`。candidatePublicKey 是 32 raw bytes 的无 padding base64url；所有 digest 为 canonical lowercase sha256；未知/缺失/额外字段、null、空 identity 或类型漂移拒绝。
+   - challenge service 不信任调用方提供最终 requestDigest。它从认证上下文和 current/pending binding row 构造 exact closed `purposeSpecificRequest={tenantId,clientId,canonicalAgentId,bindingId,bindingVersion,bindingEpoch,keyId,purpose,requestBinding,authContext}`；`authContext` exact closed 为 `{ownerPrincipalDigest,ownerCredentialDigest,runtimeSessionDigest,mtlsIdentityDigest,downloadSessionCredentialDigest,enrollmentBootstrapDigest}`，每项只能为 canonical sha256 或字面量 `NONE`，由服务端从本次入口认证材料派生。raw owner/runtime/refresh/session/bootstrap/ticket credential 不进入 transcript或日志。`requestDigest=SHA-256("CYF_BINDING_POP_REQUEST_V1\0" || JCS(purposeSpecificRequest))`。INITIAL 必须 byte-exact 命中已冻结 PENDING_ENROLL candidate binding/key/runtime；PACKAGE_GET 必须由 header 中同一 mTLS identity + bearer download-session token派生对应 digests；业务 endpoint 随后从其实际请求与认证上下文重算同一对象，禁止接受客户端自报 digest替代。
+   - challenge acquisition 不要求预先持有本次 fresh proof，认证矩阵 exact 冻结：INITIAL 必须同时有 owner principal+owner access credential，并通过 `X-CYF-Enrollment-Bootstrap: <base64url-no-padding-token>` 提交该 PENDING_ENROLL bootstrap，其他 runtime/mTLS/download-session digest 为 `NONE`；REGISTER_RECONNECT 必须是 owner principal+owner credential **或** current runtime session 二选一；RUNTIME_CREDENTIAL_ISSUE 的 ACCESS_TOKEN 必须是 owner pair 或 current runtime session，REFRESH_TOKEN 必须是 current refresh/runtime credential，MTLS 必须是 current runtime session，均在后续 credential issuance 业务事务消费本次 fresh proof，不得把旧 proof 当 challenge-acquisition credential；DOWNLOAD_SESSION 必须是 exact active runtime mTLS+runtime bearer并验证 ticket target；PACKAGE_GET 必须是 exact active runtime mTLS+download-session bearer；SKILL_INSTALL_START 必须是 exact authenticated WebSocket runtime session+durable command；SKILL_ISOLATION_ATTESTATION 必须是 exact authenticated runtime session+isolation challenge；CAPABILITY_LEASE 必须是 exact active runtime mTLS+runtime bearer+entitlement/installation target。未列出的 authContext 项必须为 `NONE`，出现额外 credential、主体不一致或 digest漂移均拒绝。challenge 响应本身不授予业务权限或 credential。不存在、跨 scope、非 owned、binding/key 已撤销、非 current bindingEpoch/key/runtime 统一先返回 `404 BINDING_NOT_FOUND_OR_FORBIDDEN`，并必须在任何结构或状态细分错误之前完成该隐藏性判断；入口认证失败 `401/403`；结构/purpose 为 `400 BINDING_CHALLENGE_REQUEST_INVALID|BINDING_CHALLENGE_PURPOSE_INVALID`；只有请求已通过 current active binding 可见性门禁后，active resource 的 target/request 漂移才返回 `409 BINDING_STATE_INVALID|BINDING_REQUEST_BINDING_MISMATCH`；过期/已消费为 `410 BINDING_CHALLENGE_EXPIRED|BINDING_CHALLENGE_CONSUMED`；速率限制为 `429 BINDING_CHALLENGE_RATE_LIMITED`。
+   - 服务端返回 exact `{challengeRequestId,challenge,bindingId,bindingVersion,bindingEpoch,keyId,purpose,requestDigest,issuedAt,expiresAt}`，最长 120 秒。challengeRequestId 是 server-generated canonical UUID；actor-scoped Idempotency-Key 永久标识原 challenge record：同 key + 同完整 body/authContext hash 在 ISSUED 时返回 byte-identical 原响应，EXPIRED 后稳定返回 `410 BINDING_CHALLENGE_EXPIRED`，CONSUMED 后稳定返回 `410 BINDING_CHALLENGE_CONSUMED`，绝不在同 key 下生成第二个 challenge；同 key不同 hash 返回 `409 IDEMPOTENCY_CONFLICT`。每个 `(tenantId,clientId,bindingId,runtimeInstanceId,purpose)` 最多一个未消费 challenge；不同 idempotency key 的请求在旧 challenge 未消费且未过期前返回 `409 BINDING_CHALLENGE_ALREADY_ISSUED`，旧 row 到期后先物理 CAS 为 EXPIRED才可用**新** idempotency key创建新 challenge，不得替换或静默作废。原业务 endpoint 的 same-proof/byte-identical replay按下述业务幂等规则返回原 ACK。
+   - proof wrapper exact closed `{protocolVersion:1,algorithm:"Ed25519",keyId,payload,signature}`；payload exact closed fields 为 challenge 响应的全部字段，再加 `tenantId/clientId/canonicalAgentId/runtimeInstanceId`，字段值均 byte-exact。`runtimeInstanceId` 在所有 purpose 下必填非空稳定 ID：INITIAL 使用 PENDING_ENROLL 已冻结候选 runtime，其他 purpose 必须等于 current active runtime；不得用 null、缺省或空字符串折叠。签名字节为 `CYF_AGENT_BINDING_POP_V1\0 || JCS(payload)`，outer/payload `keyId` 必须相等，algorithm 固定 Ed25519。业务事务按全局 binding root 顺序复核 current/pending key、epoch/version、challengeRequestId/purpose/requestDigest/expiry与实际认证上下文，再原子消费 challenge。
+   - 状态写入、credential issuance、download-session、install-start、isolation 与 capability-lease 的同 proof + byte-identical完整业务请求可幂等返回原 ACK/response，不同请求拒绝。`PACKAGE_GET` 是流式例外：proof 在该次授权事务提交时即消费且绝不复用，连接失败或 retry 必须取得全新 PACKAGE_GET challenge/proof并重新 current-read session/root。PoP purpose 路由冻结为：initial enrollment→INITIAL_BINDING_ENROLL；`agent.register/reconnect/persona-bind`→REGISTER_RECONNECT；runtime token/refresh 与 mTLS issuance→RUNTIME_CREDENTIAL_ISSUE；download-session POST→DOWNLOAD_SESSION；每次 package GET→PACKAGE_GET；`command.ack` 首次 STARTED（任何包读取/安装动作前）→SKILL_INSTALL_START；isolation attestation submission→SKILL_ISOLATION_ATTESTATION；capability lease POST→CAPABILITY_LEASE。不得跨 purpose 使用 challenge。`SKILL_INSTALL_START` 的业务事务必须按 binding root→binding PoP challenge→runtime→exact installation→durable command/ACK root 取锁，原子消费 proof并持久化 exact `STARTED_CONFIRMED` record `{installationId,commandId,attempt,fencingToken,deliveryEpoch,commandEnvelopeDigest,downloadTicketDigest,startChallengeRequestId,startProofDigest,startedAt}`；只有该事务已提交，客户端才可创建 download session、申请 PACKAGE_GET challenge、读取包或创建任何 staging 文件。服务端的 download-session、PACKAGE_GET challenge acquisition 与每次 PACKAGE_GET 授权也必须 current-read 该 record 并要求全部字段与 current command/ticket/installation exact 相等，否则返回 `409 SKILL_INSTALL_START_NOT_CONFIRMED|SKILL_INSTALL_START_MISMATCH`。
+   - 初次 enrollment 的写 API 全部要求 actor-scoped `Idempotency-Key`。`POST /internal/agent/binding-enrollments` 仅 authenticated canonical Agent owner，body exact `{canonicalAgentId,runtimeInstanceId,candidateKeyId,candidatePublicKey}`；事务按 idempotency→binding root 检查该 Agent 不存在任何 ACTIVE/PENDING binding，创建 `PENDING_ENROLL`、`bindingVersion="1"`、`bindingEpoch="1"` 并返回 exact `{bindingId,bindingVersion,bindingEpoch,keyId,runtimeInstanceId,enrollmentBootstrapToken,expiresAt}`，bootstrap token 为 256-bit随机无 padding base64url，只存 hash并以 server KMS加密原响应供 same-key byte-identical replay，最长 10 分钟。已有 ACTIVE 或另一 PENDING binding 统一 `409 BINDING_ALREADY_EXISTS_REENROLL_FORBIDDEN`，不得作为 key replacement。随后 owner credential + `X-CYF-Enrollment-Bootstrap` 按上述 INITIAL challenge 契约取得 challenge；`POST /internal/agent/bindings/{bindingId}/enroll` 必须同时携 actor-scoped `Idempotency-Key`、owner credential与同一 bootstrap header，body exact `{bindingProof}`，事务按 idempotency→binding root→binding PoP challenge复核候选 key proof并原子消费 challenge/bootstrap、CAS PENDING_ENROLL→ACTIVE，返回 exact `{bindingId,bindingVersion:"2",bindingEpoch:"1",keyId,runtimeInstanceId,status:"ACTIVE"}`。同 key/proof/body重放返回原 ACK；不同内容、过期 token/challenge或版本漂移分别稳定返回 `409 ENROLLMENT_REPLAY_CONFLICT|410 ENROLLMENT_BOOTSTRAP_EXPIRED|410 BINDING_CHALLENGE_EXPIRED|409 BINDING_VERSION_CONFLICT`。若 bootstrap 已过期但 binding 从未 ACTIVE，owner 可调用 `POST /internal/agent/bindings/{bindingId}/enrollment-bootstrap-reissues`，必须携新 actor-scoped Idempotency-Key，body exact `{expectedBindingVersion,runtimeInstanceId,candidateKeyId,candidatePublicKey}`；事务按 idempotency→binding root只接受与 PENDING_ENROLL 冻结候选 runtime/key/publicKey byte-identical 的请求，CAS 递增 bindingVersion并签发新 bootstrap/expiry，返回与 create 相同字段且保持原 bindingId/bindingEpoch/key/runtime，不允许替换候选 key、创建第二 binding或迁移 entitlement。同 key同请求永久重放原响应；速率限制只延迟，不得永久封死同候选恢复。ACTIVE 提交前绝不签发 runtime/mTLS credential。
+   - 现有 binding 不得由 owner-only register/enrollment 路径替换 key。旧私钥丢失无需依赖主动声明即可 fail closed：无法生成 fresh PoP 时上述所有路径均拒绝 `BINDING_PROOF_REQUIRED|BINDING_PROOF_INVALID`，不得通过重新注册取得新 runtime/API 凭据。API 与 Agent client 必须共享 enrollment、challenge request/response、purposeSpecificRequest、proof、重放和错误码 golden vectors。
+13. delivery-unknown isolation proof v1：退款前服务端投递与 exact order/installation/commandId/attempt/fencingToken 绑定的 `SKILL_CAPABILITY_REVOKE`，携单次 `isolationChallenge`。Agent client 在 installationId 互斥锁内扫描受管 active/staging roots；若存在目标版本，必须用 directory-FD/no-follow/no-replace 将其原子移动到 runtime 不可达的 content-addressed quarantine，fsync source/quarantine parent并停止 capability；若完全不存在则记录 ABSENT。随后用当前 binding key签 exact closed `skillIsolationAttestation={protocolVersion:1,algorithm:"Ed25519",keyId,payload,signature}`，payload 恰含 `tenantId/clientId/canonicalAgentId/bindingId/runtimeInstanceId/bindingEpoch/orderId/installationId/commandId/attempt/fencingToken/deliveryEpoch/productVersionId/packageDigest/manifestDigest/permissionGrantDigest,isolationSequence,previousIsolationDigest,outcome,quarantineDigest,isolationChallenge,issuedAt,expiresAt`；outcome 仅 `ABSENT|QUARANTINED`，sequence 严格 +1，签名字节为 `CYF_SKILL_ISOLATION_ATTESTATION_V1\0 || JCS(payload)`。Agent client 必须从申请 PACKAGE_GET challenge 前起取得跨进程 installationId mutex，并持续持有到 full stream 完成、同一 FD digest验证、staging fsync/失败清理结束；生成 isolation proof 时同样持锁，且一直持有到服务端接受 proof 的 ACK，重启恢复先在该锁内处理未完成 stream/staging。这样任何在 proof 扫描前已获授权的流必须先完成并被扫描/隔离，proof 签名后不得由同一受管 runtime 启动新 GET。证明接受事务按 publisher security→order→binding/key→binding PoP challenge→runtime→snapshot→exact installation→durable command/ACK→skill isolation proof→entitlement→exact download ticket/session 锁序验证 purpose=`SKILL_ISOLATION_ATTESTATION` 的 fresh binding PoP、签名/challenge/chain/exact attempt+fence+deliveryEpoch，current-read snapshot head 不含该 installation，要求 installation 当前 deliveryEpoch 与 STARTED record/command/session冻结值一致，并把 immutable proof row 写入、递增 deliveryEpoch、将 installation CAS 为 `ISOLATED_CONFIRMED`。同一事务必须按 PK 锁定该 fenced deliveryEpoch 的**全部** ticket/session row：对仍可授权的未消费 ticket/ACTIVE session把 lifecycle status CAS 为 `REVOKED_ISOLATION`，并对包括 CONSUMED/EXPIRED 在内的每一历史 row写入一次性不可变 `revokedAt/revokedReason=ISOLATION/revokedDeliveryEpoch`；任一匹配 row 未被物理 fence 则整体回滚。该事务**不锁资金账户/escrow、不写 REFUND_SKILL，也不改变订单资金终态**。PACKAGE_GET 与 download-session 创建均锁同一 snapshot/installation/STARTED/proof/session roots，要求 installation status 为 `DELIVERING|DOWNLOADING`、STARTED record exact、不存在 accepted isolation proof、deliveryEpoch exact 相等且 ticket/session没有 revocation fence，故 proof commit 后所有新 GET/retry/session 必须拒绝。证明提交后由独立无资金 reconciliation transaction按 order→binding→runtime→snapshot→installation→command/ACK→proof→ticket/session current-read并 CAS `delivery_unknown→delivery_failed`。后续退款是独立 domain transaction，必须重新按全局完整顺序锁 publisher security→order→funding/allocation→sorted economy accounts→escrow→binding/key→runtime→snapshot→exact installation→durable command/ACK→skill isolation proof→entitlement→download ticket/session→stream head/outbox，current-read accepted proof、当前 snapshot head、每一匹配 ticket/session 的 ISOLATION revocation fence、无可授权 session、order/escrow/capture 状态、deliveryEpoch 和 capabilityEpoch 后，才可在 CAPTURE_SKILL 前 CAS `delivery_failed|refund_pending→refunded` 并写 REFUND_SKILL；若其间已 capture、重装、snapshot 出现目标 installation、session再次 active、proof/fence/epoch 失配或任何 current root 改变则拒绝。Agent 不可达、binding key 丢失、只有 snapshot absence、人工审批或超时都不得接受 proof或退款，订单保持 delivery_unknown/escrowed；迟到安装 attestation 永不越过 isolation fence。
+
+## 4. 计价模型
+
+### 4.1 金额表示
+
+- 币种：`SILVER`。
+- 内部单位：`microSilver: BIGINT`，`1 silver = 1,000,000 microSilver`。
+- REST/事件中的金额一律是十进制字符串，例如 `"12500000"`；禁止 JSON number。
+- 所有乘除使用整数数学和明确向上取整，不能使用 `double/float`。API 对 token/rate/amount/feeBps 设置上限；中间乘加使用 `BigInteger` 或 checked arithmetic，落 `BIGINT` 前显式 range-check，溢出返回 `AMOUNT_RANGE_EXCEEDED`。
+
+### 4.2 价目表
+
+`model_price_book` 是带生效区间的不可变版本，至少包含：
+
+- `provider`、`model`、`priceBookVersion`；
+- 每百万 input/cached-input/output/reasoning token 的微银两价格；
+- 固定请求费、最小计费单位；
+- `effectiveFrom/effectiveTo`、状态、配置摘要和审批人。
+
+生产报价只使用 `active` 版本。历史用量永远按凭证绑定版本重放，不能按当前价格重算。
+
+### 4.3 公式
+
+```text
+tokenCost = ceil(inputTokens       * inputRatePerMillion       / 1_000_000)
+          + ceil(cachedInputTokens * cachedInputRatePerMillion / 1_000_000)
+          + ceil(outputTokens      * outputRatePerMillion      / 1_000_000)
+          + ceil(reasoningTokens   * reasoningRatePerMillion   / 1_000_000)
+          + requestFixedFee
+
+totalGross = initialGross + sum(postedTopUps)
+MVP: allocationGross = totalGross
+future team mode: sum(allocationGross) <= totalGross
+platformFee = min(feeCapMicro, ceil(allocationGross * feeBps / 10_000))
+estimatedCompute = tokenCost(estimated token classes)
+worstCompute = tokenCost(p90/max token classes) + configured risk reserve
+estimatedPayout = max(0, allocationGross - estimatedCompute - platformFee)
+worstCasePayout = max(0, allocationGross - worstCompute - platformFee)
+claimBudgetCovered = worstCompute + platformFee + minimumAcceptedPayout <= allocationGross
+
+success: allocationGross = actualCompute + platformFee + agentPayout
+failure/cancel: allocationGross = actualCompute + approvedPartialPayout + chargedFee + refund
+in-progress: totalGross = settledComponents + remainingEscrow
+modelCostCap = consumedUserCharge + activeReserved + remainingModelBudget
+activeReserved = sum(RESERVED, DISPATCHED, UNKNOWN reserved remainder)
+modelCapRemainderBeforeReceipt = modelCostCap - priorConsumedUserCharge
+escrowChargeableRemainder = max(0, remainingEscrow - unpaidFinalFee - minimumAcceptedPayout - otherActiveReservations)
+consumedUserCharge = min(providerComputedCost, authorizationReservedCost, modelCapRemainderBeforeReceipt, escrowChargeableRemainder)
+providerVariance = providerComputedCost - consumedUserCharge
+MVP non-success terminal: chargedFee = 0
+```
+
+计价顺序和费率在 quote/funding contract 中冻结；所有分量必须为非负整数。`modelCostCap <= allocationGross - platformFee - minimumAcceptedPayout`。settlement 中的 `actualCompute` 专指上述用户可计费的 `consumedUserCharge`；成功才收取按最终 gross 计算的平台费，MVP 失败/取消的 `chargedFee=0`；receipt 另存 `providerComputedCost`。authorization 冻结 `allowedActualModelIds`；若 receipt 的 `actualModelId` 不在集合内，receipt 仍以 `modelRouteMatch=false` 落库并执行 `DISPATCHED|UNKNOWN -> CONSUMED`，但 `consumedUserCharge=0`、释放全部 reservation、`providerVariance=providerComputedCost` 并执行 `RECORD_PROVIDER_VARIANCE`；task/allocation 原子进入 disputed、停止后续调用并阻止 settlement。不得 retroactive reprice/requote 或向用户追收；审计确认后 SYSTEM 最终承担历史成本，后续执行只能由用户接受新 quote 后创建新 authorization。若 provider 成本超过 authorization、modelCostCap 或总托管，`providerVariance = providerComputedCost - consumedUserCharge`：不得产生负 Agent payout 或透支用户账户，任务进入 `disputed`，超额默认由 `SYSTEM:PROVIDER_VARIANCE` 暂挂/承担，MVP 不允许通过 top-up 追溯转嫁给用户，由 SYSTEM variance 最终承担；未来若开放追偿必须另立争议/计费 SDD。
+
+报价建议只根据可解释字段生成：
+
+- `reject`: 结构化 verified skill requirement 不满足、Agent 不可操作、最坏净所得低于最低可接受收益、报价无法生成；
+- `caution`: 预算缓冲低、上下文不确定、模型降级、任务风险高；
+- `recommended`: 基本约束满足且预算覆盖策略通过。
+
+### 4.4 用量证据硬门禁
+
+当前模型/流式链路若过早只保留 `.content()` 而丢失最终 response usage metadata，则只能做影子预估，**不得启用真实扣费**。上线前必须由统一 LLM Gateway 或 provider adapter 保留实际模型 ID、最终 token usage 和 provider request ID；客户端自报 cost 永不可信。模型别名只用于路由，route snapshot 必须冻结 `allowedActualModelIds`，receipt 必须记录供应商实际模型 ID；实际模型不在集合内时按上述 `modelRouteMatch=false` 路径由 SYSTEM 承担并进入 dispute，不做追溯报价。
+
+## 5. 数据模型
+
+### 5.1 economy 域
+
+| 表 | 关键字段 | 说明 |
+| --- | --- | --- |
+| `economy_account` | scope、owner_type/id、purpose、currency、balance、version | 用户、Agent、任务托管、模型成本和平台费账户；余额缓存必须等于账本聚合 |
+| `economy_transaction` | transaction_id、business_type/id、idempotency_key、status、created_at | 一次完整资金动作 |
+| `economy_idempotency` | tenant/client/principal_type/principal_id/key（唯一）、冻结 method/path/request_hash、IN_PROGRESS/COMPLETED/FAILED_NO_EFFECT、owner_token/lease_until、business_ref、response_status/body/hash、version | actor-scoped raw key 唯一；崩溃后重放原响应，不重复资金动作 |
+| `economy_entry` | transaction_id、account_id、signed_amount、currency | 不可变双式分录；同交易合计必须为 0 |
+| `economy_escrow` | escrow_id、payer/task、gross、captured、refunded、status、version | 每个 task/order 一个托管 root；gross 是版本化聚合投影 |
+| `economy_escrow_funding_lot` | escrow_id、funding_sequence、reserve_transaction_id、amount、payer、created_at | initial/top-up 各一条不可变 funding lot；共同进入同一 escrow root/account |
+| `economy_trade_order` | order_id、order_type、buyer/seller、amount、status、business_ref、version | 技能订单等通用交易投影 |
+| `model_price_book` | provider/model/version、各 token rate、生效区间、digest | 不可变模型价格 |
+| `provider_egress_wrapping_key` | egress_key_id（全局唯一版本 ID）、provider/account_namespace、kms_key_ref、state、security_epoch、activated/retired/blocked/destroyed_at、max_required_unwrap_until、version | `ACTIVE_WRAP_UNWRAP/RETIRED_UNWRAP_ONLY/COMPROMISE_PENDING/COMPROMISED_BLOCKED/DESTROY_PENDING/DESTROYED`；正常轮换不变 security_epoch并保留旧 key 解密能力至全部引用 deadline；compromise 原子递增 epoch 使未 send-start lease 失效；销毁前 current-read 扫描验证且双人审批 |
+| `llm_provider_invocation_blob` | invocation_id/blob_ref、scope/creator_service_id/creator_owner_id/owner_epoch/lease_until、ciphertext/nonce/key_envelope/egress_key_id、request_digest、STAGED/FROZEN/ABANDONED/RETAINED、authorization_id、staged_expires_at、version | Broker-wrapped encrypted immutable canonical provider request；egress_key_id 引用不可复用的 key 版本；与 authorization 同库锁定，仅持 active egress lease 且 key 状态允许的 Provider Egress Broker 可读取/unwrap |
+| `llm_usage_authorization` | task/workItem/agent、execution_epoch、invocation_id、provider/account_namespace/operation_namespace/idempotency_key、immutable request blob ref/digest、egress_key_security_epoch、Gateway owner_id/owner_epoch/lease_until/fencing_token、price/route version+digest、server-authoritative egress descriptor+digest、provider idempotency retention/safety margin/replay_safe_until、allowed_actual_model_ids、token ceilings、reserved cost、RESERVED/DISPATCHED/CONSUMED/VOIDED_CONFIRMED_UNUSED/UNKNOWN/CLOSED_SYSTEM_RISK、expires_at | 每次调用前的费用上限预留；route/价格/Agent/work item 与保守 replay deadline 服务端派生；owner lease 可 CAS 接管但 request/key 不变 |
+| `llm_usage_dispatch_record` | authorization_id、owner_epoch、fencing_token、request_digest、dispatch_version/time、egress_outbox_id | 每次排队 provider egress 的不可变历史 tuple；receipt 可匹配合法历史 dispatch，不因 owner takeover 失效 |
+| `llm_provider_egress_lease` | egress_lease_id、authorization/dispatch tuple、broker_instance、lease_until、request_digest、egress_key_id/security_epoch、CLAIMED/REVOKED_BEFORE_SEND/SEND_STARTED/SENT/EXPIRED/RECEIPTED、version | Broker 单次短租约；active 时 fence owner claim/cancel/closed，只有 Broker 可调用 provider |
+| `llm_provider_unwrap_authorization` | unwrap_authorization_id、authorization/lease/blob/version/key/security_epoch、broker_workload_identity_digest、ISSUED/CONSUMED_BEFORE_KMS/EXPIRED、issued/expires/consumed_at、kms_attempt_digest | blob GET 提交创建的 audited at-most-once unwrap grant；同 lease/blob 唯一，只有受管 unwrap adapter 可先消费再单次调用 KMS，Broker worker 无 raw decrypt IAM |
+| `model_usage_receipt` | authorization、run/task/workItem/agent、provider/account_namespace/operation_namespace/providerRequestId、actual_model_id/model_route_match、token classes、price version、provider_computed_cost、consumed_user_charge、provider_variance、receipt_hash | 权威实际用量与封顶后的用户计费；request ID 按 provider 实际账户/operation namespace 去重 |
+| `economy_stream_head` | tenant/client、principal_type/id、committed_cursor、version | 当前主体专属 commit-order cursor 分配锁与连续 watermark |
+| `economy_outbox` | event_id、aggregate、aggregate_version、visible_principal、event_version、stream_cursor、payload allowlist、status | 提交后事件与重放；Economy principal projection 的 event_version=stream_cursor，在 head 临界区同时赋值 |
+
+账户余额更新只能通过一个 ledger service。任何业务服务都不得直接改余额或修改历史 entry。每次模型调用必须先通过 authorization 对 allocation 剩余额度做条件预留。
+
+### 5.2 agent 域
+
+| 表/扩展 | 关键字段 | 说明 |
+| --- | --- | --- |
+| `agent_task_meta` 新增 | gross_bounty_micro、settlement_policy、funding_status、settlement_id | `reward` 保留为旧 UI 投影，不是资金真相 |
+| `agent_bounty_allocation` | task/workItem/agent、gross cap、model cost cap、minimum payout、actuals、status、version | 多 Agent/工作项隔离预算 |
+| `agent_task_quote` | quote_id、task/agent/workItem、task_version、task_input_hash、skill_set_hash、model_route_version、token estimates、amounts、price version、expires_at、status | 揭榜报价快照 |
+| `agent_task_settlement` | settlement_id、task_id、escrow_root_id、gross、actual_compute、agent_payout、fee、refund、status、version | 任务级资金投影 |
+| `agent_skill_product` | product_id、creator_agent_id、seller_account=`SYSTEM:SKILL_STORE`、name、status、current_version | 平台自营商品目录；creator 只署名 |
+| `agent_skill_product_version` | product/version、skill_key/version、price、package/manifest_digest、permissions、compatibility、package signature/key、review_status | 不可变商品版本 |
+| `agent_skill_entitlement` | entitlement_id、target_agent_id、product_version、permission_grant_version/digest、capability_epoch、status、order_id、activated_at、version | Agent 商业授权与 capability freshness root |
+| `agent_skill_permission_grant` | order/agent/product_version、grant_version、approved_permissions、grant_digest、buyer、created_at | 下单时不可变买方批准；集合不得扩大 |
+| `agent_skill_installation` | installation_id、agent/order、command_id、attempt/fencing、delivery_epoch、product_version、package/manifest/permissionGrant digest、STARTED_CONFIRMED record/digest、attestation algorithm/key_id/canonical_bytes/hash/signature、status | 外部交付状态；download 与 GET 服务端门禁 current-read exact STARTED record |
+| `agent_durable_command_ack` | target_agent/installation/command/attempt/fence、ack_type/sequence、binding/runtime、delivery_epoch、challenge_request/proof_digest、canonical_request/response_hash、state/version | command dispatch/RECEIVED/STARTED/result 的 durable server ledger；所有写共享全局锁位 |
+| `agent_skill_download_ticket_session` | installation/ticket_or_session、delivery_epoch、lifecycle_status、token_hash/encrypted_response、revoked_at/revoked_reason/revoked_delivery_epoch、version | 生命周期状态与 isolation revocation fence 正交；历史 CONSUMED/EXPIRED row 也必须物理标记 fence |
+| `agent_binding_pop_challenge` | binding/runtime/purpose、challenge_request_id、actor idempotency ref、request_binding/auth_context/request_digest、challenge、ISSUED/CONSUMED/EXPIRED、business request/response hash、issued/expires/consumed_at、version | fresh PoP challenge；同 binding/runtime/purpose 最多一个未消费，业务事务在 binding root 后锁此 row并原子消费，PACKAGE_GET 不复用 |
+| `agent_skill_isolation_attestation` | installation/order/command/attempt/fence/delivery_epoch、binding/runtime/epoch、sequence/previous_digest、ABSENT/QUARANTINED、quarantine_digest、challenge、canonical_bytes/hash/signature、accepted_at | delivery_unknown 的不可变链式隔离证明；证明接受与资金退款分事务，退款须 current-read 此 row 与 snapshot head |
+| `agent_runtime_installed_skill` | binding/runtime、binding_epoch、snapshot_sequence/previous_digest/snapshot_digest、installation/product version、skill version、digests、last_attested_at | 结构化 presence 快照；不替代 abilities |
+
+所有唯一键包含 `tenant_id`、`client_id` 和对应业务 ID；文本 identity 使用既有 byte-exact/canonical 规则。
+
+## 6. 状态机
+
+### 6.1 资金状态独立于任务状态
+
+```text
+unfunded -> funded -> claimed -> accruing -> settlement_pending -> settled
+               |         |          |                 |
+               |         |          |                 +-> disputed
+               +---------+----------+-> refund_pending -> refunded
+```
+
+- `task.status` 表示协作生命周期；`funding_status` 表示资金生命周期。任务 completed 不等于资金 settled。
+- 合法组合使用显式矩阵校验。例如 `open + funded` 合法，`completed + funded` 非法，`completed + settled` 合法。
+- 状态转换使用 CAS 和持久事件版本，禁止“先改任务、后尽力扣款”。
+
+### 6.2 Escrow
+
+```text
+ACTIVE -> PARTIALLY_CAPTURED -> CAPTURED
+   |              |
+   +------------> REFUNDED
+   +------------> EXPIRED（仅未被业务占用时）
+```
+
+任意时刻满足：`gross = captured + refunded + remaining`。
+
+双式 journal 模板冻结为：
+
+```text
+ISSUE_SILVER: SYSTEM:SILVER_ISSUANCE -amount; USER:<jiacn>:AVAILABLE +amount
+RESERVE_BOUNTY: USER:<jiacn>:AVAILABLE -gross; TASK:<taskId>:ESCROW +gross
+CAPTURE_COMPUTE: TASK:<taskId>:ESCROW -compute; SYSTEM:MODEL_COST +compute
+PAY_AGENT: TASK:<taskId>:ESCROW -payout; AGENT:<agentId>:EARNINGS +payout
+CAPTURE_FEE: TASK:<taskId>:ESCROW -fee; SYSTEM:PLATFORM_FEE +fee
+REFUND_BOUNTY: TASK:<taskId>:ESCROW -refund; USER:<jiacn>:AVAILABLE +refund
+RESERVE_SKILL: USER:<jiacn>:AVAILABLE -price; ORDER:<orderId>:ESCROW +price
+CAPTURE_SKILL: ORDER:<orderId>:ESCROW -price; SYSTEM:SKILL_STORE +price
+RECORD_PROVIDER_VARIANCE: SYSTEM:PROVIDER_VARIANCE -variance; SYSTEM:MODEL_COST +variance
+REFUND_SKILL: ORDER:<orderId>:ESCROW -price; USER:<jiacn>:AVAILABLE +price
+REVERSE: 对原 POSTED 交易创建引用原 transactionId 的等额反向新交易；必须由对应 task/order domain command 同事务更新 escrow/settlement/order 投影
+```
+
+MVP 的资金退款只允许发生在 CAPTURE_SKILL 前，直接使用仍在 order escrow 中的 REFUND_SKILL；delivery failure/refund 与 activation/capture 竞争同一 order version。completed/CAPTURE_SKILL 后只允许暂停或撤销 capability，不提供资金退款，任何现有接口请求必须稳定返回 `409 POST_CAPTURE_SKILL_REFUND_NOT_SUPPORTED`，不得从空 escrow 退款或用 generic REVERSE 绕过；若未来支持售后退款，必须另立 SDD 冻结 reversal 资金来源、账本模板和终态。只有完整、平衡且状态为 `POSTED` 的 transaction 参与余额。`ISSUE_SILVER` 只允许 treasury authority，必须携带 campaign/budget business ref、Idempotency-Key、单笔/日累计限额和双人审批；生产只向 allowlisted USER 钱包发行，测试赠送仅允许非生产 scope。`SYSTEM:SILVER_ISSUANCE` 是唯一允许因发行形成负余额的 contra account，发行总量单独对账。数据库/权限层禁止已 POSTED entry/transaction 更新删除，并以唯一业务键、USER/AGENT/业务 escrow 非负约束和 `captured + refunded <= gross` 约束阻止重复结算；`SYSTEM:PROVIDER_VARIANCE` 等受审计系统调整账户可为负，但必须在对账报表单独暴露。
+
+### 6.3 技能订单/授权
+
+```text
+created -> funds_held -> delivering -> completed
+created|funds_held -> cancelled -> refunded
+delivering -> delivery_unknown -> delivering|delivery_failed
+delivery_failed -> delivering（有限重试）|refunded
+
+entitlement: pending_delivery -> active -> suspended -> revoked
+                         |
+                         +-> failed
+```
+
+订单 completed 必须蕴含 entitlement active、签名版本级 attestation 有效、结构化 installedSkills presence 已确认。`completed` 与 capture 前 `refunded` 是竞争同一 order version 的互斥终态；MVP 无 completed 后资金退款转换。
+
+## 7. API contract
+
+### 7.0 通用约定
+
+- 所有本 SDD 新增的对外资金/订单/业务命令写接口使用 `Idempotency-Key` header；旧 `LEGACY_UNFUNDED` create/assign 接口保持既有兼容契约。内部 provider dispatch 是例外：不使用通用 Idempotency-Key，而使用 authorization expectedVersion + ownerEpoch/fencingToken CAS；在 provider 明确支持冻结 key/request 的幂等语义时，可向当前 owner 重发**同一 key、同一 durable canonical request** 的外呼许可，绝不许可新 key 或变更请求。对已有聚合的修改还必须提交字符串 `expectedVersion`，响应返回新版本。幂等记录与业务资金事务同事务从 IN_PROGRESS 写为 COMPLETED，并持久化原 HTTP status + canonical response body/hash；提交后响应丢失时重试原样返回。回滚不遗留已完成记录；跨事务编排只允许 lease 到期后按 business_ref 接管，绝不重做已 POSTED 资金动作。相同 key/相同 hash 重放原结果，相同 key/不同 hash 返回 `409 IDEMPOTENCY_CONFLICT`。
+- 认证顺序：OAuth/API client -> jiacn -> byte-exact canonical Agent ownership -> 业务 ACL；不存在、跨 scope、非 owner 均统一对外 `404 NOT_FOUND_OR_FORBIDDEN`，具体 `AGENT_NOT_OWNED` 只能写入内部审计 reason，不能出现在公共响应。
+- REST/事件中的金额、token 数、数字型 aggregate version/fence、游标和 epoch 时间戳均用十进制字符串；`priceBookVersion` 等内容标识可使用稳定不透明字符串。Agent Protocol v1 envelope 继续遵守既有类型：`schemaVersion/attempt/issuedAt/expiresAt` 是 JSON integer，不套用 REST 字符串规则。错误体为 `{code,message,retryable,currentVersion?}`。
+- `400` 用于结构/范围错误，`401/403` 用于入口认证/authority，`404` 用于 scope 隐藏，`409` 用于状态/CAS/幂等冲突，`422` 用于不可报价/不兼容，`503` 用于功能关闭或 provider 证据不可用。
+
+### 7.1 钱包
+
+#### `GET /economy/accounts/me?currency=SILVER`
+
+返回当前用户钱包：
+
+```json
+{
+  "currency": "SILVER",
+  "availableMicro": "1200000000",
+  "heldMicro": "300000000",
+  "version": "17",
+  "eventCursorWatermark": "901"
+}
+```
+
+认证：当前 OAuth/API client + jiacn。不得查询他人钱包。
+
+#### `GET /economy/ledger`
+
+分页返回当前主体可见流水；只包含业务类型、业务引用、金额、方向、状态和时间，不返回内部对手方敏感信息。游标/版本使用字符串。
+
+#### `GET /economy/operations/{idempotencyKey}`
+
+Idempotency-Key namespace 固定为 `(tenantId,clientId,principalType,principalId,idempotencyKey)`，该 namespace 内 raw key 唯一且不包含 method/path；同一 actor 把同一 key 用于不同 endpoint/Agent/task 时由 canonical request hash 返回 `409 IDEMPOTENCY_CONFLICT`。该 GET 使用当前认证 actor + path key 精确命中唯一记录，返回 `IN_PROGRESS | COMPLETED | FAILED_NO_EFFECT`、canonicalRequestHash、businessRef 和原 response status/body（COMPLETED 时）。其他 actor/scope 可在自己的隔离 namespace 合法使用相同 UUID，且查询彼此记录一律与不存在相同为 404，不泄露冲突。只有该资源明确返回 `FAILED_NO_EFFECT` 才允许 Web abandon 旧 operation 并为同一业务意图生成新 key；IN_PROGRESS 必须继续 same-key 查询/重试，COMPLETED 直接恢复原结果。另提供 `GET /economy/operations?afterOperationCursor=&limit=`，不接受任何本地 operation/key/hash/target 过滤，完全从 authenticated actor 派生 scope，按 server-owned 单调 operationCursor 返回 `{nextOperationCursor,items:[{operationCursor,operationId,operationType,businessRef,state,requestHash,createdAt,completedAt,resultSummary}]}`；limit `1..100`，稳定分页且只含该 actor 可见 server journal。`KEY_LOST_QUARANTINED` UI 只能把此列表作为人工只读审计线索，不得自动关联、恢复、重放或据此创建新 key；解除隔离需恢复原 WebCrypto key或受审计 support resolution。
+
+#### `GET /economy/events?afterCursor=<cursor>&limit=<1..200>`
+
+仅返回当前 OAuth/API client + jiacn 专属 feed 的 allowlisted wallet/order 经济事件，JSON 分页而非 SSE；feed projection 在写入时绑定 principal，读取时不从共享全局流做 ACL 过滤：
+
+```json
+{
+  "events": [
+    {
+      "eventId": "evt_...",
+      "eventType": "bounty.funded.v1",
+      "schemaVersion": "1",
+      "eventVersion": "902",
+      "aggregateType": "BOUNTY",
+      "aggregateId": "task_...",
+      "aggregateVersion": "3",
+      "tenantId": "tenant-id",
+      "clientId": "client-id",
+      "occurredAt": "1788260400000",
+      "streamCursor": "902",
+      "payload": { "taskId": "task_...", "amountMicro": "1000000000" }
+    }
+  ],
+  "nextCursor": "902",
+  "contiguousWatermark": "905"
+}
+```
+
+`afterCursor` 必须是规范十进制字符串；消费者只能推进到实际返回的 `nextCursor`。cursor ahead、retention gap 或无法证明连续性时返回 `409 ECONOMY_RESYNC_REQUIRED`，body 固定含 `{reason,currentCursor,snapshotResource:"/economy/snapshots/current"}`。
+
+#### `GET /economy/snapshots/current`
+
+创建/返回绑定当前 principal 的不可变短时 `snapshotToken`、`eventCursorWatermark`、wallet snapshot 与 collection manifest：`bounties`、`skillOrders`、`entitlements`、`ledgerEntries`。`ledgerEntries` 是该 principal 截至同一 snapshot 事务 cutoff 可见的**全部不可变流水投影**，每项至少含稳定 `transactionId/entryId/businessType/businessRef/direction/amountMicro/status/postedAt`；普通 `/economy/ledger` 不能替代该 cutoff-bound collection。各 collection 通过 `/economy/snapshots/{snapshotToken}/{collection}?cursor=` 完整分页；manifest 固定列出有序 page token、item count、page digest 和 collection digest，page digest=`SHA-256("CYF_ECONOMY_SNAPSHOT_PAGE_V1\0" || JCS(items))`，collection digest=`SHA-256("CYF_ECONOMY_SNAPSHOT_COLLECTION_V1\0" || JCS(按 page 顺序的 {pageToken,itemCount,pageDigest} 数组))`。snapshotToken 绑定 principal、watermark、cutoff 与 materialized item set，过期前内容不变；页面按各 collection 冻结的 stable ID 排序且不得插入/遗漏/重复。客户端必须枚举并校验 manifest 全部 page/count/digest 后，才可从 `eventCursorWatermark` 恢复 feed；因此 gap 内创建的未知 order 或 ledger entry 也能恢复。snapshot materialization 与 watermark 在同一一致性事务完成；禁止用尚未发送/未提交的 cursor 推进客户端。
+
+### 7.2 张榜
+
+#### `POST /agent/tasks`
+
+资金化请求新增下列字段；只有提交 `grossBountyAmountMicro` 时才要求 Header `Idempotency-Key: <uuid>`。未提交该字段的旧请求继续按原 DTO 创建 `LEGACY_UNFUNDED`，保留旧 `reward` 展示语义且不创建任何 SILVER/escrow；提交资金字段但缺 header/policy 时 fail closed：
+
+```json
+{
+  "title": "整理聚义厅回归测试",
+  "description": "...",
+  "requiredAbilities": ["code-edit", "test"],
+  "requiredSkillRequirements": [
+    { "skillKey": "repo-test", "versionRange": ">=2.1.0 <3.0.0" }
+  ],
+  "grossBountyAmountMicro": "1000000000",
+  "settlementPolicy": "GROSS_INCLUSIVE"
+}
+```
+
+成功返回现有 `AgentTaskDTO` 字段，并新增 `funding` 投影。余额不足返回 `409 INSUFFICIENT_SILVER`；重复相同 key/相同请求返回原结果，不同请求返回 `409 IDEMPOTENCY_CONFLICT`。
+
+### 7.3 报价
+
+#### `POST /agent/tasks/{taskId}/quotes`
+
+必须携带 actor-scoped `Idempotency-Key`；同 actor/key/request hash 返回原 quoteId、原 exact response 与相同 expiresAt，不生成第二行 quote/event；不同 hash 返回 `IDEMPOTENCY_CONFLICT`。
+
+```json
+{
+  "agentId": "canonical-agent-id",
+  "workItemId": null,
+  "modelPreference": { "provider": "openai", "model": "configured-model" },
+  "contextRevision": "42",
+  "minimumAcceptedPayoutMicro": "700000000"
+}
+```
+
+响应：
+
+```json
+{
+  "quoteId": "q_...",
+  "taskId": "...",
+  "agentId": "canonical-agent-id",
+  "taskVersion": "8",
+  "priceBookVersion": "pb_...",
+  "taskInputHash": "sha256:...",
+  "skillSetHash": "sha256:...",
+  "modelRouteVersion": "route_...",
+  "estimatedTokens": {
+    "input": "18000",
+    "cachedInput": "4000",
+    "output": "6000",
+    "reasoning": "3000"
+  },
+  "estimatedComputeMicro": "82000000",
+  "worstComputeMicro": "160000000",
+  "platformFeeMicro": "30000000",
+  "grossAllocationMicro": "1000000000",
+  "estimatedAgentPayoutMicro": "888000000",
+  "worstAgentPayoutMicro": "810000000",
+  "minimumAcceptedPayoutMicro": "700000000",
+  "budgetHeadroomMicro": "110000000",
+  "verifiedSkillMatch": true,
+  "advisoryAbilityMatch": true,
+  "recommendation": "recommended",
+  "reasonCodes": ["VERIFIED_SKILLS_MATCH", "ADVISORY_ABILITY_MATCH", "BUDGET_COVERED"],
+  "expiresAt": "1788260400000"
+}
+```
+
+报价不得暴露其他 Agent 私有成本、prompt、模型输出或凭据。
+
+### 7.4 揭榜
+
+#### `POST /agent/tasks/{taskId}/claim`
+
+Header: `Idempotency-Key: <uuid>`
+
+```json
+{
+  "agentId": "canonical-agent-id",
+  "quoteId": "q_...",
+  "taskVersion": "8",
+  "allowQueue": false
+}
+```
+
+错误：`QUOTE_EXPIRED`、`QUOTE_SCOPE_MISMATCH`、`TASK_VERSION_CONFLICT`、`TASK_ALREADY_CLAIMED`、`VERIFIED_SKILL_REQUIREMENT_MISMATCH`、`BUDGET_NOT_COVERED`、`NOT_FOUND_OR_FORBIDDEN`。
+
+兼容：资金化单 Agent 任务调用旧 `/assign` 时返回 `QUOTE_REQUIRED`；funded group assign 和 `/auto-assign` 返回 `FUNDED_TEAM_NOT_SUPPORTED`。旧无资金任务继续按原单/多人/auto 接口工作。Web 在同一发布中对 funded task 隐藏多人和自动点将入口并显示明确原因。
+
+### 7.5 预算与结算
+
+#### `POST /agent/tasks/{taskId}/budget/top-ups`
+
+Body: `{ "amountMicro":"200000000", "requestedModelCapIncreaseMicro":"190000000", "expectedSettlementVersion":"5" }`。仅张榜人可调用；在同一 task escrow root 创建新 POSTED reserve transaction + immutable funding lot 并增加 escrow gross 投影，按冻结 fee schedule 计算 incremental fee；model cap 增量不得超过 `amount - incrementalFee`。返回 funding/settlement 新版本。错误：`INSUFFICIENT_SILVER`、`TASK_TERMINAL`、`VERSION_CONFLICT`。
+
+#### `GET /agent/tasks/{taskId}/settlement`
+
+张榜人可看完整 funding/allocation/usage/ledger refs；成员只能看公开总额和自己的 allocation/usage；非成员统一隐藏。响应含字符串 `settlementVersion`、`gross/compute/fee/payout/refund/remainingMicro`、authorization counts 和状态。
+
+#### Provider Egress wrapping-key 生命周期（内部管理契约）
+
+`egressKeyId` 必须是 `provider_egress_wrapping_key` 的全局唯一不可复用版本 ID；registry 正常状态仅允许 `ACTIVE_WRAP_UNWRAP → RETIRED_UNWRAP_ONLY → DESTROY_PENDING → DESTROYED`；紧急分支从任一未销毁状态执行 `COMPROMISE_PENDING → COMPROMISED_BLOCKED → DESTROY_PENDING → DESTROYED`，且不得返回 wrap/unwrap 状态。正常轮换不得改变 `securityEpoch`；进入 COMPROMISE_PENDING 必须在 key-root 事务中先原子递增 securityEpoch 并提交 deny fence。每个 provider/account namespace 最多一个 ACTIVE 版本；正常轮换在一个受审计事务中启用新版本并把旧版本改为 RETIRED_UNWRAP_ONLY，旧版本禁止 wrap 新 blob，但 Broker 对既有 blob 的 unwrap 必须保持到 `requiredUnwrapUntil=max(引用该 key 的 STAGED.stagedExpiresAt, FROZEN.authorization.providerReplaySafeUntil)`。`maxRequiredUnwrapUntil` 只是可重建投影；进入 DESTROY_PENDING/DESTROYED 前必须按 key root 锁定并 current-read 全部引用，确认无未过期 STAGED、无 `RESERVED/DISPATCHED/UNKNOWN` 或其他仍需 reconciliation 的 FROZEN authorization，且 `now > requiredUnwrapUntil`，再经独立双人审批；KMS policy 禁止在服务 registry 达到 DESTROYED 前 disable/delete key material。
+
+Gateway 上传 blob 和 authorization freeze 都只接受 ACTIVE；dispatch、Broker blob GET、lease 与 send-start 都必须先按全局锁序锁/current-read同一 key root，只接受 ACTIVE 或 RETIRED_UNWRAP_ONLY、且 lease/authorization 冻结的 securityEpoch 必须等于 registry current epoch，并不得超过对应 frozen deadline。成功的 blob GET 事务提交是 unwrap authorization 的线性化点：它创建绑定 exact Broker workload identity、authorizationId、egressLeaseId、blobVersion、egressKeyId/securityEpoch 与短 expiry 的 audited one-use authorization row；同一 lease/blob GET 重放只能返回同一 authorizationId，不得生成第二个。Broker worker 本身没有 raw KMS decrypt IAM；仅受管 unwrap adapter 可在访问 KMS 前把该 row 从 `ISSUED` 原子 CAS 为 `CONSUMED_BEFORE_KMS`，并只对冻结 envelope/AAD 发起一次 KMS unwrap 尝试。CAS 或 KMS 响应丢失均不得重用该 authorization、不得第二次调用 KMS；Broker 放弃该 lease，待安全 EXPIRED 后以新 lease/authorization 恢复。因此“一次性”是受信 Broker/unwrap service boundary 内可审计的 at-most-once grant，不宣称脱离该边界的密码学 one-time ciphertext。若随后发生 compromise，fence 前已 CAS 消费的 decrypt 可能完成，但 send-start 必须再次过 key fence。`COMPROMISE_PENDING` 以 provider key root 作为串行化根；事务持有该 root 后，直接按完整 PK 升序锁全部关联旧 epoch CLAIMED lease，在**同一事务**递增 securityEpoch、置 deny 并把每行物理 CAS 为 `REVOKED_BEFORE_SEND` 后才可提交，任一更新失败整体回滚。该事务不读取或修改 authorization/blob/dispatch，故依全局锁序允许跳过这些中间表；若实现需要读取任一中间表，必须先按 authorization→dispatch→blob 冻结顺序取锁后才能锁 lease，禁止 key→lease→authorization/blob 回锁。任何后续 blob GET/send-start 返回 `EGRESS_WRAPPING_KEY_BLOCKED`，Broker 收到拒绝或 revoke push 后必须在 socket write 前销毁 plaintext；只有 fence 线性化前已 committed SEND_STARTED 的 lease 保留“可能已调用”证据。随后转 `COMPROMISED_BLOCKED` 并通过 outbox 收敛：从未 dispatch/send-start 的 RESERVED 可证明未使用后 void；任何已有 dispatch、SEND_STARTED 或 UNKNOWN 证据的 authorization 保持 UNKNOWN，只能使用不需要该 key 的 provider status API或验证通过的 provider-signed callback 收据对账，deadline 后转 CLOSED_SYSTEM_RISK，由 SYSTEM variance 承担。禁止在 compromise fence 后签发新的 blob GET/unwrap authorization、导出 DEK、生成新 key 重放或修改 frozen request/key envelope；fence 前已授权 decrypt 仅可在受管内存完成并随后零化，绝无 send permission。所有状态转换、unwrap authorization/消费结果、引用扫描摘要、审批者和 KMS policy verifier 结果写不可变审计记录。
+
+#### `POST /internal/llm/provider-invocation-blobs`
+
+仅 LLM Gateway service identity。Body exact 为 `{invocationId,requestCiphertext,nonce,keyEnvelope,egressKeyId,providerAccountNamespaceId,providerOperationNamespace,requestDigest,plaintextSize}`：requestCiphertext/keyEnvelope 使用无 padding base64url，nonce 是 12 bytes/16 chars，requestCiphertext 是随机 AES-256 DEK 加密并含 128-bit GCM tag；GCM AAD exact 为 RFC8785 JCS `{tenantId,clientId,invocationId,requestDigest,egressKeyId,providerAccountNamespaceId,providerOperationNamespace}`，scope 来自认证上下文并必须与 AAD 相等。keyEnvelope 是 active Broker wrapping key `egressKeyId` 对该 DEK 的受管封装并绑定同一 AAD，服务只校验 envelope 格式/key registry 状态，Broker unwrap 后再次验证；plaintextSize 为十进制字符串且 `1..8388608`；`requestDigest=SHA-256("CYF_PROVIDER_REQUEST_V1\0" || canonical application request bytes)`。canonical application request bytes 固定为 RFC8785 JCS exact closed `{canonicalizerVersion:1,method,path,query:[{name,value}],headers:[{name,value}],bodyBase64url}`：method 大写，path 是冻结 provider operation 的 byte-exact path，query 按 byte-exact `(name,value)` 排序，headers 仅含 route registry 明确列出的非秘密语义头且 name 小写排序，body 使用无 padding base64url；Authorization/API key、trace header 等 transport-only 字段不得进入。每个资金化 route registry 条目必须冻结 canonicalizer、provider account/operation namespace、幂等覆盖范围、`providerIdempotencyRetentionMillis`、`replaySafetyMarginMillis` 和 UNKNOWN reconciliation SLA；只有 `retention >= maxAuthorizationLifetime + reconciliationSla + clockSkewAllowance + safetyMargin` 才可资金化，否则真实扣费 fail closed。authorization 创建时以服务端时间保守冻结 `providerReplaySafeUntil = authorizationCreatedAt + providerIdempotencyRetentionMillis - replaySafetyMarginMillis`（即使 provider 从首次调用才开始计 retention，也不得把 deadline 后移），所有 dispatch/replay grant 必须 current-read 验证 `now < providerReplaySafeUntil`。Economy 同时从受信 route registry 生成 immutable RFC8785 JCS exact closed `egressDescriptor={schemaVersion:1,provider,providerBaseUrlId,providerAccountNamespaceId,providerOperationNamespace,method,path,queryAllowlist,semanticHeaderAllowlist,providerIdempotencyHeaderName,providerIdempotencyKey,allowedActualModelIds,tokenCeilings,requestCanonicalizerVersion,requestPolicyVersion,routeDigest,modelRouteVersion,priceBookVersion}`，数组 byte-exact 排序去重，`egressDescriptorDigest=SHA-256("CYF_PROVIDER_EGRESS_DESCRIPTOR_V1\0" || JCS(egressDescriptor))`。encrypted request 的 headers 禁止包含 Authorization/API key/provider idempotency header；Broker 必须用 descriptor 指定的 trusted adapter 解析并验证 method/path/query/semantic headers/body 中的 requested model 与 token ceilings，复算 requestDigest，随后由 Broker 注入 descriptor 冻结的 provider credential 与 idempotency key。任一字段/adapter policy 不匹配返回 `EGRESS_REQUEST_POLICY_MISMATCH` 且绝不外呼。同 `(scope,invocationId)` + 同 digest 幂等返回同结果，不同 digest 返回 `409 PROVIDER_BLOB_CONFLICT`。成功返回 `{providerRequestBlobRef,invocationId,egressKeyId,providerAccountNamespaceId,providerOperationNamespace,requestDigest,plaintextSize,state:"STAGED",blobVersion,stagedExpiresAt}`；STAGED 最长 10 分钟未绑定即清理，FROZEN 不可修改。若正常轮换后同 invocation 命中使用 RETIRED key 的 STAGED blob，上传重放仍返回原 row，但 authorization freeze 必须返回 `409 EGRESS_WRAPPING_KEY_RETIRED_REUPLOAD_REQUIRED`；Gateway 只能先安全 abandon，再以新 invocationId、当前 ACTIVE key 和新的未使用 provider idempotency key 重建，不得覆盖旧 row。稳定错误：`PROVIDER_BLOB_TOO_LARGE/PROVIDER_BLOB_ENCODING_INVALID/PROVIDER_BLOB_NOT_FOUND_OR_FORBIDDEN`。
+
+#### `POST /internal/llm/provider-invocation-blobs/{providerRequestBlobRef}/abandons`
+
+仅 blob 冻结的稳定 `creatorServiceId` Gateway service group；instance 只是 `creatorOwnerId`。Body exact `{expectedBlobVersion,expectedCreatorOwnerEpoch,claimantInstanceId}`；当前 creator owner 可直接调用，owner lease 过期后同 service group 可在该事务 CAS `creatorOwnerEpoch+1` 接管，其他主体禁止。事务按 provider wrapping-key security root→invocation blob 锁序，且只允许未绑定 authorization、无 dispatch/outbox/egress lease 的 STAGED row CAS 为 ABANDONED。相同 expected version 的同结果重放返回原 ABANDONED ACK；FROZEN/已绑定或存在任何外呼证据返回 `409 PROVIDER_BLOB_ABANDON_FORBIDDEN`。ABANDONED ciphertext 按审计保留策略清理但 invocationId 永不复用；调用方必须创建全新 invocationId/provider idempotency key/blob。
+
+#### `GET /internal/llm/provider-invocation-blobs/{providerRequestBlobRef}`
+
+Query 必须含 `authorizationId/egressLeaseId`；仅 Provider Egress Broker mTLS identity。服务按 provider wrapping-key security root→authorization→invocation blob→egress lease→unwrap authorization 锁序 current-read，要求 key registry 与 blob 的 egressKeyId 精确匹配且状态为 ACTIVE_WRAP_UNWRAP 或 RETIRED_UNWRAP_ONLY、lease 为当前 broker、CLAIMED、未过期，精确绑定 authorization/dispatch ownerEpoch/fence/version/requestDigest，authorization 为 DISPATCHED/UNKNOWN 且 `now < providerReplaySafeUntil`、blob FROZEN，且 lease/authorization/key registry 的 `egressKeySecurityEpoch` exact 相等，才创建或幂等读取唯一 `(egressLeaseId,blobVersion)` 的 `ISSUED` unwrap authorization，并返回 `{requestCiphertext,nonce,keyEnvelope,unwrapAuthorizationId,egressKeyId,egressKeySecurityEpoch,providerAccountNamespaceId,providerOperationNamespace,requestDigest,plaintextSize,blobVersion,egressLeaseUntil,unwrapAuthorizationExpiresAt}`。该响应事务提交即为本次 Broker decrypt authorization 的线性化点；同 broker/lease/blob 的 GET 重放返回同一 ID，其他主体不可转让。Broker worker 无 raw KMS decrypt IAM；仅受管 unwrap adapter 可调用 `POST /internal/llm/provider-unwrap-authorizations/{unwrapAuthorizationId}/consume`，body exact `{authorizationId,egressLeaseId,blobVersion,requestDigest,egressKeySecurityEpoch}`。consume 事务按 key root→authorization→blob→egress lease→unwrap authorization current-read，复核同一 Broker workload、CLAIMED/未过期、key 尚为 ACTIVE/RETIRED 且 epoch exact 后 CAS `ISSUED→CONSUMED_BEFORE_KMS`，返回 frozen `kmsKeyRef/keyEnvelope/AAD` 给同一进程内 adapter；adapter 只允许随后发起一次 KMS unwrap attempt并写不可变 attempt digest。consume/KMS response 丢失时不得重置或重用该 row，必须放弃 lease；adapter 在任何未进入 committed SEND_STARTED 的失败、超时或进程关闭路径都必须 finally 零化已取得的 DEK/plaintext受管缓冲，重启不得恢复明文；因此是受信 service boundary 内 audited at-most-once，不是密码学 one-time ciphertext。Gateway owner 永远不可读/unwrap；旧/过期 broker、跨 scope 或不存在统一 `404 PROVIDER_BLOB_NOT_FOUND_OR_FORBIDDEN`；digest/state 冲突为 `409 PROVIDER_BLOB_DIGEST_MISMATCH|PROVIDER_BLOB_NOT_FROZEN|EGRESS_LEASE_INVALID|EGRESS_WRAPPING_KEY_BLOCKED|UNWRAP_AUTHORIZATION_CONSUMED`。
+
+#### `POST /internal/agent/tasks/{taskId}/usage-authorizations`
+
+仅 LLM Gateway service identity。Body exact fields 为 `{workItemId,agentId,invocationId,providerIdempotencyKey,providerRequestBlobRef,requestDigest,tokenCeilings,expectedExecutionEpoch,expectedAllocationVersion,requestedOwnerLeaseMillis}`；ownerId 从 mTLS/service identity + Gateway instance identity 派生，不能由 body 冒充。requested lease 为 `5000..30000` ms，服务端封顶 30 秒；不得由调用方扩大 route/model/price 范围。服务按全局锁序锁 task root + funding/allocation，复核任务可执行、executionEpoch、escrow ACTIVE、allocation/accepted quote 有效且 authorization gate 开启，然后从 accepted quote 与受信 route registry 服务端派生并冻结 `priceBookVersion/modelRouteVersion/routeDigest/provider/providerAccountNamespaceId/providerOperationNamespace/allowedActualModelIds/agent/workItem`；调用方若传兼容副本，必须 byte-exact 相等，否则 `409 AUTHORIZATION_ROUTE_MISMATCH`。请求 ceiling 只能缩小服务端派生上限。创建事务按 provider wrapping-key security root→task root→funding/allocation→escrow/authorization→invocation blob 顺序取锁，复核 blob 的 egressKeyId 对应 registry row 为 ACTIVE_WRAP_UNWRAP 且 provider account/operation namespace 与服务端派生 route byte-exact 相等，并冻结 current `egressKeySecurityEpoch`，再原子 FROZEN blob + reserve；若 key 已 RETIRED 返回 `409 EGRESS_WRAPPING_KEY_RETIRED_REUPLOAD_REQUIRED` 且不 reserve。成功返回 `authorizationId/providerRequestBlobRef/requestDigest/ownerId/ownerEpoch="1"/ownerLeaseUntil/fencingToken/authorizationVersion`、冻结 route 摘要、egressDescriptorDigest、providerIdempotencyKey、reservedCost 和 expiresAt。key 按 `(provider,providerAccountNamespaceId,providerOperationNamespace,providerIdempotencyKey)` 唯一且不可改；Gateway owner 作为 ACL/fence 字段而非 provider 去重 namespace。冲突/额度不足为 `409`。
+
+#### `GET /internal/agent/tasks/{taskId}/usage-authorizations/{authorizationId}`
+
+仅当前持有有效 owner lease/fence 的 Gateway identity。返回冻结的 invocation/provider namespace/idempotency key、providerRequestBlobRef/requestDigest、ownerEpoch/leaseUntil/fencingToken、`providerReplaySafeUntil`、state/version、providerRequestId/receipt 状态和 `nextAction`。`RESERVED` 只返回 `CALL_DISPATCH_ENDPOINT`。`DISPATCHED/UNKNOWN` 仅当 current owner 精确 epoch/fence 已有 committed dispatch record 且 `now < providerReplaySafeUntil` 时仍只返回 `CALL_DISPATCH_ENDPOINT`，由 dispatch endpoint 重新复核并排队 Broker replay；当前 tuple 无 record 也返回 `CALL_DISPATCH_ENDPOINT` 以先建 record。route 不安全或 replay deadline 已到则只返回 `RECONCILE_ONLY`，绝不直接返回 provider call permission；`CONSUMED/VOIDED/CLOSED_SYSTEM_RISK` 只返回终态。Gateway 重启后必须先读此资源。`POST /internal/agent/tasks/{taskId}/usage-authorizations/{authorizationId}/owner-claims` body exact 为 `{expectedAuthorizationVersion,expectedOwnerEpoch,claimantInstanceId,requestedOwnerLeaseMillis}`；仅同 Gateway service group、`now >= ownerLeaseUntil` 时按 authorizationId→blobRef 锁序 CAS，ownerId 从认证主体+claimantInstanceId 派生，ownerEpoch/fencingToken 各 +1，lease 封顶 30 秒，并返回完整 frozen refs/state/version/nextAction。`owner-renewals` body exact 为 `{expectedAuthorizationVersion,expectedOwnerEpoch,fencingToken,requestedOwnerLeaseMillis}`，仅当前 owner 且 lease 未过期可把 lease 延到 `now+<=30000ms`，不得改变 epoch/fence。Gateway owner 无权调用 blob read；只有后述持 active egress lease 的 Broker 可取得 encrypted envelope 并在受管进程内 unwrap/decrypt。claim/renew/recovery/dispatch 响应都不得包含 plaintext、key envelope 或 transport secrets。绝不创建新 key 覆盖未知调用。
+
+#### `POST /internal/agent/tasks/{taskId}/usage-authorizations/{authorizationId}/dispatch`
+
+仅当前 Gateway owner identity。此 endpoint 不使用通用 Idempotency-Key。Body exact 为 `{expectedAuthorizationVersion,ownerEpoch,fencingToken,invocationId,requestDigest}`；按全局锁序锁 provider wrapping-key security root、task root、funding/allocation、authorization、invocation blob，复核 key state 为 ACTIVE_WRAP_UNWRAP 或 RETIRED_UNWRAP_ONLY且 current securityEpoch 等于 authorization/blob 冻结值、owner lease/epoch/fence、executionEpoch、任务可执行、escrow ACTIVE、blob FROZEN/digest、预算，并强制 `now < providerReplaySafeUntil` 且不存在 active egress lease。若 deadline 已到：无历史 dispatch/outbox/egress lease 的 RESERVED 可走确认未外呼后的 void；DISPATCHED/UNKNOWN 或已有任一 dispatch record 只能 `RECONCILE_ONLY`，不得 replay，最终按 receipt/provider proof 或 `CLOSED_SYSTEM_RISK` 收敛。deadline 内若为 RESERVED 则 CAS 为 DISPATCHED；若已 DISPATCHED/UNKNOWN，仅允许当前 owner 为同一 blob/key 排队 replay。事务内插入或幂等读取唯一 `(authorizationId,ownerEpoch,fencingToken)` immutable dispatch record，并在同事务写唯一关联 provider-egress outbox；只有 record+outbox 已提交才返回 `dispatchDecision=QUEUED_FOR_PROVIDER_EGRESS` 与 `dispatchVersion/egressOutboxId`，**该响应不含 provider credential、blob envelope 或任何直接外呼权限**。首次 CAS、响应丢失 recovery、owner-claim 后重新调用都只幂等返回同 record/outbox；owner-claim 本身只返回 `nextAction=CALL_DISPATCH_ENDPOINT`。资金化 route registry 只允许 provider 明确保证冻结 key 下相同请求重放至多执行/计费一次；否则真实扣费 fail closed。owner lease/fence 失效者只能 RECONCILE_ONLY。receipt 入账后 outbox/dispatch replay 只返回已完成结果。
+
+#### `POST /internal/llm/provider-egress-leases`
+
+仅 Provider Egress Broker mTLS identity；Gateway 不可调用。Body exact 为 `{authorizationId,dispatchOwnerEpoch,dispatchFencingToken,dispatchVersion,egressOutboxId,requestDigest}`；`brokerInstanceId` 只从 mTLS workload identity 派生，body 不得覆盖。事务按 provider wrapping-key security root→task root→funding/allocation→authorization→invocation blob→egress lease 锁序 current-read，复核 key 状态为 ACTIVE_WRAP_UNWRAP 或 RETIRED_UNWRAP_ONLY、current securityEpoch 等于 authorization/blob 冻结值、exact committed dispatch/outbox、当前 owner tuple 与有效 owner lease、任务/escrow 可执行、无 active egress lease、`now < providerReplaySafeUntil`；创建绑定该 `egressKeySecurityEpoch` 的单次 `CLAIMED` lease，`egressLeaseUntil=min(now+5000ms,ownerLeaseUntil,providerReplaySafeUntil)`，若剩余不足 1000ms 则拒绝 `EGRESS_LEASE_WINDOW_TOO_SHORT`；服务端返回 `{egressLeaseId,egressLeaseUntil,egressLeaseTtlMillis,authorizationId,dispatchVersion,providerRequestBlobRef,requestDigest,egressKeySecurityEpoch,egressDescriptor,egressDescriptorDigest}`，其中 ttl 为响应生成时到 leaseUntil 的保守整数毫秒。Broker 在收到响应时取本地 `monotonicNow`，以 `localSendDeadline=monotonicNow+max(0,egressLeaseTtlMillis-250ms)` 冻结本地截止；ttl≤250ms 直接放弃。同 outbox+broker 同字节重放返回原 active lease；先前 lease 为 EXPIRED 且从未 SENT/RECEIPTED 时，同一 outbox 可由当前 Broker 创建新 lease，其他冲突为 `409 EGRESS_LEASE_CONFLICT`；稳定错误另含 `EGRESS_DEADLINE_EXPIRED/EGRESS_OWNER_FENCED/EGRESS_ALREADY_RECEIPTED`。active lease 存在时 owner-claim、cancel、void、CLOSED 和新 dispatch 不得越过；无 receipt 到期后 authorization 转/保持 UNKNOWN 并允许同 key 新 owner 排队恢复。Broker 取得 lease 后调用 blob GET，在受管内存中 unwrap/decrypt，按 egressDescriptor 验证并复算 digest。**第一字节离开前**必须调用 `POST /internal/llm/provider-egress-leases/{egressLeaseId}/send-starts`，body exact `{expectedLeaseVersion,requestDigest,egressDescriptorDigest,egressKeySecurityEpoch}`；事务按 provider wrapping-key security root→authorization→dispatch record→invocation blob→egress lease current-read，复核 Broker mTLS、key state 为 ACTIVE_WRAP_UNWRAP 或 RETIRED_UNWRAP_ONLY、registry/authorization/blob/lease/body securityEpoch exact 相等、CLAIMED、deadline/owner/fence且 server-side 剩余窗口至少 500ms 后原子置 `SEND_STARTED` 并把 authorization 标记为外呼结果未知门禁，响应 exact `{egressLeaseId,leaseVersion,state:"SEND_STARTED",sendStartedAt,sendWindowTtlMillis}`。若 key state/epoch 已被 compromise fence，事务把仍为 CLAIMED 的 lease CAS 为 `REVOKED_BEFORE_SEND`，绝不产生 SEND_STARTED/send window，并返回 `409 EGRESS_WRAPPING_KEY_BLOCKED`；Broker 必须零化已解密 plaintext 且不得 socket write。Broker 在 ACK 到达时重新取 monotonicNow，并以 `min(localSendDeadline,monotonicNow+max(0,sendWindowTtlMillis-100ms))` 收紧截止；只有 committed ACK、sendWindowTtlMillis>100ms 且本地 monotonicNow 未过收紧截止才可 socket write。从 SEND_STARTED 起，即使 lease 时间到，owner claim/cancel/void/CLOSED 也只能保持/转 UNKNOWN，绝不能普通释放或覆盖。写出完成调用 `POST /internal/llm/provider-egress-leases/{egressLeaseId}/sent`，body exact `{expectedLeaseVersion}`，做 `SEND_STARTED→SENT` 并返回 `{egressLeaseId,leaseVersion,state:"SENT",sentAt}`；响应丢失仍以 SEND_STARTED 作为 receipt-valid 历史证据。未 send-start 的 CLAIMED lease 可由 `POST /internal/llm/provider-egress-leases/{egressLeaseId}/expire` body exact `{expectedLeaseVersion,egressKeySecurityEpoch}` 处理；事务必须按 provider wrapping-key security root→authorization→invocation blob→egress lease current-read。仅 key state/epoch 仍匹配且普通 deadline 到期时做 CLAIMED→EXPIRED；若 key 为 COMPROMISE_PENDING/COMPROMISED_BLOCKED 或 epoch 漂移，只能做 CLAIMED→REVOKED_BEFORE_SEND 并返回该审计终态，绝不写 EXPIRED。compromise 主事务已物理收敛全部当时 CLAIMED，expire 是幂等补偿。SEND_STARTED 不得 expire/revoke 为未调用。Broker 是 provider credentials 和 provider-domain network policy 的唯一主体；任何 Gateway/普通服务直接 egress 都由基础设施 ACL fail closed。provider response/receipt 由 Broker 或带可验证 provider callback proof 的入口提交；Gateway identity 永无 receipt authority。
+
+#### `POST /internal/agent/tasks/{taskId}/usage-authorizations/{authorizationId}/void`
+
+仅 Gateway reconciliation identity。普通 void 只允许有本地未 dispatch 证明的 `RESERVED -> VOIDED_CONFIRMED_UNUSED`。另设受审计 reconciliation command：有效 receipt 执行 `DISPATCHED|UNKNOWN -> CONSUMED`；provider 可验证未执行证明 + 双人审批允许 `DISPATCHED|UNKNOWN -> VOIDED_CONFIRMED_UNUSED`。若 provider 在冻结 reconciliation SLA 后仍无法提供 receipt/状态/未执行证明，双人审批可转 `DISPATCHED|UNKNOWN -> CLOSED_SYSTEM_RISK`：用户计费固定为 0、释放全部 reservation、记录 provider request/key 与 unresolved liability，任务可继续结算；任何迟到 receipt/账单只记 `SYSTEM:PROVIDER_VARIANCE`，永不重开用户收费。所有转换都锁 task root/allocation/authorization，在同一事务释放预算并写 decision/outbox。
+
+#### `POST /internal/agent/tasks/{taskId}/usage-receipts`
+
+仅 Provider Egress Broker mTLS identity，或验证通过的 provider-signed callback identity；Gateway identity 禁止。Body 含 authorizationId、invocationId、`dispatchOwnerEpoch`、`dispatchFencingToken`、`egressLeaseId`、providerRequestId、actualModelId 和 token classes，不接受客户端 cost。receipt 必须匹配该 authorization 的任一 immutable `llm_usage_dispatch_record(ownerEpoch,fence,requestDigest)` 与其 SEND_STARTED/SENT egress lease；owner takeover 后合法的旧 dispatch receipt 仍可结算，未匹配历史 dispatch 或 requestDigest/key/provider namespace 的 receipt 拒绝。返回 providerComputedCost、consumedUserCharge、providerVariance、releasedReservation 和状态；重复凭证返回原结果，冲突凭证为 `409 RECEIPT_CONFLICT`。
+
+现有 `report/review` 合法状态转换只触发结算编排，不接收金额。结算事务先按 3.4 原子 void 全部 RESERVED；void 后若仍存在 DISPATCHED/UNKNOWN authorization，则返回/保持 `SETTLEMENT_EVIDENCE_PENDING`；转为 `CONSUMED/VOIDED_CONFIRMED_UNUSED/CLOSED_SYSTEM_RISK` 后才解除该门禁。
+
+### 7.6 技能市场
+
+- `GET /agent/skill-products`、`GET /agent/skill-products/{productId}`：公开已审核的平台自营目录；分页/价格/兼容性字段稳定，不暴露包下载地址。
+- `POST /internal/agent/skill-products`、`POST /internal/agent/skill-products/{productId}/versions`：仅平台发布 authority；版本含 immutable digests/permissions/review 与 3.5 冻结的 package signature/key，已售版本不可覆盖。
+- `POST /agent/skill-orders/quotes`：要求 actor-scoped `Idempotency-Key`；同 request hash 返回原 quoteId/相同 expiresAt。body `{productVersionId,targetAgentId,expectedAgentVersion}`；仅目标 Agent owner。返回 quoteId、`priceMicro`、商品 manifest permission set、平台 policy 可批准子集、package signature/key、兼容性、attestation/capability protocol version、expiresAt 和 reason codes。
+- `POST /agent/skill-orders`：body `{quoteId,productVersionId,targetAgentId,expectedPriceMicro,expectedAgentVersion,approvedPermissions:[...]}`；服务将 byte-exact 排序去重的批准集合冻结为 `permissionGrantVersion/permissionGrantDigest`，集合超出 quote/platform/manifest 时拒绝。成功返回 orderVersion、permission grant 摘要、escrow ref 和 `funds_held`。错误：`PRICE_CHANGED`、`PERMISSION_SET_CHANGED`、`PERMISSION_NOT_ALLOWED`、`NOT_FOUND_OR_FORBIDDEN`、`DELIVERY_UNSUPPORTED`、`ALREADY_ENTITLED`。
+- `GET /agent/skill-orders/{orderId}`：买方可见完整购买/交付状态并返回同一只读一致性事务取得的 `eventCursorWatermark`；平台运营可见审计字段；其他主体统一隐藏。
+- `GET /agent/{agentId}/skill-entitlements`：仅 Agent owner；分别返回 pending/active/suspended/revoked、精确 product/skill versions、permissionGrantVersion/digest、capabilityEpoch 和 entitlementVersion。
+
+私有技能包下载采用一次性 ticket 换 mTLS-bound session：`downloadTicket` 是 UTF-8 RFC8785 JCS exact wrapper 的无 padding base64url，wrapper exact `{protocolVersion:1,algorithm:"Ed25519",keyId,payload,signature}`；payload 恰含 `tenantId/clientId/canonicalAgentId/bindingId/runtimeInstanceId/bindingEpoch/orderId/installationId/commandId/attempt/fencingToken/deliveryEpoch/productVersionId/packageSize/packageDigest/manifestDigest/permissionGrantVersion/permissionGrantDigest/packageSignatureDigest/publisherKeyRecordDigest/permissionsDigest/compatibilityDigest/ticketId/issuedAt/expiresAt`，signature 为无 padding base64url并签署 `CYF_SKILL_DOWNLOAD_TICKET_V1\0 || JCS(payload)`，最长 60 秒。`POST /internal/agent/skill-installations/{installationId}/download-sessions` 仅 payload 指定的 active binding/runtime mTLS identity，且必须携 `X-CYF-Binding-Proof` purpose=DOWNLOAD_SESSION；body exact `{downloadTicket}`，事务锁 publisher security→order→binding/key→binding PoP challenge→runtime→snapshot→installation→durable command/ACK→skill isolation proof→entitlement→download ticket/session，复核商品/key、entitlement pending、installation status 为 `DELIVERING|DOWNLOADING`、当前 snapshot/installation 未被隔离、exact `STARTED_CONFIRMED` record 已 committed且 command/attempt/fence/deliveryEpoch/commandEnvelopeDigest/downloadTicketDigest/start proof全部匹配、ticket无 revocation fence且 ticket deliveryEpoch 等于 installation current deliveryEpoch、package provenance/permission/compatibility digests/current binding epoch 后原子消费 ticketId并返回 `{downloadSessionId,downloadSessionToken,deliveryEpoch,expiresAt,packageSize,packageDigest,manifestDigest}`；token 为 256-bit random无 padding base64url，保存 token hash用于认证，并以 server KMS + AAD `{installationId,downloadSessionId,deliveryEpoch,mtlsIdentityDigest,expiresAt}` 加密保存原 token/原响应以支持 byte-identical replay，session 最长 5 分钟。同 ticket + 同 identity 的 byte-identical POST 在 session 有效时解密返回原 session，不同主体/内容统一 `404 SKILL_PACKAGE_NOT_FOUND_OR_FORBIDDEN`，过期/消费冲突为 `410 DOWNLOAD_TICKET_EXPIRED|409 DOWNLOAD_TICKET_REPLAY`。`GET /internal/agent/skill-installations/{installationId}/package` 必须携带同 mTLS identity、bearer session token 和 fresh `X-CYF-Binding-Proof` purpose=PACKAGE_GET；每次 GET 都按 publisher security→order→binding/key→binding PoP challenge→runtime→snapshot→installation→durable command/ACK→skill isolation proof→entitlement→download session current-read，复核 publisher/product仍 approved、binding/current epoch、order/entitlement仍 pending delivery、installation status 仍为 `DELIVERING|DOWNLOADING`、当前 snapshot/installation 未隔离、exact `STARTED_CONFIRMED` record仍与 current command/attempt/fence/deliveryEpoch及 ticket digests匹配、session ACTIVE/未过期且无 revocation fence、session冻结 deliveryEpoch 等于 installation current deliveryEpoch、不存在 accepted isolation proof且全部 digests一致。退款/暂停/撤销、publisher compromise、binding rotate/revoke、attempt supersede/cancel 事务使上述 current root 失配并立即拒绝旧 session；可同步置 REVOKED，但 GET 不依赖异步 outbox。只返回 immutable raw ZIP 的完整 `200 application/zip`、exact Content-Length/Digest、`Cache-Control: no-store`，禁止 redirect/CDN/public cache，Range 一律 `416 RANGE_NOT_SUPPORTED`；跨主体/不可见以及 binding/key/epoch/runtime 非 current 或已撤销统一先返回 `404 SKILL_PACKAGE_NOT_FOUND_OR_FORBIDDEN`；只有调用者已通过 current active binding 可见性门禁后，visible session 的过期返回 `410 DOWNLOAD_SESSION_EXPIRED`，因订单/entitlement/isolation/supersede而撤销返回 `409 DOWNLOAD_SESSION_REVOKED`。每次 GET 的授权线性化点是上述 current-locking-read 事务成功提交：任何在该提交前已线性化的 refund/rotate/compromise/supersede 必须拒绝；提交后发生的撤权不能召回该次已授权的 immutable full-response stream，但会拒绝所有后续 GET/retry，且包在 entitlement/binding/capability lease 已撤权后不可激活或执行。事务冻结 server-side content-addressed immutable object version/digest；handler 提交后才打开该 exact object，并从同一 file descriptor 复核 digest后发送一次完整响应，连接失败不得续传/Range，只能重新 GET 并重新通过 current-read。日志/事件不得记录 ticket/session token或包正文。
+- `POST /agent/skill-orders/{orderId}/retry-delivery`：仅买方、`delivery_failed` 且未退款；body 含 expectedOrderVersion。按完整全局锁序 current-read accepted isolation proof、当前 snapshot head、order/escrow/capture、exact旧 attempt/fence、该旧 deliveryEpoch 的每一 ticket/session ISOLATION revocation fence且无可授权 session、current deliveryEpoch/capabilityEpoch 后，原子生成新 attempt/fencing并递增 deliveryEpoch、清空新 attempt 的 STARTED state；全新 command/ticket及后续 session必须冻结该新 epoch。每个 installation 最多 3 次 retry，超过稳定返回 `409 SKILL_DELIVERY_RETRY_LIMIT_EXCEEDED`。
+- 安装过程通过现有 authenticated WebSocket 协议回传：`command.ack` 表达 RECEIVED/STARTED，最终成功/失败使用与该 `commandId` 关联的 `work.result`；两者都必须通过 canonical normalizer、binding/runtime、attempt/fence 校验。无浏览器公共写接口。
+
+## 8. 事件与异步交付
+
+事件示例：
+
+- `bounty.funded.v1`
+- `bounty.quote.created.v1`
+- `bounty.claimed.v1`
+- `bounty.budget.warning.v1`
+- `bounty.usage.recorded.v1`
+- `bounty.settled.v1`
+- `bounty.refunded.v1`
+- `skill.order.funds-held.v1`
+- `skill.install.requested.v1`
+- `skill.entitlement.activated.v1`
+- `skill.order.refunded.v1`
+
+Economy principal feed 的 base envelope 固定为 `{eventId,eventType,schemaVersion,eventVersion,aggregateType,aggregateId,aggregateVersion,tenantId,clientId,occurredAt,payload,streamCursor}`；`eventVersion=streamCursor`，与 aggregateVersion 分离；金额和数字型版本为字符串。payload 只允许 IDs、状态、金额、token counts、price/model version、hash 和 reason code，禁止原始 prompt/output、认证头、API key、安装脚本正文、lease token。
+
+本 SDD **不修改现有 M2 task SSE/workspace 的 endpoint、exact JSON keys 或 watermark 语义**：继续保留其现有 `version/currentVersion` wire shape，禁止追加 `schemaVersion/eventVersion/aggregateVersion/eventVersionWatermark` 等会被 exact-key reducer 拒绝的字段。funded create/claim 及 completion/cancel/fail 等任何改变既有 task 协作状态的成功 domain transition，必须复用 accepted M2 同一事务写 `agent_task_event` 并恰递增一次 `current_event_version`；幂等 replay、CAS 失败或事务回滚写零条 task event/零次版本推进，Broker/WebSocket 唤醒只能 after-commit。纯 economy settlement 投影变化若不改变 task 状态则不伪造 task event。资金/订单事件只进入 `/economy/events` principal feed；task 协作状态继续由 M2 原契约传播。如果实现基线尚未包含已验收的 M2 task SSE/workspace，B08 必须先 pin/merge 该 accepted tree，而不是在本 SDD 发明不同 task projection。跨 aggregate 的 Economy feed 对每个 `(tenantId,clientId,principalType,principalId)` 使用独立单调流游标 `GET /economy/events?afterCursor=`：每个写事务先为每个可见 principal 生成独立 feed projection；在所有业务写完成后、提交前最后按 canonical principal key 依序锁定对应 `economy_stream_head`。某 principal 若有 N 条 feed outbox event，按 `(aggregateType,aggregateId,aggregateVersion,eventId)` 确定性排序并分配唯一连续区间 `head+1..head+N`，再把每条 projection 的 `eventVersion=streamCursor` 并更新 head，之后不再执行外部 I/O 或新增业务写并立即提交。该锁使 cursor 顺序等于提交顺序；同事务事件不共享 cursor，回滚不推进 head。publisher 只公布该 principal 的连续 committed watermark，隐藏主体事件不占用其 cursor、不会制造可见 gap；snapshot 与 watermark 在同一只读一致性事务取得。订单提供详情快照；消费者只推进服务端返回的 contiguous `nextCursor`，按 eventId 幂等，重复/乱序不部分应用。
+
+技能安装命令复用现有 Agent WebSocket 协议：
+
+```json
+{
+  "schemaVersion": 1,
+  "messageType": "command.dispatch",
+  "messageId": "msg_...",
+  "requestId": "msg_...",
+  "commandType": "SKILL_INSTALL",
+  "commandId": "cmd_...",
+  "attempt": 1,
+  "fencingToken": "7",
+  "deliveryEpoch": "1",
+  "tenantId": "tenant-id",
+  "clientId": "client-id",
+  "targetAgentId": "canonical-agent-id",
+  "runtimeInstanceId": "runtime-id",
+  "orderId": "so_...",
+  "installationId": "si_...",
+  "productVersionId": "spv_...",
+  "packageSize": "123456",
+  "packageDigest": "sha256:...",
+  "manifestDigest": "sha256:...",
+  "skillPackageSignature": {"protocolVersion":1,"algorithm":"Ed25519","keyId":"pkg-key-1","payload":{"productVersionId":"spv_...","skillKey":"repo-test","skillVersion":"2.1.0","packageDigest":"sha256:...","manifestDigest":"sha256:...","permissionsDigest":"sha256:...","compatibilityDigest":"sha256:...","publishedAt":"1788260000000"},"signature":"..."},
+  "publisherKeyRecord": {"protocolVersion":1,"algorithm":"Ed25519","keyId":"platform-root-1","payload":{"publisherKeyId":"pkg-key-1","algorithm":"Ed25519","publicKey":"base64url-raw32","validFrom":"1780000000000","validUntil":"1890000000000","status":"ACTIVE","registryVersion":"7"},"signature":"..."},
+  "permissions": ["repo.read"],
+  "permissionsDigest": "sha256:...",
+  "compatibility": {"agentProtocolMin":1,"platforms":["linux-amd64"]},
+  "compatibilityDigest": "sha256:...",
+  "approvedPermissions": ["repo.read"],
+  "permissionGrantVersion": "1",
+  "permissionGrantDigest": "sha256:...",
+  "serverChallenge": "nonce_...",
+  "attestationProtocolVersion": 1,
+  "issuedAt": 1788260300000,
+  "expiresAt": 1788260600000,
+  "downloadTicket": "base64url(JCS(server-signed exact ticket wrapper))"
+}
+```
+
+使用现有 `command.ack` 确认 RECEIVED/STARTED，并以关联 `commandId` 的 `work.result` 回传签名 attestation 或错误码；durable command ledger 支持离线队列、重放、超时和 attempt fencing。server durable command/ACK row 对 dispatch、RECEIVED、STARTED、result acceptance、timeout reconciliation、supersede 与 retry 都按全局 order→binding→runtime→snapshot（涉及时）→installation→command/ACK 锁位更新，禁止 command→binding/order 回锁。只有 `command.dispatch` 触发安装，ACK/result 本身不得触发第二次执行；回执不包含包内容或本地秘密。
+
+快照恢复使用受保护的 `GET /internal/agent/bindings/{bindingId}/runtimes/{runtimeInstanceId}/installed-skills/head`，仅该 active binding/runtime identity 可读，返回当前 `bindingEpoch/snapshotSequence/snapshotDigest`。presence/register 接收成功后返回 `installedSkills.snapshot.ack`；相同 canonical 快照重放返回同一 ACK。客户端 durable outbox 必须保留未 ACK 快照并从服务端 head+1 顺序重放；链数据丢失时不得伪造跳号，只能用当前旧私钥完成受管 rotate 后以新 bindingEpoch genesis 重建；旧私钥丢失即 `BINDING_KEY_LOST_QUARANTINED`。
+
+受管 chain reset/密钥轮换协议固定为：`POST /internal/agent/bindings/{bindingId}/rotation-challenges` 仅当前 owner + active runtime identity 可调用，返回 exact `{challenge,currentBindingEpoch,currentBindingVersion,expiresAt}`（数值均 REST 十进制字符串），challenge 单次、最长 5 分钟。客户端生成新 Ed25519 key；`newPublicKey` 是 32 raw bytes 的无 padding base64url（恰 43 ASCII chars），`newPublicKeyDigest="sha256:"+lowerhex(SHA-256(raw32))`。随后 `POST .../{bindingId}/rotate` body exact 为 `{expectedBindingVersion,rotationProof,genesisInstalledSkillsSnapshot}`，rotationProof wrapper exact 为 `{"protocolVersion":1,"algorithm":"Ed25519","keyId":oldKeyId,"payload":{tenantId,clientId,canonicalAgentId,bindingId,runtimeInstanceId,expectedBindingVersion,currentBindingEpoch,nextBindingEpoch,newKeyId,newPublicKey,newPublicKeyDigest,challenge,genesisSnapshotDigest,reason},"signature":base64url}`；reason 仅 `SNAPSHOT_CHAIN_LOST|PLANNED_KEY_ROTATION`，所有 epoch/version 是规范正十进制字符串，proof.expectedBindingVersion 必须等于 outer expectedBindingVersion 与 challenge.currentBindingVersion，`nextBindingEpoch=currentBindingEpoch+1`。签名字节为 `CYF_AGENT_BINDING_ROTATE_V1\0` || RFC8785 JCS(payload)。genesis wrapper 使用 3.5 exact snapshot schema、keyId=newKeyId、payload.bindingEpoch=nextBindingEpoch、`snapshotSequence="1"`、`previousSnapshotDigest="sha256:"+64个0`，且 snapshotDigest 恰等于 proof.genesisSnapshotDigest。rotationProof.signature 与 genesis signature 都是无 padding base64url。事务按 publisher security（涉及已安装技能验证时）→binding/key root→runtime root→snapshot root→按 PK 的所有受影响 skill installation→durable command/ACK→entitlement→download ticket/session→economy_stream_head（如有）→outbox finalize 取锁，current-read ownership/runtime/旧 key active/challenge/expectedVersion、每个 installation/command/session 的旧 bindingEpoch fence，原子消费 challenge、递增 bindingEpoch、撤销旧 key、登记新 key、接受 genesis，并使所有旧 epoch command/session/lease 无法再取得 STARTED/GET/capability；不得省略 matrix 中存在的 root或先锁 snapshot 再回锁 runtime。响应 exact 为 `{bindingId,bindingVersion,bindingEpoch,keyId,acceptedSnapshotSequence,acceptedSnapshotDigest,challengeState:"CONSUMED"}`；rotate request identity/hash 覆盖 outer `expectedBindingVersion` + rotationProof + genesis wrapper；同 challenge + byte-identical **完整 body** 重放返回原 ACK，不同内容返回 `ROTATION_CHALLENGE_REPLAY`，另有 `ROTATION_PROOF_INVALID/BINDING_VERSION_CONFLICT/ROTATION_CHALLENGE_EXPIRED`。旧私钥不可用时不得调用 rotate或任何 re-enrollment/rebind，binding 立即进入 `BINDING_KEY_LOST_QUARANTINED`；MVP 没有恢复旁路，恢复原私钥前不签 capability lease、不下载/激活/安装，无法恢复则撤销旧 Agent 并创建新 canonical Agent且不迁移 entitlement。新 epoch 快照接受前不签 capability lease，delivery_unknown 安装需新 challenge/fence。API/Agent client 共享 rotation golden vectors。
+
+技能 capability 控制复用 authenticated channel：退款/暂停/撤销或 package key compromise 提交后 outbox 投递 `command.dispatch/SKILL_CAPABILITY_REVOKE`（只撤权，不安装）；在线执行前调用 `POST /internal/agent/skill-installations/{installationId}/capability-leases`，提交当前 binding/runtime、permissionGrantDigest、expected entitlement/capability epoch 与 purpose=CAPABILITY_LEASE 的 fresh binding proof，返回 3.5 定义的 server-signed lease。该控制命令与 lease endpoint 都不能新增或激活安装内容；`SKILL_CAPABILITY_REVOKE` 仅可按 item 13 将 exact version 原子移入 sealed quarantine并回传 isolation attestation，只有 `SKILL_INSTALL` 可新增安装内容。PoP purpose 路由冻结为：initial enrollment→`INITIAL_BINDING_ENROLL`；`agent.register/reconnect/persona-bind`→`REGISTER_RECONNECT`；runtime token/refresh 与 mTLS issuance→`RUNTIME_CREDENTIAL_ISSUE`；download-session POST→`DOWNLOAD_SESSION`；每次 package GET→`PACKAGE_GET`；`command.ack` 首次 STARTED（任何 package GET/安装动作前）→`SKILL_INSTALL_START`；isolation attestation submission→`SKILL_ISOLATION_ATTESTATION`；capability lease POST→`CAPABILITY_LEASE`。不得用一个 purpose 的未消费 challenge 代替另一路由，也不得把 reconnect/session/mTLS 本身当作 PoP。
+
+## 9. 安全、事务与并发
+
+- 所有读写先解析当前 `tenantId/clientId/jiacn`，再校验 canonical Agent ownership；跨 scope 一律统一返回 not-found/forbidden，避免存在性泄露。
+- 所有安全/幂等 opaque key 使用 `VARBINARY` 或显式 binary collation，并按 UTF-8 octet 做应用层比较和唯一索引：canonical UUID key 恰 36 ASCII bytes；entity/keyId/namespace 1..128 bytes；provider idempotency/request ID 1..512 bytes；禁止 NUL/control、trim、case-fold 和尾随空格折叠。签名/摘要使用定长 binary 或严格 canonical textual encoding；schema initializer/catalog parity 测试必须验证 collation、长度与 unique key 完全一致。
+- 账本交易至少两条平衡分录，提交前验证同币种合计为零；历史分录只追加冲正，不 update/delete。
+- account、escrow、funding/allocation、任务、报价、authorization、订单、installation、binding PoP challenge、entitlement 都有版本；金额/状态更新使用 expected version CAS。技能激活与退款锁同一 order root 并竞争唯一终态。
+- Idempotency 记录的数据库唯一键固定为 `(tenant_id,client_id,principal_type,principal_id,idempotency_key)`；method/path/request hash 是该唯一记录的冻结内容而非唯一键组成。相同 actor namespace 的 key 不得跨 endpoint/Agent/任务复用；不同 actor namespace 可独立复用同一随机 UUID且互不可见。request hash 固定为 SHA-256(UTF-8 `CYF_IDEMPOTENCY_V1\0` || RFC 8785 JCS(exact closed envelope))，envelope 固定为 `{"actor":{"tenantId":string,"clientId":string,"principalType":string,"principalId":string},"method":uppercase-string,"routeTemplate":string,"pathParameters":[{"name":string,"value":string}],"queryParameters":[{"name":string,"value":string}],"body":{"present":boolean,"value":any-or-null}}`；path/query 在严格解析、仅一次 percent-decode 后写入，数组按 byte-exact `(name,value)` 排序，route allowlist 未声明的重复 query 拒绝，path 参数按 route template 顺序。无 body 使用 `present=false,value=null`，显式 JSON null 使用 `present=true,value=null`，二者不得折叠。只接受 UTF-8 JSON，重复 key、trailing token、非规范十进制金额、非法/双重 percent-encoding 全部拒绝；禁止字符串拼接式无 framing transcript。状态为 IN_PROGRESS/COMPLETED/FAILED_NO_EFFECT，保存 owner lease、business ref 和原响应；接管前必须先按 business ref 查证是否已提交。
+- 固定锁序：idempotency -> provider-egress wrapping-key security root -> publisher-key/product-version security root -> task/order root -> funding/allocation -> economy accounts（按 canonical account key 排序）-> escrow/authorization/receipt -> provider invocation blob -> provider egress lease -> provider unwrap authorization -> canonical Agent binding/key -> binding PoP challenge -> Agent runtime -> installed-snapshot -> skill installation -> durable Agent command/inbox-ACK -> skill isolation proof -> entitlement/projection -> download ticket/session -> economy_stream_head（按 canonical principal key）-> outbox finalize。binding revoke/rotate、技能激活与 runtime snapshot 接收必须共用 binding/key -> snapshot 顺序；Economy 服务不得反向调用或锁 Agent task，从而禁止 account -> task 的逆序。所有 tenant-scoped 表的锁排序键都显式以 byte-exact `(tenantId,clientId)` 为前缀，以下为其表内 PK suffix；SYSTEM/global 表使用冻结的 system scope prefix。**各表分别**按完整排序键升序：idempotency `(principalType,principalId,idempotencyKey)`；provider wrapping key `(egressKeyId)`；publisher key `(publisherKeyId)`；product version `(productVersionId)`；task root `(taskId)`；order root `(orderId)`；funding lot `(escrowId,fundingSequence)`；allocation `(taskId,workItemId,agentId)`；economy account `(currency,ownerType,ownerId,purpose)`；escrow root `(escrowId)`；authorization root `(authorizationId)`；dispatch record `(authorizationId,ownerEpoch,fencingToken)`；receipt `(authorizationId,providerRequestId)`；invocation blob `(blobRef)`；egress lease `(authorizationId,egressLeaseId)`；unwrap authorization `(egressLeaseId,blobVersion)`；binding root `(bindingId)`；binding PoP challenge `(bindingId,runtimeInstanceId,purpose,challengeRequestId)`；runtime root `(bindingId,runtimeInstanceId)`；snapshot `(bindingId,runtimeInstanceId,bindingEpoch,snapshotSequence)`；skill installation `(targetAgentId,installationId)`；durable command `(targetAgentId,installationId,commandId,attempt,fencingToken)`；command ACK `(targetAgentId,installationId,commandId,attempt,ackType,ackSequence)`；skill isolation proof `(targetAgentId,installationId,isolationSequence)`；entitlement `(targetAgentId,entitlementId)`；download ticket/session `(installationId,ticketOrSessionId)`；stream head `(principalType,principalId)`；outbox `(outboxId)`。不得把不同表塞进异构 tuple 比较，也不得按查询返回顺序取锁。数据库死锁仅允许整事务最多 3 次带抖动重试，重试前无外部 I/O/已发消息。
+- 技能路径的 normative lock matrix（只可跳过明确不涉及的行，不得重排）：purchase=`publisher→order→funding/accounts/escrow→binding→runtime→snapshot→installation→command→entitlement→outbox`；dispatch/retry/supersede=`publisher→order→funding/accounts/escrow（涉资金时）→binding→runtime→snapshot→installation→command→proof→entitlement→ticket/session→outbox`；STARTED=`binding→PoP challenge→runtime→installation→command/ACK`；download-session/PACKAGE_GET=`publisher→order→binding→PoP challenge→runtime→snapshot→installation→command/ACK→proof→entitlement→ticket/session`；snapshot append=`binding→runtime→snapshot→installation（校验条目时）`；proof acceptance=`publisher→order→binding→PoP challenge→runtime→snapshot→installation→command/ACK→proof→entitlement→ticket/session`；activation=`publisher→order→funding→accounts→escrow→binding→runtime→snapshot→installation→command/ACK→proof→entitlement→ticket/session→stream/outbox`；refund=`publisher→order→funding→accounts→escrow→binding→runtime→snapshot→installation→command/ACK→proof→entitlement→ticket/session→stream/outbox`；suspend/revoke=`publisher→order→binding→runtime→snapshot→installation→command/ACK→proof→entitlement→ticket/session→stream/outbox`；capability lease=`publisher→binding→PoP challenge→runtime→snapshot→installation→command/ACK→entitlement`；binding rotate/revoke=`binding→runtime→snapshot→installation→command/ACK→entitlement→ticket/session→stream/outbox`。任何依赖 snapshot head/absence 的操作都必须先锁 runtime 再锁 snapshot head，任何读取 STARTED 的操作都必须先锁 installation 再锁 command/ACK。
+- 不在事务内调用模型 provider、消息代理、文件系统或 Agent 客户端；数据库提交后由 outbox 派发。
+- 商品购买、安装 dispatch、技能激活和 capability lease 签发都必须先锁 publisher-key/product-version security root，并在各自提交/签发前用 current locking read 复核商品仍 approved、publisher key 未 compromised/revoked、package/manifest/permission digests 未变。publisher compromise 事务先锁该 security root 并提交 deny 状态，使后续操作 fail closed；再由 outbox/batch 按同一全局锁序暂停 entitlement、递增 capabilityEpoch 和推送 revoke。已签 lease 最迟 30 秒失效。
+- 技能权限不是展示字段：Agent client 将每个技能安装到隔离目录/进程或等价 sandbox，运行时 capability broker 默认拒绝网络、文件、进程、工具和凭据访问，只授予 `平台允许 ∩ 商品 manifest 声明 ∩ buyer permission grant ∩ 当前 active entitlement/current capabilityEpoch ∩ active binding/current bindingEpoch` 的有界 capability；技能不能直接读取宿主 ambient credentials 或继承 Agent API authority。每次危险操作必须持有 3.5 定义的最长 30 秒 server-signed lease，断网不可续签；revoke push 可提前终止，最迟 expiry fail closed。客户端无法强制该边界、声明含未知权限或请求越权时 fail closed，商品不可购买/激活。
+- 对账任务验证：account 缓存 = ledger 聚合；escrow 守恒；allocation 不超总悬赏；authorization 守恒（consumedUserCharge + activeReserved + remainingModelBudget = modelCostCap）；交易分录平衡；settlement = usage + agent payout + fee + refund；order completed 与 entitlement active 对应。
+- 高风险人工调整使用独立 authority、双人审批、reason code 和冲正交易；冲正必须经业务 domain command 同事务修正账本和投影，禁止 generic ledger-only reverse 或 SQL 直接改余额。
+
+## 10. Frontend behavior
+
+### 悬赏榜
+
+- 张榜表单只要求一个主金额：`总悬赏金`，并明确“成功后模型费与平台费从中扣除，余款为 Agent 所得”。
+- 榜单卡片显示总悬赏和资金状态；详情显示“预估/最坏模型费、预估/最坏 Agent 所得、实际成本、可退款余额”。
+- 点击点将或揭榜时先打开报价确认页；报价过期自动刷新，不能静默使用旧价格。
+- `recommended/caution/reject` 用文本、图标和 reason code 表达，不能只依赖颜色。
+- 预算不足时主操作改为“补充银两”；不得让前端通过禁用按钮掩盖后端竞态错误。
+- funded create、task quote、top-up、claim、skill quote 和 skill order 在发送前先持久化 actor-partitioned local operation journal。plaintext row exact closed 仅为 `{journalSchemaVersion,keyId,actorScopeFingerprint,operationType,recordId,nonce,ciphertext,state}`：`recordId` 是每条记录 CSPRNG 生成的 128-bit无 padding base64url随机 ID；`businessTarget/canonicalRequestHash/idempotencyKey/canonicalRequestBytes/createdAt` 只存在于 AES-GCM plaintext 内，禁止建立这些字段的本地明文列、索引、日志或 secondary cache。`actorScopeFingerprint=SHA-256("CYF_WEB_ACTOR_SCOPE_V1\0" || JCS({tenantId,clientId,principalType,principalId}))`；每个浏览器 profile 使用 versioned、非导出 AES-256-GCM WebCrypto key，tag 固定 128 bits 并追加在 ciphertext，nonce 为每条记录 CSPRNG 生成的 96 bits，nonce/ciphertext 持久化为无 padding base64url；同 `(keyId,nonce)` 与 `recordId` 分别建唯一索引，碰撞时在加密前重生成，单 key 最多 `2^32` 条记录后强制轮换。AAD exact 为 JCS(`{journalSchemaVersion,keyId,actorScopeFingerprint,operationType,recordId}`)，只含不可用于重放业务的非敏感定位字段；解密后的 inner plaintext exact closed 为 `{businessTarget,canonicalRequestHash,idempotencyKey,canonicalRequestBytes,createdAt}`，并重新计算 request hash/actor scope。`state` 只是未认证的 UI hint，任何 decrypt/replay 前必须从当前 authenticated principal 重算 actor fingerprint、验证 AAD/密文并查询服务端 operation truth，不能依据本地 state 决定重新扣款。旧 key 在其最后一条 unresolved record 经服务端确认终态/FAILED_NO_EFFECT 前必须 durable 保留，之后才可删除；跨 key/actor/ciphertext/nonce/AAD/recordId swap 必须失败，并以冻结 browser golden vectors验证。不保存认证头、token 或明文凭据，prompt/描述只能位于密文 inner bytes。timeout、网络断开、自动 retry 或页面 reload 必须解密并复用 inner 中同一 idempotency key + canonical bytes。若非导出密钥不可用，关联 record 立即进入 `KEY_LOST_QUARANTINED`：本地仍只能看到非敏感 recordId/keyId/actor fingerprint/operationType/state，无法查询或恢复 idempotencyKey、requestHash、businessTarget、body，不得为“同一意图”自动/人工创建新 key；只能通过不接受本地 target/key过滤的 actor-authenticated服务端 operation/business history观察终态，无法明确归属时进入人工审计，恢复密钥前 fail closed。logout 只锁定未决 journal，不删除；其他 actor 登录时条目不可见、不可解密、不可重放。密钥可用且 AAD/密文验证通过的状态不确定记录，UI 只允许“继续确认/原请求重试”，不得生成新 key；`KEY_LOST_QUARANTINED` 不显示重试入口。同一业务意图只有在解密后原响应确认终态，或服务端明确返回 FAILED_NO_EFFECT 后，才可 abandoned 并创建新 key。
+
+### 技能集市
+
+- 从名册/选中 Agent 卡片进入技能集市时，可以预选该 Agent，但最终购买 payload 必须含 `targetAgentId`。
+- 商品详情显示平台自营标识、创作者署名、版本、价格、权限、兼容性、包摘要缩写、审核状态和更新策略，不展示不存在的第三方卖家结算。
+- 订单状态明确区分“已付款/待安装”和“已生效”；只有 active entitlement 才显示“已获得”。
+- 安装失败自动退款时展示退款流水引用和可执行下一步。
+
+## 11. Compatibility and rollout
+
+### Phase 0：契约与账本基础
+
+- 新增 economy schema、ledger/escrow/idempotency/outbox、价目表和对账工具，默认功能开关关闭。
+- 银两只通过 `ISSUE_SILVER` 受控 treasury command 从 `SYSTEM:SILVER_ISSUANCE` 发行到 allowlisted 钱包；生产要求 campaign/budget、限额、幂等和双人审批，测试赠送仅非生产 scope，不迁移旧 point。
+
+### Phase 1：资金化悬赏
+
+- 先在创建开关关闭时将 funded-aware `/assign`/group/auto fail-closed guard 部署到全部 API 节点；节点上报 `economyContractVersion`，控制面确认最低版本达标并 drain 所有旧 binary 后，才允许创建第一笔 funded task。数据库 task funding discriminator 对未知/旧写路径拒绝 funded assignment。
+- 迁移采用 expand/backfill/contract：先新增 nullable `funding_mode` 与 funding refs，数据库默认/旧 binary 未显式写入一律解析为 `LEGACY_UNFUNDED`，新 binary 对每次 insert 显式写 `LEGACY_UNFUNDED|FUNDED`；混部期读路径把 NULL 当 legacy，只有 `FUNDED` 才要求单 escrow root/allocation。按 byte-exact lexicographic `(tenantId,clientId,taskId)` 完整 scope tuple 范围做可恢复小批 backfill；跨进程编码固定为 `scopeTupleBytes=UTF8(JCS([tenantId,clientId,taskId]))`、opaque cursor=`base64url-no-padding(scopeTupleBytes)`。接收 cursor 时必须 base64url 无 padding严格解码、解析 exact 三字符串数组、拒绝 NUL/control/空 identity，再重新编码并要求 byte-exact 等于原 cursor；比较只按原始 UTF-8 octet tuple，禁止拼接分隔符、case-fold、trim或 Unicode normalization。
+  - pre/post row projection 都是 exact closed object `{tenantId,clientId,taskId,agentTaskMetaVersion,fundingMode,grossBountyAmountMicro,escrowId,allocationSetDigest}`；前三项是非空字符串，`agentTaskMetaVersion` 是规范正十进制字符串，其余四项只能为规范字符串或 JSON null。待 backfill 行的 pre projection 必须为 `fundingMode=null,grossBountyAmountMicro=null,escrowId=null,allocationSetDigest=null`；post projection 除 `fundingMode="LEGACY_UNFUNDED"`、`agentTaskMetaVersion=pre+1` 外 byte-exact 不变。数组按完整 scope tuple 升序且 tuple 唯一。
+  - `preRowsDigest=SHA-256("CYF_TASK_FUNDING_BACKFILL_PRE_ROWS_V1\0" || JCS(preRows))`，`postRowsDigest=SHA-256("CYF_TASK_FUNDING_BACKFILL_POST_ROWS_V1\0" || JCS(postRows))`。batch identity payload exact closed 为 `{schemaVersion:1,startExclusiveScopeTuple,endInclusiveScopeTuple,highWaterScopeTuple,rowCount,preRowsDigest}`，`startExclusiveScopeTuple` 仅第一批允许 JSON null，后续必须是上一 committed batch 的 `endInclusiveScopeTuple`；`endInclusiveScopeTuple/highWaterScopeTuple` 对 committed batch 都是 exact 三字符串数组，`rowCount` 是规范正十进制字符串 `1..batchLimit`；`batchId="sha256:"+lowerhex(SHA-256("CYF_TASK_FUNDING_BACKFILL_BATCH_ID_V1\0" || JCS(identityPayload)))`。
+  - committed batch manifest exact closed 为 `{schemaVersion:1,batchId,startExclusiveScopeTuple,endInclusiveScopeTuple,highWaterScopeTuple,rowCount,preRowsDigest,postRowsDigest}`，不得有“至少含”或扩展字段，也不得提交 `rowCount=0` manifest。空表/无下一行只在控制表写 exact `{schemaVersion:1,state:"COMPLETE_EMPTY",startExclusiveScopeTuple:null,highWaterScopeTuple:null}`（全表从未有行）或 `{schemaVersion:1,state:"COMPLETE",startExclusiveScopeTuple:<last>,highWaterScopeTuple:<last>}`，不生成 batchId、不推进数据 cursor。每行 update predicate exact 为 byte-exact `(tenant_id,client_id,task_id)` + `agent_task_meta_version=pre.agentTaskMetaVersion` + `funding_mode IS NULL` + `gross_bounty_micro IS NULL` + `escrow_id IS NULL` + `allocation_set_digest IS NULL`；update 只写 `funding_mode=LEGACY_UNFUNDED,agent_task_meta_version=pre+1`。任一 predicate miss 必须回滚**整个 batch**、不写 manifest、不推进 cursor，并记录完整 pre projection/drift reason；不得跳行后提交与 preRowsDigest 不一致的子集。全部 update 成功后，提交前读取 exact post projection并验证 postRowsDigest。重复 batchId 必须 byte-identical manifest重放，否则 `BACKFILL_BATCH_CONFLICT`。cursor/high-watermark、manifest、batchId、更新谓词和两类 digest 都包含完整 tuple，禁止裸 taskId 合并。
+  - 持续对账 `NULL/非法 mode/FUNDED 无 escrow/LEGACY 有资金 refs` drift；全部节点升级并 drain 旧 binary、backfill完成且连续 drift=0 后才把 NULL 固化为 LEGACY、增加 NOT NULL 与 `FUNDED⇔funding refs present` check。失败只停批，不回滚已提交批次。
+- 给显式提交 `grossBountyAmountMicro/GROSS_INCLUSIVE` 的新请求启用资金化；旧 create payload 继续创建 `LEGACY_UNFUNDED`，历史任务同样标记 `LEGACY_UNFUNDED`。
+- Web 同时上线余额、张榜托管、quote + claim；地图 Agent 继续只读 `GET /agent/map`，名册/候选 Agent 继续只读 `POST /agent/roster`，不得引入 `/agent/active` 或相互覆盖。
+
+### Phase 2：权威用量与结算
+
+- 先支持一个受控 provider/model 适配器；再扩展多 provider。
+- 以 shadow calculation 比对 provider 账单，误差门槛通过后才启用真实 capture。
+
+### Phase 3：技能市场
+
+- 只允许平台自营、已审核技能和支持版本级签名 attestation 的 server-managed Agent。
+- 第三方卖家、跨 owner 分成和旧本地客户端购买不属于本 SDD；如需开放必须另立跨 scope 清算/ACL SDD。
+
+### Rollback
+
+- 关闭创建新资金化悬赏/技能订单，不删除账本或 entitlement。
+- 已托管资金的业务继续只允许结算、退款和对账；在最后一笔 funded task 终结前不得回滚 funded-aware assignment guard 或重新引入旧 binary，禁止遗留永久 escrow。
+- 所有 schema 为 additive；不以 destructive down migration 回退。
+
+## 12. 可观测性
+
+指标至少包括：
+
+- 活跃钱包、托管总额、可用/冻结差异、账本不平衡数；
+- 报价命中率、过期率、估算/实际误差 P50/P90/P99；
+- 预算阻断、补款、结算、退款、争议数量；
+- provider receipt 重复/缺失/重放；
+- 技能安装成功率、时延、失败原因、自动退款时延；
+- 每个交易状态停留时间和 outbox lag。
+
+敏感日志按 allowlist 输出，仅允许 ID、哈希、计数、金额、版本、reason code 和时间。

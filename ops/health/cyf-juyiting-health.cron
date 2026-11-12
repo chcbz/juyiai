@@ -1,0 +1,5 @@
+# Installed only by the explicit install-cron action. crond is not restarted here.
+SHELL=/bin/sh
+PATH=/usr/sbin:/usr/bin:/sbin:/bin
+MAILTO=""
+* * * * * root /usr/bin/python3 -I /usr/local/libexec/cyf-juyiting-health.py --check-once

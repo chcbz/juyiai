@@ -1,0 +1,10 @@
+[Unit]
+Description=CYF backend Flow version release at 00:00 Asia/Shanghai
+
+[Timer]
+OnCalendar=*-*-* 00:00:00 Asia/Shanghai
+Persistent=true
+Unit=cyf-flow-backend-nightly.service
+
+[Install]
+WantedBy=timers.target

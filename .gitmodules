@@ -1,0 +1,12 @@
+[submodule "api"]
+	path = api
+	url = https://github.com/chcbz/juyiai-api.git
+	branch = develop
+[submodule "web"]
+	path = web
+	url = https://github.com/chcbz/juyiai-web.git
+	branch = develop
+[submodule "runtime"]
+	path = runtime
+	url = https://github.com/chcbz/juyiai-runtime.git
+	branch = develop

@@ -1,0 +1,703 @@
+{
+  "kind": "browser-walkthrough-completed-interaction-prototype-20261007",
+  "sourceHashes": {
+    "index.html": "69eb2d02fd8fe6d572cd9fde548bf29873f0d01c7fb0a33a974bc86637b17ef1",
+    "adjusted.js": "b91403008d5a35797933c2e4e41d9d4b0156355fd64bfc6f67da6b1f77056824",
+    "adjusted.css": "fa30a1fa48bc82d6c2e2c0a977d9ef22df0ce68ae8012ed99333f2c9e68d9018",
+    "../current/snapshots.js": "e0c8f88a0e8269b7b9e4e276d11c916b221bc2b6ceaf3a1a1895688655215bea",
+    "scenarios.html": "99333aac6feb9f4754c3ad91b770978c233efefa66be64eea3418d79a4e7f741",
+    "scenarios.css": "2d4e32e03a46f767b7aee5ec321b10a42eb5468e4f52984482d80c38e8c36779",
+    "check.cjs": "9dcb902571ac94a8646061835d0f74c975fac2d64767fdbf72562c412dd4d447"
+  },
+  "browser": {
+    "protocolVersion": "1.3",
+    "product": "Chrome/133.0.6943.141",
+    "revision": "@2a5d6da0d6165d7b107502095a937fe7704fcef6",
+    "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/133.0.0.0 Safari/537.36",
+    "jsVersion": "13.3.415.23"
+  },
+  "checks": [
+    {
+      "name": "Unified multi-type materials; remove and cancel semantics",
+      "pass": true
+    },
+    {
+      "name": "Roster contains Agent information, not requirement or materials",
+      "pass": true
+    },
+    {
+      "name": "Explicit chosen Agent; automatic requirement and files; direct reply",
+      "pass": true
+    },
+    {
+      "name": "Chat removes navigation shortcuts; only plus and send in integrated composer",
+      "pass": true
+    },
+    {
+      "name": "Quoted revision retained; text,image,audio,document outputs",
+      "pass": true
+    },
+    {
+      "name": "Attachment-only follow-up",
+      "pass": true
+    },
+    {
+      "name": "Real local image,WAV,Markdown,text download bytes",
+      "pass": true,
+      "details": [
+        "小鸟-第1稿.svg",
+        "文字成果-第2稿.txt",
+        "活动方案-第2稿.md",
+        "音频-第2稿.wav"
+      ]
+    },
+    {
+      "name": "Native WAV audio playback",
+      "pass": true
+    },
+    {
+      "name": "No acceptance checkboxes; modify in original conversation; freeze current delivery including unchanged media",
+      "pass": true
+    },
+    {
+      "name": "Original mobile bottom navigation with native clicks",
+      "pass": true
+    },
+    {
+      "name": "No-attachment submission and natural clarification",
+      "pass": true
+    },
+    {
+      "name": "Default latest reply delivery; text-only acceptance without workspace save",
+      "pass": true
+    },
+    {
+      "name": "Editable text fragment save; previous saved assets survive new task",
+      "pass": true
+    },
+    {
+      "name": "One create entry replaces three technical categories",
+      "pass": true
+    },
+    {
+      "name": "Restored real private-chat prototype branch; per-Agent history and materials isolated from formal task",
+      "pass": true
+    },
+    {
+      "name": "Voice mock: cancel, stop, edit transcript, insert draft without auto-send, settings",
+      "pass": true
+    },
+    {
+      "name": "Reload preserves prototype draft, private history, formal completion and optional workspace saves",
+      "pass": true
+    },
+    {
+      "name": "Browsing roster and private chatting never invents a requirement",
+      "pass": true
+    },
+    {
+      "name": "Attachment-only create; no hidden generation; natural clarification before deliverable",
+      "pass": true
+    },
+    {
+      "name": "create-failure preserves draft and attachments; status check does not create",
+      "pass": true
+    },
+    {
+      "name": "create-unknown preserves draft and attachments; status check does not create",
+      "pass": true
+    },
+    {
+      "name": "SF01 direct return to exact task; SF03 clear successful submitted draft; SF05 single original demand",
+      "pass": true
+    },
+    {
+      "name": "SF02 completion projects without reload; SF04 refresh preserves same operation; completed task read-only",
+      "pass": true
+    },
+    {
+      "name": "Task filter empty/completed and exact demo detail navigation",
+      "pass": true
+    },
+    {
+      "name": "accept-unknown status unknown/failed; refresh and queries never re-submit",
+      "pass": true
+    },
+    {
+      "name": "accept-failure status unknown/failed; refresh and queries never re-submit",
+      "pass": true
+    },
+    {
+      "name": "Failed/ambiguous send preserves attachments and text; only explicit resend after checking",
+      "pass": true
+    },
+    {
+      "name": "R01 independent roots explicitly blocked; no fake source recovery implementation",
+      "pass": true
+    },
+    {
+      "name": "Native file picker; local text preview; cancel does not confirm attachments",
+      "pass": true
+    },
+    {
+      "name": "Refresh during acceptance keeps frozen selection and original operation; local read-only recovery",
+      "pass": true
+    },
+    {
+      "name": "Leaving acceptance progress still updates detail completion without reload or extra writes",
+      "pass": true
+    },
+    {
+      "name": "Refresh while reply pending does not restart Agent simulation or duplicate demand",
+      "pass": true
+    },
+    {
+      "name": "Eight linked scenario entries and all new recovery layouts at 390/320",
+      "pass": true
+    }
+  ],
+  "layouts": [
+    {
+      "label": "desktop-materials",
+      "width": 1440,
+      "scroll": 1440,
+      "dialog": {
+        "x": 395,
+        "y": 239.75,
+        "width": 650,
+        "height": 520.484375,
+        "top": 239.75,
+        "right": 1045,
+        "bottom": 760.234375,
+        "left": 395
+      },
+      "bottom": [],
+      "badImages": []
+    },
+    {
+      "label": "desktop-agents",
+      "width": 1440,
+      "scroll": 1440,
+      "bottom": [],
+      "badImages": []
+    },
+    {
+      "label": "desktop-chat",
+      "width": 1440,
+      "scroll": 1440,
+      "composer": {
+        "x": 221,
+        "y": 754,
+        "width": 998,
+        "height": 123,
+        "top": 754,
+        "right": 1219,
+        "bottom": 877,
+        "left": 221
+      },
+      "bottom": [],
+      "badImages": []
+    },
+    {
+      "label": "mobile-chat-active",
+      "width": 390,
+      "scroll": 390,
+      "composer": {
+        "x": 37,
+        "y": 677,
+        "width": 316,
+        "height": 124,
+        "top": 677,
+        "right": 353,
+        "bottom": 801,
+        "left": 37
+      },
+      "bottom": [],
+      "badImages": []
+    },
+    {
+      "label": "mobile-materials",
+      "width": 390,
+      "scroll": 390,
+      "dialog": {
+        "x": 17,
+        "y": 167.75,
+        "width": 356,
+        "height": 508.484375,
+        "top": 167.75,
+        "right": 373,
+        "bottom": 676.234375,
+        "left": 17
+      },
+      "composer": {
+        "x": 37,
+        "y": 677,
+        "width": 316,
+        "height": 124,
+        "top": 677,
+        "right": 353,
+        "bottom": 801,
+        "left": 37
+      },
+      "bottom": [],
+      "badImages": []
+    },
+    {
+      "label": "desktop-accept",
+      "width": 1440,
+      "scroll": 1440,
+      "dialog": {
+        "x": 395,
+        "y": 283.84375,
+        "width": 650,
+        "height": 432.296875,
+        "top": 283.84375,
+        "right": 1045,
+        "bottom": 716.140625,
+        "left": 395
+      },
+      "bottom": [],
+      "badImages": []
+    },
+    {
+      "label": "390-home",
+      "width": 390,
+      "scroll": 390,
+      "bottom": [
+        "办事",
+        "事项",
+        "资料",
+        "我的"
+      ],
+      "badImages": []
+    },
+    {
+      "label": "390-tasks",
+      "width": 390,
+      "scroll": 390,
+      "bottom": [
+        "办事",
+        "事项",
+        "资料",
+        "我的"
+      ],
+      "badImages": []
+    },
+    {
+      "label": "390-create",
+      "width": 390,
+      "scroll": 390,
+      "bottom": [
+        "办事",
+        "事项",
+        "资料",
+        "我的"
+      ],
+      "badImages": []
+    },
+    {
+      "label": "390-agents",
+      "width": 390,
+      "scroll": 390,
+      "bottom": [],
+      "badImages": []
+    },
+    {
+      "label": "390-detail",
+      "width": 390,
+      "scroll": 390,
+      "bottom": [],
+      "badImages": []
+    },
+    {
+      "label": "390-chat",
+      "width": 390,
+      "scroll": 390,
+      "composer": {
+        "x": 37,
+        "y": 677,
+        "width": 316,
+        "height": 124,
+        "top": 677,
+        "right": 353,
+        "bottom": 801,
+        "left": 37
+      },
+      "bottom": [],
+      "badImages": []
+    },
+    {
+      "label": "390-workspace",
+      "width": 390,
+      "scroll": 390,
+      "bottom": [
+        "办事",
+        "事项",
+        "资料",
+        "我的"
+      ],
+      "badImages": []
+    },
+    {
+      "label": "390-mine",
+      "width": 390,
+      "scroll": 390,
+      "bottom": [
+        "办事",
+        "事项",
+        "资料",
+        "我的"
+      ],
+      "badImages": []
+    },
+    {
+      "label": "390-accept",
+      "width": 390,
+      "scroll": 390,
+      "dialog": {
+        "x": 17,
+        "y": 211.84375,
+        "width": 356,
+        "height": 420.296875,
+        "top": 211.84375,
+        "right": 373,
+        "bottom": 632.140625,
+        "left": 17
+      },
+      "bottom": [],
+      "badImages": []
+    },
+    {
+      "label": "320-home",
+      "width": 320,
+      "scroll": 320,
+      "bottom": [
+        "办事",
+        "事项",
+        "资料",
+        "我的"
+      ],
+      "badImages": []
+    },
+    {
+      "label": "320-tasks",
+      "width": 320,
+      "scroll": 320,
+      "bottom": [
+        "办事",
+        "事项",
+        "资料",
+        "我的"
+      ],
+      "badImages": []
+    },
+    {
+      "label": "320-create",
+      "width": 320,
+      "scroll": 320,
+      "bottom": [
+        "办事",
+        "事项",
+        "资料",
+        "我的"
+      ],
+      "badImages": []
+    },
+    {
+      "label": "320-agents",
+      "width": 320,
+      "scroll": 320,
+      "bottom": [],
+      "badImages": []
+    },
+    {
+      "label": "320-detail",
+      "width": 320,
+      "scroll": 320,
+      "bottom": [],
+      "badImages": []
+    },
+    {
+      "label": "320-chat",
+      "width": 320,
+      "scroll": 320,
+      "composer": {
+        "x": 37,
+        "y": 677,
+        "width": 246,
+        "height": 124,
+        "top": 677,
+        "right": 283,
+        "bottom": 801,
+        "left": 37
+      },
+      "bottom": [],
+      "badImages": []
+    },
+    {
+      "label": "320-workspace",
+      "width": 320,
+      "scroll": 320,
+      "bottom": [
+        "办事",
+        "事项",
+        "资料",
+        "我的"
+      ],
+      "badImages": []
+    },
+    {
+      "label": "320-mine",
+      "width": 320,
+      "scroll": 320,
+      "bottom": [
+        "办事",
+        "事项",
+        "资料",
+        "我的"
+      ],
+      "badImages": []
+    },
+    {
+      "label": "320-accept",
+      "width": 320,
+      "scroll": 320,
+      "dialog": {
+        "x": 17,
+        "y": 211.84375,
+        "width": 286,
+        "height": 420.296875,
+        "top": 211.84375,
+        "right": 303,
+        "bottom": 632.140625,
+        "left": 17
+      },
+      "bottom": [],
+      "badImages": []
+    },
+    {
+      "label": "mobile-private",
+      "width": 390,
+      "scroll": 390,
+      "composer": {
+        "x": 37,
+        "y": 677,
+        "width": 316,
+        "height": 124,
+        "top": 677,
+        "right": 353,
+        "bottom": 801,
+        "left": 37
+      },
+      "bottom": [],
+      "badImages": []
+    },
+    {
+      "label": "desktop-private",
+      "width": 1440,
+      "scroll": 1440,
+      "composer": {
+        "x": 221,
+        "y": 754,
+        "width": 998,
+        "height": 123,
+        "top": 754,
+        "right": 1219,
+        "bottom": 877,
+        "left": 221
+      },
+      "bottom": [],
+      "badImages": []
+    },
+    {
+      "label": "390-create-unknown",
+      "width": 390,
+      "scroll": 390,
+      "dialog": {
+        "x": 17,
+        "y": 343.40625,
+        "width": 356,
+        "height": 157.171875,
+        "top": 343.40625,
+        "right": 373,
+        "bottom": 500.578125,
+        "left": 17
+      },
+      "bottom": [
+        "办事",
+        "事项",
+        "资料",
+        "我的"
+      ],
+      "badImages": []
+    },
+    {
+      "label": "390-reply-failure",
+      "width": 390,
+      "scroll": 390,
+      "composer": {
+        "x": 37,
+        "y": 677,
+        "width": 316,
+        "height": 124,
+        "top": 677,
+        "right": 353,
+        "bottom": 801,
+        "left": 37
+      },
+      "bottom": [],
+      "badImages": []
+    },
+    {
+      "label": "390-accept-unknown",
+      "width": 390,
+      "scroll": 390,
+      "dialog": {
+        "x": 17,
+        "y": 293.828125,
+        "width": 356,
+        "height": 256.34375,
+        "top": 293.828125,
+        "right": 373,
+        "bottom": 550.171875,
+        "left": 17
+      },
+      "bottom": [],
+      "badImages": []
+    },
+    {
+      "label": "390-accept-failure",
+      "width": 390,
+      "scroll": 390,
+      "dialog": {
+        "x": 17,
+        "y": 293.828125,
+        "width": 356,
+        "height": 256.34375,
+        "top": 293.828125,
+        "right": 373,
+        "bottom": 550.171875,
+        "left": 17
+      },
+      "bottom": [],
+      "badImages": []
+    },
+    {
+      "label": "390-independent-roots",
+      "width": 390,
+      "scroll": 390,
+      "dialog": {
+        "x": 17,
+        "y": 305.828125,
+        "width": 356,
+        "height": 232.34375,
+        "top": 305.828125,
+        "right": 373,
+        "bottom": 538.171875,
+        "left": 17
+      },
+      "bottom": [],
+      "badImages": []
+    },
+    {
+      "label": "320-create-unknown",
+      "width": 320,
+      "scroll": 320,
+      "dialog": {
+        "x": 17,
+        "y": 332.21875,
+        "width": 286,
+        "height": 179.5625,
+        "top": 332.21875,
+        "right": 303,
+        "bottom": 511.78125,
+        "left": 17
+      },
+      "bottom": [
+        "办事",
+        "事项",
+        "资料",
+        "我的"
+      ],
+      "badImages": []
+    },
+    {
+      "label": "320-reply-failure",
+      "width": 320,
+      "scroll": 320,
+      "composer": {
+        "x": 37,
+        "y": 677,
+        "width": 246,
+        "height": 124,
+        "top": 677,
+        "right": 283,
+        "bottom": 801,
+        "left": 37
+      },
+      "bottom": [],
+      "badImages": []
+    },
+    {
+      "label": "320-accept-unknown",
+      "width": 320,
+      "scroll": 320,
+      "dialog": {
+        "x": 17,
+        "y": 282.625,
+        "width": 286,
+        "height": 278.734375,
+        "top": 282.625,
+        "right": 303,
+        "bottom": 561.359375,
+        "left": 17
+      },
+      "bottom": [],
+      "badImages": []
+    },
+    {
+      "label": "320-accept-failure",
+      "width": 320,
+      "scroll": 320,
+      "dialog": {
+        "x": 17,
+        "y": 282.625,
+        "width": 286,
+        "height": 278.734375,
+        "top": 282.625,
+        "right": 303,
+        "bottom": 561.359375,
+        "left": 17
+      },
+      "bottom": [],
+      "badImages": []
+    },
+    {
+      "label": "320-independent-roots",
+      "width": 320,
+      "scroll": 320,
+      "dialog": {
+        "x": 17,
+        "y": 305.828125,
+        "width": 286,
+        "height": 232.34375,
+        "top": 305.828125,
+        "right": 303,
+        "bottom": 538.171875,
+        "left": 17
+      },
+      "bottom": [],
+      "badImages": []
+    },
+    {
+      "label": "320-scenarios",
+      "width": 320,
+      "scroll": 320,
+      "bottom": [],
+      "badImages": []
+    }
+  ],
+  "errors": [],
+  "externalNetwork": "https blocked; CSP default-src self and connect-src none",
+  "notProductionAcceptance": true
+}

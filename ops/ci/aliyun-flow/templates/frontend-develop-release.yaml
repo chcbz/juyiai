@@ -1,0 +1,156 @@
+name: cyf-web-kit
+sources:
+  repo_0:
+    type: gitee
+    name: cyf_web_develop
+    endpoint: https://github.com/chcbz/juyiai-web.git
+    branch: develop
+    cloneDepth: 1
+    triggerEvents:
+      - push
+    branchesFilter: ^develop$
+    certificate:
+      type: serviceConnection
+      serviceConnection: vyz9pea3uni64twx
+defaultWorkspace: repo_0
+stages:
+  cloud_ci:
+    name: Frontend resource-offloaded CI
+    jobs:
+      web_ci:
+        name: Locked install, full tests, and Vite build
+        runsOn: public/cn-beijing
+        timeoutMinutes: 60
+        steps:
+          test_and_build:
+            name: Alinux3 full frontend CI
+            step: CustomEnvironmentBuild
+            with:
+              image: build-steps-public-registry.cn-beijing.cr.aliyuncs.com/build-steps/alinux3:latest
+              run: |-
+                set -eu
+                # Heavy execution only; external readiness and online acceptance stay on the control host.
+                phase() { printf 'CYF_FLOW_PHASE %s wall=%s monotonic=' "$1" "$(date -u +%FT%TZ)"; cut -d' ' -f1 /proc/uptime; }
+                phase runtime.begin
+                test "${CI_COMMIT_REF_NAME:-}" = develop
+                test -n "${CI_COMMIT_SHA:-}"
+                test "$(git rev-parse HEAD)" = "$CI_COMMIT_SHA"
+                # Release tests use the current tree. Asset/all profiles verify historical provenance.
+                case "${CYF_TEST_PROFILE:-release}" in
+                  release) ;;
+                  assets|all)
+                    if test "$(git rev-parse --is-shallow-repository)" = true; then
+                      git fetch --unshallow origin "$CI_COMMIT_REF_NAME"
+                    fi
+                    test "$(git rev-parse HEAD)" = "$CI_COMMIT_SHA"
+                    ;;
+                  *) echo 'Unsupported CYF_TEST_PROFILE' >&2; exit 1 ;;
+                esac
+                printf 'CYF_SOURCE_CHECKOUT shallow=%s commit=%s tree=%s\n' "$(git rev-parse --is-shallow-repository)" "$(git rev-parse HEAD)" "$(git rev-parse HEAD^{tree})"
+                manager=
+                if test -x /usr/bin/dnf; then manager=/usr/bin/dnf; elif test -x /usr/bin/yum; then manager=/usr/bin/yum; fi
+                test -n "$manager"
+                # The base image already provides most tools. Installing named packages
+                # unconditionally also upgrades them and pulls unrelated system dependencies.
+                missing_packages=
+                for package in ca-certificates curl tar xz git; do
+                  if ! rpm -q --quiet "$package"; then
+                    missing_packages="$missing_packages $package"
+                  fi
+                done
+                if test -n "$missing_packages"; then
+                  # Intentional splitting: names come only from the fixed list above.
+                  "$manager" -y --setopt=gpgcheck=1 --setopt=install_weak_deps=False install $missing_packages
+                fi
+                for tool in curl tar xz git; do command -v "$tool" >/dev/null; done
+                node_sha=6c172a9ab6718f7b801fb5a7bd486af2ee5e32758086a04b84fcce2aa77095e6
+                cache_root="$HOME/.cache/cyf-test-runtime"
+                node_archive="$cache_root/node-$node_sha"
+                mkdir -p "$cache_root"
+                if test -f "$node_archive"; then
+                  printf '%s  %s\n' "$node_sha" "$node_archive" | sha256sum -c -
+                else
+                  downloaded=0
+                  attempt=0
+                  for node_url in \
+                    https://mirrors.aliyun.com/nodejs-release/v24.22.1/node-v24.22.1-linux-x64.tar.xz \
+                    https://cdn.npmmirror.com/binaries/node/v24.22.1/node-v24.22.1-linux-x64.tar.xz \
+                    https://nodejs.org/dist/v24.22.1/node-v24.22.1-linux-x64.tar.xz
+                  do
+                    attempt=$((attempt + 1))
+                    partial="$node_archive.$$.${attempt}.partial"
+                    test ! -e "$partial"
+                    if curl --fail --location --retry 2 --connect-timeout 20 --max-time 240 "$node_url" --output "$partial"; then
+                      printf '%s  %s\n' "$node_sha" "$partial" | sha256sum -c -
+                      mv "$partial" "$node_archive"
+                      downloaded=1
+                      break
+                    fi
+                  done
+                  test "$downloaded" = 1
+                fi
+                node_root="$PWD/_cyf_node24"
+                test ! -e "$node_root"
+                mkdir "$node_root"
+                tar -xJf "$node_archive" -C "$node_root"
+                export PATH="$node_root/node-v24.22.1-linux-x64/bin:$PATH"
+                test "$(node --version)" = v24.22.1
+                phase runtime.end
+                phase install.begin
+                npm ci --include=dev --registry=https://registry.npmmirror.com --replace-registry-host=npmjs --fetch-retries=2 --fetch-retry-mintimeout=10000 --fetch-retry-maxtimeout=30000 --fetch-timeout=120000 --no-audit --no-fund
+                test -x node_modules/.bin/vite
+                test -f node_modules/vite/bin/vite.js
+                phase install.end
+                phase test.begin
+                npm run test
+                phase test.end
+                phase build.begin
+                npm run build
+                phase build.end
+                test -d dist
+                test -f mochawesome-report/mochawesome.html
+                test -f mochawesome-report/mochawesome.json
+                export_root="$PWD/_cyf_web_develop_ci_export"
+                test ! -e "$export_root"
+                mkdir -m 700 "$export_root"
+                cp -a dist "$export_root/dist"
+                cp -a mochawesome-report "$export_root/mochawesome-report"
+                printf '%s\n' "$CI_COMMIT_SHA" > "$export_root/source-commit.txt"
+                git rev-parse HEAD^{tree} > "$export_root/source-tree.txt"
+                node <<'CYF_MANIFEST'
+                // Runs after npm test/build. Publish only dist; keep test reports in Flow artifacts.
+                const fs=require('fs'),path=require('path'),crypto=require('crypto');
+                const root='_cyf_web_develop_ci_export', files=[];
+                function walk(dir){for(const e of fs.readdirSync(path.join(root,'dist',dir),{withFileTypes:true})){
+                 const relative=path.posix.join(dir,e.name), p=path.join(root,'dist',relative);
+                 if(e.isDirectory())walk(relative);
+                 else if(e.isFile()){const data=fs.readFileSync(p);files.push({path:relative,size:data.length,sha256:crypto.createHash('sha256').update(data).digest('hex')});}
+                 else throw Error('Unsupported dist entry: '+relative);
+                }}
+                walk('');
+                if(!files.some(x=>x.path==='index.html'))throw Error('Missing site entry');
+                const packageVersion=JSON.parse(fs.readFileSync('package.json','utf8')).version;
+                if(typeof packageVersion!=='string'||!/^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:-((?:0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*)(?:\.(?:0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*))*))?(?:\+([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?$/.test(packageVersion))throw Error('Invalid package version');
+                const m={schema_version:1,pipeline_id:process.env.PIPELINE_ID,run_id:process.env.BUILD_NUMBER,branch:process.env.CI_COMMIT_REF_NAME,commit:process.env.CI_COMMIT_SHA,package_version:packageVersion,files};
+                if(m.pipeline_id!=='4403172'||m.branch!=='develop'||!/^[1-9][0-9]*$/.test(m.run_id)||!/^[0-9a-f]{40,64}$/.test(m.commit))throw Error('Wrong Flow identity');
+                fs.writeFileSync(path.join(root,'release.json'),JSON.stringify(m)+'\n');
+                console.log('CYF_WEB_ARTIFACT '+JSON.stringify({pipeline:m.pipeline_id,run:m.run_id,commit:m.commit,files:files.length}));
+
+                CYF_MANIFEST
+                phase export.end
+          upload_artifact:
+            name: Upload same-run site and test report
+            step: ArtifactUpload
+            with:
+              uploadType: flowPublic
+              artifact: cyf_web_flow_4403172
+              filePath:
+                - _cyf_web_develop_ci_export/
+              includePathInArtifact: false
+      code_scan:
+        name: JavaScript code scan
+        runsOn: public/cn-beijing
+        steps:
+          javascript_scan:
+            step: JavaScriptCodeScan
+            with: {}

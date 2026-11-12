@@ -1,0 +1,78 @@
+{
+  "schemaVersion": 1,
+  "contract": "typed-deliberation-receipt-adoption-contract-v1.1.md",
+  "inherited_contract_sha256": "cb1cafa7b96238a7fa2a3ff3a89d0eb639aee6aabdfa3c57d1c460f54d2cc3c5",
+  "inherited_fixture_sha256": "f83984e09236ea56fd448712a34ee83efa1707c64fb01d0002167bf27af45a2a",
+  "golden_admission": {
+    "schemaVersion": 1,
+    "intent": "DISCUSSION",
+    "requestId": "request-1",
+    "userMessageId": "100",
+    "turnIds": [
+      "turn-1"
+    ],
+    "state": "ADMITTED",
+    "stateVersion": "0",
+    "eventCursor": "9007199254740993",
+    "statusUrl": "/chat/requests/request-1",
+    "typedOutcomeUrl": "/chat/conversations/7/requests/request-1/typed-outcome",
+    "replay": false,
+    "pendingQuestionId": null
+  },
+  "state_domains": {
+    "admission": [
+      "ADMITTED"
+    ],
+    "request": [
+      "RUNNING",
+      "PARTIAL",
+      "COMPLETED",
+      "FAILED",
+      "CANCELLED"
+    ],
+    "turn": [
+      "RECEIVED",
+      "QUEUED",
+      "DISPATCHED",
+      "STREAMING",
+      "FINAL_PERSISTED",
+      "PUBLISHED",
+      "UNKNOWN",
+      "RECOVERY_REQUIRED",
+      "FAILED",
+      "CANCELLED"
+    ]
+  },
+  "cases": [
+    {
+      "id": "TRA01",
+      "requirement": "API admission ADMITTED/0 is separate from initial RequestView RUNNING/0",
+      "actual": "NOT_RUN"
+    },
+    {
+      "id": "TRA02",
+      "requirement": "original-key replay receipt immutable after request final; current GET can be COMPLETED",
+      "actual": "NOT_RUN"
+    },
+    {
+      "id": "TRA03",
+      "requirement": "Web adopts canonical RUNNING/RECEIVED exact single-turn binding",
+      "actual": "NOT_RUN"
+    },
+    {
+      "id": "TRA04",
+      "requirement": "Web adopts COMPLETED/FINAL_PERSISTED after rapid final without second POST",
+      "actual": "NOT_RUN"
+    },
+    {
+      "id": "TRA05",
+      "requirement": "Web rejects immutable binding mismatches without state/content/POST",
+      "actual": "NOT_RUN"
+    },
+    {
+      "id": "TRA06",
+      "requirement": "Web late lower-version request cannot replace newer terminal same-request view",
+      "actual": "NOT_RUN"
+    }
+  ]
+}

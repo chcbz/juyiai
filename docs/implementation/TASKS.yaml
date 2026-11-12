@@ -1,0 +1,20 @@
+schema_version: 4
+# BEGIN CYF_RUNTIME_LEDGER_JSON
+runtime_ledger_json: |
+  {
+    "schema_version": 2,
+    "updated_at": "2026-11-12",
+    "critical_path": [
+      "JUYIAI-OPEN-SOURCE-MIGRATION"
+    ],
+    "tasks": {
+      "JUYIAI-OPEN-SOURCE-MIGRATION": {
+        "owner": null,
+        "exact_sha_tree": {"commit_sha": null, "tree_sha": null},
+        "current_gate": "planned",
+        "blocker": null,
+        "next_action": "Repository migration verification; not production deployment."
+      }
+    }
+  }
+# END CYF_RUNTIME_LEDGER_JSON

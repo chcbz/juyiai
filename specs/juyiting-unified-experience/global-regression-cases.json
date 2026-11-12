@@ -1,0 +1,3744 @@
+{
+  "schemaVersion": 1,
+  "name": "聚义厅全局回归测试用例",
+  "revision": "2026-11-10-v1",
+  "scope": "Regression definition only; no execution, deploy, paid call or production write in this catalog revision",
+  "authoritativeCaseData": "global-regression-cases.json",
+  "humanView": "global-regression.md",
+  "currentExecutionStatus": "NOT_RUN",
+  "historicallyCoveredCoreCases": 17,
+  "categories": [
+    {
+      "key": "ENTRY",
+      "title": "入口、导航与响应式",
+      "contracts": [
+        "juyiting-lightweight-workbench/spec.md",
+        "juyiting-ui-optimization/spec.md",
+        "juyiting-dual-orientation-experience/spec.md",
+        "juyiting-live-map-preview/spec.md"
+      ]
+    },
+    {
+      "key": "TASK",
+      "title": "需求与事项生命周期",
+      "contracts": [
+        "juyiting-unified-experience/spec.md",
+        "juyiting-assignee-recommendation/spec.md",
+        "juyiting-ui-baseline-20261006/optimization/spec.md"
+      ]
+    },
+    {
+      "key": "ASSIGN",
+      "title": "推荐、承办与外部委派",
+      "contracts": [
+        "juyiting-assignee-recommendation/spec.md",
+        "juyiting-external-commission-mvp/spec.md",
+        "juyiting-agent-skill-display/spec.md"
+      ]
+    },
+    {
+      "key": "TALK",
+      "title": "正式议事、密议与多轮上下文",
+      "contracts": [
+        "juyiting-multimedia-deliberation/spec.md",
+        "juyiting-conversation-sessions/spec.md",
+        "juyiting-codex-fast-context-20260925/spec.md",
+        "juyiting-ui-baseline-20261006/optimization/detailed-design.md"
+      ]
+    },
+    {
+      "key": "MATERIAL",
+      "title": "资料选择、上传、固定版本与工作空间",
+      "contracts": [
+        "juyiting-creative-delivery-mvp/spec.md",
+        "juyiting-ui-baseline-20261006/optimization/spec.md"
+      ]
+    },
+    {
+      "key": "SKILL",
+      "title": "全部现有技能与产物质量",
+      "contracts": [
+        "juyiting-skill-execution/spec.md",
+        "juyiting-skill-execution/responsibility-boundaries.md",
+        "juyiting-skill-execution/core-ui-regression.md"
+      ]
+    },
+    {
+      "key": "DELIVERY",
+      "title": "成果、预览、选版与验收",
+      "contracts": [
+        "juyiting-unified-experience/spec.md",
+        "juyiting-creative-delivery-mvp/spec.md",
+        "juyiting-ui-baseline-20261006/optimization/spec.md"
+      ]
+    },
+    {
+      "key": "ECON",
+      "title": "WEN钱包、报价与成本",
+      "contracts": [
+        "agent-economy-marketplace/beta-wen-billing.md",
+        "task-scheduling/spec.md"
+      ]
+    },
+    {
+      "key": "AGENT",
+      "title": "好汉、技能管理、岗位与托管",
+      "contracts": [
+        "juyiting-agent-model-governance/spec.md",
+        "juyiting-agent-skill-display/spec.md",
+        "juyiting-skill-execution/management-contract.md",
+        "runtime-self-host-onboarding/spec.md",
+        "agent-economy-marketplace/beta-wen-billing.md"
+      ]
+    },
+    {
+      "key": "ARCHIVE",
+      "title": "典籍、阅读器、手札与案卷",
+      "contracts": [
+        "archive-agent-maintenance/spec.md",
+        "archive-pavilion-reader-mvp/spec.md",
+        "juyiting-lightweight-workbench/spec.md"
+      ]
+    },
+    {
+      "key": "HELP",
+      "title": "我的、消息、帮助与反馈",
+      "contracts": [
+        "juyiting-lightweight-workbench/spec.md",
+        "juyiting-ui-optimization/spec.md"
+      ]
+    },
+    {
+      "key": "VOICE",
+      "title": "语音输入输出与实时会话",
+      "contracts": [
+        "juyiting-voice-conversation/spec.md",
+        "juyiting-voice-realtime/spec.md"
+      ]
+    },
+    {
+      "key": "RELIABILITY",
+      "title": "异常恢复、隔离与系统稳定性",
+      "contracts": [
+        "juyiting-execution-recovery/spec.md",
+        "account-security-foundation/spec.md",
+        "juyiting-skill-execution/responsibility-boundaries.md",
+        "api-performance-3s-slo/spec.md"
+      ]
+    },
+    {
+      "key": "COLLAB",
+      "title": "公共议事、团队与扩展协作",
+      "contracts": [
+        "juyiting-task-collaboration/spec.md",
+        "juyiting-multimedia-deliberation/spec.md"
+      ]
+    }
+  ],
+  "cases": [
+    {
+      "id": "JYT-ENTRY-01",
+      "category": "ENTRY",
+      "title": "登录与未登录入口",
+      "priority": "P0",
+      "fixture_preconditions": "F0：授权账号及未登录浏览器",
+      "steps": [
+        "未登录进入聚义厅",
+        "按实际认证入口登录",
+        "返回聚义厅",
+        "退出登录后再次打开受保护入口"
+      ],
+      "expected": [
+        "不展示他人私有数据",
+        "登录后进入真实业务页而非原型",
+        "退出后受保护操作不可继续"
+      ],
+      "risks": [
+        "OWN_WRITE"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-ENTRY-02",
+      "category": "ENTRY",
+      "title": "四大工作台入口与返回",
+      "priority": "P1",
+      "fixture_preconditions": "F0；办事/事项/资料/我的均启用",
+      "steps": [
+        "依次打开四入口",
+        "进入一项详情",
+        "返回来源列表"
+      ],
+      "expected": [
+        "入口和当前页一致",
+        "保留来源筛选及合理滚动位置",
+        "没有重复层或误创建事项"
+      ],
+      "risks": [
+        "READ"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-ENTRY-03",
+      "category": "ENTRY",
+      "title": "PC与手机布局",
+      "priority": "P1",
+      "fixture_preconditions": "F0；320/390/1440视口",
+      "steps": [
+        "依次打开首页/事项/议事/资料",
+        "在三视口检查"
+      ],
+      "expected": [
+        "关键按钮及输入可操作",
+        "无遮挡、横向溢出或重复滚动",
+        "手机软键盘另记真机证据"
+      ],
+      "risks": [
+        "READ",
+        "DEVICE"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-ENTRY-04",
+      "category": "ENTRY",
+      "title": "横竖屏和低高度切换",
+      "priority": "P1",
+      "fixture_preconditions": "F0；未发送草稿和已选资料",
+      "steps": [
+        "输入草稿",
+        "打开预览",
+        "切换横竖屏及低高度",
+        "返回"
+      ],
+      "expected": [
+        "不丢草稿/引用",
+        "不重复发送",
+        "地图与工作台状态不混用",
+        "弹层可关闭"
+      ],
+      "risks": [
+        "DEVICE"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-ENTRY-05",
+      "category": "ENTRY",
+      "title": "弹层、键盘与焦点",
+      "priority": "P1",
+      "fixture_preconditions": "F0；键盘操作可用",
+      "steps": [
+        "打开一级/子级弹层",
+        "Tab遍历",
+        "Esc逐层返回"
+      ],
+      "expected": [
+        "子级优先关闭",
+        "焦点限制并恢复触发入口",
+        "纯图标有无障碍名称",
+        "不误提交"
+      ],
+      "risks": [
+        "READ"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-ENTRY-06",
+      "category": "ENTRY",
+      "title": "深层导航与未保存内容",
+      "priority": "P1",
+      "fixture_preconditions": "F0；详情内有草稿",
+      "steps": [
+        "详情进入其他入口",
+        "触发返回/未保存提示",
+        "取消离开",
+        "明确离开"
+      ],
+      "expected": [
+        "不静默丢失草稿",
+        "按现有深度规则提示返回",
+        "不残留背景锁或不可关闭面板"
+      ],
+      "risks": [
+        "OWN_WRITE"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-ENTRY-07",
+      "category": "ENTRY",
+      "title": "地图与名册互不污染",
+      "priority": "P1",
+      "fixture_preconditions": "F0；含在线/离线/多名好汉",
+      "steps": [
+        "打开地图与名册",
+        "切换名册状态筛选",
+        "打开地图预览"
+      ],
+      "expected": [
+        "名册筛选不改地图人物事实",
+        "只读预览不新建第二业务状态或发执行",
+        "隐藏人数可达"
+      ],
+      "risks": [
+        "READ"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-ENTRY-08",
+      "category": "ENTRY",
+      "title": "加载、空态与失败态",
+      "priority": "P1",
+      "fixture_preconditions": "F0；空数据账号/隔离读取故障",
+      "steps": [
+        "进入空列表",
+        "切为读取失败",
+        "恢复读取"
+      ],
+      "expected": [
+        "加载/空列表/筛选无结果/失败可区分",
+        "错误不伪装0项成功",
+        "不显示示例假数据"
+      ],
+      "risks": [
+        "READ",
+        "FAULT"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "ISOLATED_UI_FAULT",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-TASK-01",
+      "category": "TASK",
+      "title": "文字需求保存与草稿",
+      "priority": "P0",
+      "fixture_preconditions": "F0；无活动事项",
+      "steps": [
+        "填写有效需求",
+        "保存/开始办事",
+        "查看待承办详情"
+      ],
+      "expected": [
+        "保存需求不等于授权执行",
+        "正文与标题按合同保留",
+        "记录事项ID/版本"
+      ],
+      "risks": [
+        "OWN_WRITE"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-TASK-02",
+      "category": "TASK",
+      "title": "纯资料需求与无效提交",
+      "priority": "P1",
+      "fixture_preconditions": "F0、F1；无正文草稿",
+      "steps": [
+        "空内容尝试提交",
+        "只选固定版本资料",
+        "保存需求"
+      ],
+      "expected": [
+        "空正文且无资料不误创建",
+        "纯资料需求可保存",
+        "标题兜底不截短实际正文"
+      ],
+      "risks": [
+        "OWN_WRITE"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-TASK-03",
+      "category": "TASK",
+      "title": "新建、确认承办及费用闭环",
+      "priority": "P0",
+      "fixture_preconditions": "F0、F1、F2；两新事项且资金已授权",
+      "steps": [
+        "创建A/B事项",
+        "分别显式确认承办，记录本用例启动里程碑",
+        "依次完成各分支技能/交付用例",
+        "B验收、A取消后核对钱包，完成本用例收尾断言"
+      ],
+      "expected": [
+        "确认前不执行/不预占",
+        "按真实报价冻结WEN",
+        "B仅结算一次、A释放预占",
+        "held归零、预算未超"
+      ],
+      "risks": [
+        "OWN_WRITE",
+        "PAID"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": "JYT-01",
+      "historical_evidence": {
+        "round": "R5",
+        "date": "2026-11-10",
+        "result": "PASS",
+        "scope": "Original core case only, not this catalog execution",
+        "baseline": "../juyiting-skill-execution/core-ui-regression-baseline.json",
+        "report": "/home/isp/state/juyiting-root-cause-20261109/full-r5/report.md",
+        "legacy_id": "JYT-01"
+      },
+      "depends_on": []
+    },
+    {
+      "id": "JYT-TASK-04",
+      "category": "TASK",
+      "title": "取消后保留历史成果",
+      "priority": "P0",
+      "fixture_preconditions": "F2；A已有截图/JSON/检索JSON/两版PDF且无新在途请求",
+      "steps": [
+        "UI取消A并确认",
+        "查看取消态",
+        "认证读取原成果"
+      ],
+      "expected": [
+        "取消关闭后续执行并释放预占",
+        "不承诺外部调用立即撤回",
+        "原文件200且长度/SHA不变"
+      ],
+      "risks": [
+        "OWN_WRITE",
+        "PAID"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": "JYT-14",
+      "historical_evidence": {
+        "round": "R5",
+        "date": "2026-11-10",
+        "result": "PASS",
+        "scope": "Original core case only, not this catalog execution",
+        "baseline": "../juyiting-skill-execution/core-ui-regression-baseline.json",
+        "report": "/home/isp/state/juyiting-root-cause-20261109/full-r5/report.md",
+        "legacy_id": "JYT-14"
+      },
+      "depends_on": [
+        "JYT-SKILL-05"
+      ]
+    },
+    {
+      "id": "JYT-TASK-05",
+      "category": "TASK",
+      "title": "待承办编辑与无变化保存",
+      "priority": "P1",
+      "fixture_preconditions": "F0、F1；待承办事项",
+      "steps": [
+        "修改标题/描述/固定资料",
+        "保存",
+        "原值不变再次保存"
+      ],
+      "expected": [
+        "真实变化才推进版本并使旧推荐失效",
+        "无变化不重复推荐/清空手选",
+        "不会承办已过期需求"
+      ],
+      "risks": [
+        "OWN_WRITE"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-TASK-06",
+      "category": "TASK",
+      "title": "编辑并发与迟到保存",
+      "priority": "P1",
+      "fixture_preconditions": "F0；同一待承办事项两个自有tab",
+      "steps": [
+        "两tab读取同版",
+        "A保存",
+        "B保存旧版",
+        "按页面冲突说明处理"
+      ],
+      "expected": [
+        "拒绝静默覆盖",
+        "不丢新需求/资料",
+        "保留可核对原操作与草稿",
+        "不重复写入"
+      ],
+      "risks": [
+        "OWN_WRITE"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-TASK-07",
+      "category": "TASK",
+      "title": "事项列表组合筛选和分页",
+      "priority": "P1",
+      "fixture_preconditions": "F0；跨多页不同状态/承办人/关键词样本",
+      "steps": [
+        "组合筛选",
+        "翻页",
+        "打开详情",
+        "返回"
+      ],
+      "expected": [
+        "列表、total与计数使用同一条件且分页前筛选",
+        "按实际承办ID",
+        "返回保持筛选",
+        "首页不被列表筛选污染"
+      ],
+      "risks": [
+        "READ"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-TASK-08",
+      "category": "TASK",
+      "title": "首页最近与待处理投影",
+      "priority": "P1",
+      "fixture_preconditions": "F0；足量自有事项及待处理记录",
+      "steps": [
+        "查看首页最近/待处理/归档",
+        "打开目标",
+        "完成后返回"
+      ],
+      "expected": [
+        "按现行排序与数量投影真实记录",
+        "状态更新正确",
+        "首页摘要不替代完整列表，不多次全量加载"
+      ],
+      "risks": [
+        "READ"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-TASK-09",
+      "category": "TASK",
+      "title": "完成态只读与重新办理",
+      "priority": "P1",
+      "fixture_preconditions": "F2；已完成事项",
+      "steps": [
+        "打开详情/原议事",
+        "查看成果",
+        "尝试继续入口",
+        "明确新建另一需求"
+      ],
+      "expected": [
+        "完成态不继续执行/催验收",
+        "查看不扣费",
+        "新需求有独立事项/授权，不复用旧终态执行"
+      ],
+      "risks": [
+        "OWN_WRITE"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-TASK-10",
+      "category": "TASK",
+      "title": "取消与执行/验收并发",
+      "priority": "P0",
+      "fixture_preconditions": "F0、F2；隔离环境可控执行及资金",
+      "steps": [
+        "执行落成果或验收提交时在另一tab取消",
+        "核对双方最终事实"
+      ],
+      "expected": [
+        "以权威并发结果收敛",
+        "无完成又全额退款等冲突",
+        "资金/成果一致",
+        "不强停共享Runtime"
+      ],
+      "risks": [
+        "OWN_WRITE",
+        "PAID",
+        "FAULT"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "ISOLATED_UI_FAULT",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-ASSIGN-01",
+      "category": "ASSIGN",
+      "title": "推荐解释与手动选择",
+      "priority": "P0",
+      "fixture_preconditions": "F0；至少两名合法候选",
+      "steps": [
+        "保存需求",
+        "查看真实推荐",
+        "改选其他候选",
+        "返回详情"
+      ],
+      "expected": [
+        "推荐是建议而非指派",
+        "展示可解释的实际候选",
+        "手选不受推荐失败绑死",
+        "未确认无执行"
+      ],
+      "risks": [
+        "OWN_WRITE"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-ASSIGN-02",
+      "category": "ASSIGN",
+      "title": "推荐失败、重读及报价未知",
+      "priority": "P1",
+      "fixture_preconditions": "F0；隔离推荐服务失败/缺价样本",
+      "steps": [
+        "保存需求",
+        "触发推荐失败/报价不可得",
+        "查看可用操作"
+      ],
+      "expected": [
+        "已保存需求保留",
+        "未知不显示免费/0",
+        "手选及确认能力按实际合同区分",
+        "不默认为有价"
+      ],
+      "risks": [
+        "OWN_WRITE",
+        "FAULT"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "ISOLATED_UI_FAULT",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-ASSIGN-03",
+      "category": "ASSIGN",
+      "title": "确认后自动首轮与重复点击",
+      "priority": "P0",
+      "fixture_preconditions": "F0；可承办事项且报价已确认",
+      "steps": [
+        "确认承办一次",
+        "快速重复点击/刷新",
+        "查看请求及资金事实"
+      ],
+      "expected": [
+        "只有同一承办授权/首轮/预占",
+        "不要求额外开始按钮",
+        "响应未知只核对原操作不重发"
+      ],
+      "risks": [
+        "OWN_WRITE",
+        "PAID"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-ASSIGN-04",
+      "category": "ASSIGN",
+      "title": "离线或忙碌候选",
+      "priority": "P1",
+      "fixture_preconditions": "F0；已获准模拟离线/忙碌候选",
+      "steps": [
+        "选候选",
+        "查看确认文案",
+        "确认",
+        "等待候选就绪"
+      ],
+      "expected": [
+        "按合同可委派时明确等待",
+        "不伪报已开始",
+        "候选恢复后原授权仅启动一次，不换身份"
+      ],
+      "risks": [
+        "OWN_WRITE",
+        "PAID",
+        "FAULT"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "ISOLATED_UI_FAULT",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-ASSIGN-05",
+      "category": "ASSIGN",
+      "title": "外部好汉接单开关及资格",
+      "priority": "P1",
+      "fixture_preconditions": "F0、F6；两账号的可测试外部Agent",
+      "steps": [
+        "服务方开/关接外单",
+        "委托方刷新候选",
+        "查看所属用户"
+      ],
+      "expected": [
+        "仅有效同平台范围的公开候选可选",
+        "私有好汉不泄漏",
+        "关闭只阻止新外单，已接任务不被取消"
+      ],
+      "risks": [
+        "TWO_ACCOUNT",
+        "SHARED_WRITE"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-ASSIGN-06",
+      "category": "ASSIGN",
+      "title": "外单完整委派与验收",
+      "priority": "P1",
+      "fixture_preconditions": "F0、F1、F6；外部委派授权及预算",
+      "steps": [
+        "委托方确认外部承办并带固定资料",
+        "服务方办理",
+        "委托方选版验收"
+      ],
+      "expected": [
+        "仅授予本事项资料",
+        "不需服务方额外逐单审批",
+        "正式交付可验收",
+        "私聊与其他事项不泄漏"
+      ],
+      "risks": [
+        "TWO_ACCOUNT",
+        "PAID"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-ASSIGN-07",
+      "category": "ASSIGN",
+      "title": "候选变更与旧授权失效",
+      "priority": "P0",
+      "fixture_preconditions": "F0；隔离绑定/资格代际变化",
+      "steps": [
+        "打开候选确认",
+        "在隔离环境变更归属/资格",
+        "提交旧确认"
+      ],
+      "expected": [
+        "旧确认不能授权给新Owner/实例",
+        "返回可理解冲突",
+        "无预占/授权部分成功"
+      ],
+      "risks": [
+        "OWN_WRITE",
+        "FAULT"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "ISOLATED_UI_FAULT",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-TALK-01",
+      "category": "TALK",
+      "title": "正式议事连续三轮",
+      "priority": "P0",
+      "fixture_preconditions": "F0、F2；自有进行中事项",
+      "steps": [
+        "发送首问",
+        "正常终态后追问",
+        "再修改一项约束"
+      ],
+      "expected": [
+        "请求/回合/消息绑定清晰",
+        "每轮解锁且消费前文",
+        "不重复首问/自动并行排队",
+        "不广播无关好汉"
+      ],
+      "risks": [
+        "OWN_WRITE",
+        "PAID"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-TALK-02",
+      "category": "TALK",
+      "title": "普通密议新建、草稿与历史",
+      "priority": "P1",
+      "fixture_preconditions": "F0；自有好汉私议入口",
+      "steps": [
+        "从详情进密议",
+        "新建话头",
+        "留草稿并返回",
+        "打开历史话头"
+      ],
+      "expected": [
+        "普通密议无taskId、不自动创建正式事项",
+        "目标明确",
+        "历史与新话头/草稿不串用"
+      ],
+      "risks": [
+        "OWN_WRITE"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-TALK-03",
+      "category": "TALK",
+      "title": "跨轮读取旧JSON而非信封",
+      "priority": "P0",
+      "fixture_preconditions": "F2；已提交网页JSON",
+      "steps": [
+        "仅发送一次读取旧JSON请求",
+        "看三字段",
+        "对比执行/文件目录"
+      ],
+      "expected": [
+        "值与原文件一致",
+        "无新EXECUTE/文件",
+        "合法成果JSON不按接口响应信封误验"
+      ],
+      "risks": [
+        "OWN_WRITE",
+        "PAID"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": "JYT-05",
+      "historical_evidence": {
+        "round": "R5",
+        "date": "2026-11-10",
+        "result": "PASS",
+        "scope": "Original core case only, not this catalog execution",
+        "baseline": "../juyiting-skill-execution/core-ui-regression-baseline.json",
+        "report": "/home/isp/state/juyiting-root-cause-20261109/full-r5/report.md",
+        "legacy_id": "JYT-05"
+      },
+      "depends_on": [
+        "JYT-DELIVERY-01"
+      ]
+    },
+    {
+      "id": "JYT-TALK-04",
+      "category": "TALK",
+      "title": "密议续轮真实查询技能",
+      "priority": "P0",
+      "fixture_preconditions": "F4；紧接同会话典籍查询",
+      "steps": [
+        "在原普通密议发skill_list与两项skill_read只读请求",
+        "核对回执及UI"
+      ],
+      "expected": [
+        "同engine下一轮DELTA连续",
+        "真实两项skill_read",
+        "无RECOVERY_REQUIRED/信封错误",
+        "不以本地SKILL.md或旧回复替代"
+      ],
+      "risks": [
+        "OWN_WRITE",
+        "PAID"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": "JYT-16",
+      "historical_evidence": {
+        "round": "R5",
+        "date": "2026-11-10",
+        "result": "PASS",
+        "scope": "Original core case only, not this catalog execution",
+        "baseline": "../juyiting-skill-execution/core-ui-regression-baseline.json",
+        "report": "/home/isp/state/juyiting-root-cause-20261109/full-r5/report.md",
+        "legacy_id": "JYT-16"
+      },
+      "depends_on": [
+        "JYT-ARCHIVE-01"
+      ]
+    },
+    {
+      "id": "JYT-TALK-05",
+      "category": "TALK",
+      "title": "话头切换与迟到消息",
+      "priority": "P0",
+      "fixture_preconditions": "F0；两个不同话头且有延迟回复",
+      "steps": [
+        "A发问",
+        "切B并编辑草稿",
+        "A回复到达",
+        "返回A"
+      ],
+      "expected": [
+        "A结果只入A",
+        "不覆盖B正文/草稿/目标",
+        "返回可读取完整最终回复"
+      ],
+      "risks": [
+        "OWN_WRITE",
+        "PAID",
+        "FAULT"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "ISOLATED_UI_FAULT",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-TALK-06",
+      "category": "TALK",
+      "title": "历史分页与连续窗口",
+      "priority": "P1",
+      "fixture_preconditions": "F0；超过20条且跨页有附件/成果会话",
+      "steps": [
+        "进入历史",
+        "向前加载",
+        "返回最新",
+        "断线后补读"
+      ],
+      "expected": [
+        "以现行20条页级投影及连续游标消费",
+        "无缺页/重复/乱序",
+        "不逐条全量补查",
+        "正文完整"
+      ],
+      "risks": [
+        "READ"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-TALK-07",
+      "category": "TALK",
+      "title": "资料作用范围与临时引用",
+      "priority": "P0",
+      "fixture_preconditions": "F0、F1、F2；任务资料和仅本条资料各一份",
+      "steps": [
+        "在议事选择本任务/仅本条/不带资料",
+        "发送",
+        "下一轮再核对"
+      ],
+      "expected": [
+        "仅发送声明范围的固定版本",
+        "临时移除不删任务持久关联",
+        "无资料不隐式授权整个文件库"
+      ],
+      "risks": [
+        "OWN_WRITE",
+        "PAID"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-TALK-08",
+      "category": "TALK",
+      "title": "输入状态与重复发送",
+      "priority": "P0",
+      "fixture_preconditions": "F0；有草稿、引用及明确目标",
+      "steps": [
+        "发送一次",
+        "处理中连续点击",
+        "完成再发送下一轮"
+      ],
+      "expected": [
+        "处理中不重复提交",
+        "成功只清本轮已提交草稿",
+        "失败/未知保留必要内容",
+        "下一轮不被上一轮finally锁住"
+      ],
+      "risks": [
+        "OWN_WRITE",
+        "PAID"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-TALK-09",
+      "category": "TALK",
+      "title": "停止回复与取消事项分离",
+      "priority": "P1",
+      "fixture_preconditions": "F0、F2；可控长回复",
+      "steps": [
+        "发起回复",
+        "点击停止回复",
+        "读取原事项/执行状态"
+      ],
+      "expected": [
+        "明确实际停止范围",
+        "不把UI停止等同退款/撤回外部副作用/取消事项",
+        "已提交成果保留"
+      ],
+      "risks": [
+        "OWN_WRITE",
+        "PAID",
+        "FAULT"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "ISOLATED_UI_FAULT",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-TALK-10",
+      "category": "TALK",
+      "title": "记录删除与关联资源",
+      "priority": "P1",
+      "fixture_preconditions": "F0；专用可删除测试话头",
+      "steps": [
+        "打开话头记录",
+        "取消删除",
+        "再确认删除",
+        "检查关联事项及成果"
+      ],
+      "expected": [
+        "取消不变更",
+        "删除仅本话头合法范围",
+        "不级联删除事项/正式成果",
+        "UI按当前能力如实处理"
+      ],
+      "risks": [
+        "OWN_WRITE"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-TALK-11",
+      "category": "TALK",
+      "title": "选文保存与起草不发送",
+      "priority": "P1",
+      "fixture_preconditions": "F0；长回复/典籍摘录/案卷各一份",
+      "steps": [
+        "选中文字保存片段或引入需求",
+        "查看草稿及出处",
+        "取消"
+      ],
+      "expected": [
+        "保留合法来源与明确截取范围",
+        "不凭截短摘录宣称读全文",
+        "不自动发送/承办/执行"
+      ],
+      "risks": [
+        "OWN_WRITE"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-MATERIAL-01",
+      "category": "MATERIAL",
+      "title": "工作空间上传与列表",
+      "priority": "P0",
+      "fixture_preconditions": "F0、F1；用户自有空测试目录",
+      "steps": [
+        "资料页上传固定PNG/JSON/PDF",
+        "刷新列表",
+        "查看文件详情"
+      ],
+      "expected": [
+        "显示真实fileId/version/大小/类型",
+        "文件未预览时列表不读整文件",
+        "字节/SHA匹配"
+      ],
+      "risks": [
+        "OWN_WRITE"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-MATERIAL-02",
+      "category": "MATERIAL",
+      "title": "多文件串行上传与中途失败",
+      "priority": "P1",
+      "fixture_preconditions": "F0、F1；隔离使第二项失败",
+      "steps": [
+        "批选三文件上传",
+        "等第二项失败",
+        "观察第三项及成功项"
+      ],
+      "expected": [
+        "串行处理",
+        "已成功保留，失败停止后续",
+        "不重复上传第一项",
+        "失败可定位"
+      ],
+      "risks": [
+        "OWN_WRITE",
+        "FAULT"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "ISOLATED_UI_FAULT",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-MATERIAL-03",
+      "category": "MATERIAL",
+      "title": "上传未知结果核对",
+      "priority": "P0",
+      "fixture_preconditions": "F0、F1；隔离丢失提交响应",
+      "steps": [
+        "上传一次",
+        "使响应丢失",
+        "使用现有核对入口",
+        "重新进入目录"
+      ],
+      "expected": [
+        "按原上传意图核对",
+        "已提交自动选中同fileId/version",
+        "不盲重传或产生重复版本"
+      ],
+      "risks": [
+        "OWN_WRITE",
+        "FAULT"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "ISOLATED_UI_FAULT",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-MATERIAL-04",
+      "category": "MATERIAL",
+      "title": "资料弹层完成与取消",
+      "priority": "P1",
+      "fixture_preconditions": "F0、F1；已有选中资料",
+      "steps": [
+        "打开选择器",
+        "改选资料",
+        "取消",
+        "再打开并完成"
+      ],
+      "expected": [
+        "取消保留原选择且不提交关联",
+        "完成才带入",
+        "窄屏预览/关闭/焦点恢复正常",
+        "不自动发送"
+      ],
+      "risks": [
+        "OWN_WRITE"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-MATERIAL-05",
+      "category": "MATERIAL",
+      "title": "固定版本而非最新文件",
+      "priority": "P0",
+      "fixture_preconditions": "F0、F1；同文件两个不同内容版本",
+      "steps": [
+        "选择版本1绑定事项",
+        "文件库新增版本2",
+        "原事项执行读取"
+      ],
+      "expected": [
+        "原授权仍读版本1且摘要匹配",
+        "不会静默读最新版本",
+        "新选择需明确绑定新版本"
+      ],
+      "risks": [
+        "OWN_WRITE",
+        "PAID"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-MATERIAL-06",
+      "category": "MATERIAL",
+      "title": "重命名与解除事项关联",
+      "priority": "P1",
+      "fixture_preconditions": "F0、F1；固定版本已绑定专用事项",
+      "steps": [
+        "重命名文件",
+        "从事项解除关系",
+        "读取原历史成果/库文件"
+      ],
+      "expected": [
+        "名称与内容身份分离",
+        "解除关系不误删库文件/正式成果",
+        "原已提交来源仍按权限可核对"
+      ],
+      "risks": [
+        "OWN_WRITE"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-MATERIAL-07",
+      "category": "MATERIAL",
+      "title": "跨用户文件越权",
+      "priority": "P0",
+      "fixture_preconditions": "F0、F6；各有私有同名文件",
+      "steps": [
+        "A选择文件",
+        "B通过真实页面尝试访问A私有固定资源",
+        "查看拒绝"
+      ],
+      "expected": [
+        "页面及下载均无内容泄漏",
+        "不能凭猜ID/URL取得权限",
+        "相同文件名不串身份"
+      ],
+      "risks": [
+        "TWO_ACCOUNT"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-MATERIAL-08",
+      "category": "MATERIAL",
+      "title": "存储与预览能力分离",
+      "priority": "P1",
+      "fixture_preconditions": "F0、F1；PPTX和不支持在线预览格式",
+      "steps": [
+        "上传/选择文件",
+        "打开预览",
+        "到资料页下载"
+      ],
+      "expected": [
+        "不支持在线预览如实说明",
+        "PPT/PPTX不恢复逐页渲染",
+        "仍可存储、授权下载并校验原字节"
+      ],
+      "risks": [
+        "OWN_WRITE"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-MATERIAL-09",
+      "category": "MATERIAL",
+      "title": "取消系统文件选择",
+      "priority": "P1",
+      "fixture_preconditions": "F0；已有草稿与暂存",
+      "steps": [
+        "打开普通上传选择",
+        "取消系统选择",
+        "返回弹层"
+      ],
+      "expected": [
+        "已有暂存/选择/草稿不变",
+        "不报伪上传失败",
+        "不产生文件或执行"
+      ],
+      "risks": [
+        "DEVICE"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-MATERIAL-10",
+      "category": "MATERIAL",
+      "title": "预览切换与资源释放",
+      "priority": "P1",
+      "fixture_preconditions": "F0、F1；两张图和两版文档",
+      "steps": [
+        "连续切换文件",
+        "关闭预览",
+        "换身份或退出页面"
+      ],
+      "expected": [
+        "不显示上一文件迟到内容",
+        "撤销临时URL/取消旧渲染",
+        "不残留大文件或旧用户授权"
+      ],
+      "risks": [
+        "OWN_WRITE",
+        "FAULT"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "ISOLATED_UI_FAULT",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-MATERIAL-11",
+      "category": "MATERIAL",
+      "title": "从文件与案卷起草事项",
+      "priority": "P1",
+      "fixture_preconditions": "F0、F1；可读文件/案卷",
+      "steps": [
+        "从文件详情或案卷选起草",
+        "查看新需求",
+        "返回"
+      ],
+      "expected": [
+        "固定fileId/version与出处保留",
+        "不携私人sourceRef或他人targetAgentId",
+        "不自动提交/承办"
+      ],
+      "risks": [
+        "OWN_WRITE"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-SKILL-01",
+      "category": "SKILL",
+      "title": "首次技能目录一致性",
+      "priority": "P0",
+      "fixture_preconditions": "F0、F2；进行中事项首次进议事",
+      "steps": [
+        "首次展开目录",
+        "不点刷新",
+        "对比同次权威目录及执行绑定",
+        "记录当轮全部实际可调用技能的名称、版本及授权范围，逐项关联成功场景；缺项单列未覆盖，不沿用历史目录宣称全部技能通过"
+      ],
+      "expected": [
+        "自动显示真实可调用项",
+        "不出现假0项/须手动刷新才恢复",
+        "安装不等于本任务授权"
+      ],
+      "risks": [
+        "READ"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": "JYT-02",
+      "historical_evidence": {
+        "round": "R5",
+        "date": "2026-11-10",
+        "result": "PASS",
+        "scope": "Original core case only, not this catalog execution",
+        "baseline": "../juyiting-skill-execution/core-ui-regression-baseline.json",
+        "report": "/home/isp/state/juyiting-root-cause-20261109/full-r5/report.md",
+        "legacy_id": "JYT-02"
+      },
+      "depends_on": []
+    },
+    {
+      "id": "JYT-SKILL-02",
+      "category": "SKILL",
+      "title": "网页操作：截图和JSON",
+      "priority": "P0",
+      "fixture_preconditions": "F2、F3；可用browser-workbench",
+      "steps": [
+        "只读打开自控robots.txt",
+        "交付截图及title/url/httpStatus JSON",
+        "核对真实工具"
+      ],
+      "expected": [
+        "selected action与技能绑定正确",
+        "真实浏览器非curl截图",
+        "200/空标题/固定URL准确",
+        "RESULT_COMMITTED"
+      ],
+      "risks": [
+        "OWN_WRITE",
+        "PAID"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": "JYT-03",
+      "historical_evidence": {
+        "round": "R5",
+        "date": "2026-11-10",
+        "result": "PASS",
+        "scope": "Original core case only, not this catalog execution",
+        "baseline": "../juyiting-skill-execution/core-ui-regression-baseline.json",
+        "report": "/home/isp/state/juyiting-root-cause-20261109/full-r5/report.md",
+        "legacy_id": "JYT-03"
+      },
+      "depends_on": [
+        "JYT-TASK-03",
+        "JYT-SKILL-01"
+      ]
+    },
+    {
+      "id": "JYT-SKILL-03",
+      "category": "SKILL",
+      "title": "信息检索真实取源",
+      "priority": "P0",
+      "fixture_preconditions": "F2、F3；可用web-research",
+      "steps": [
+        "实际读取IANA来源",
+        "交付结论、两段短引文及sourceUrl的JSON"
+      ],
+      "expected": [
+        "真实本轮取源且回执可追踪",
+        "引文/日期与原文一致",
+        "不得凭模型记忆或解释判成功"
+      ],
+      "risks": [
+        "OWN_WRITE",
+        "PAID"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": "JYT-06",
+      "historical_evidence": {
+        "round": "R5",
+        "date": "2026-11-10",
+        "result": "PASS",
+        "scope": "Original core case only, not this catalog execution",
+        "baseline": "../juyiting-skill-execution/core-ui-regression-baseline.json",
+        "report": "/home/isp/state/juyiting-root-cause-20261109/full-r5/report.md",
+        "legacy_id": "JYT-06"
+      },
+      "depends_on": [
+        "JYT-TALK-03"
+      ]
+    },
+    {
+      "id": "JYT-SKILL-04",
+      "category": "SKILL",
+      "title": "中文PDF制作",
+      "priority": "P0",
+      "fixture_preconditions": "F2、F3；document-workbench就绪",
+      "steps": [
+        "只执行一次生成120文8人活动方案PDF",
+        "UI预览",
+        "下载提取文本"
+      ],
+      "expected": [
+        "一页中文可读",
+        "24/28/48/12/8合计120",
+        "预览非无限loading",
+        "文件名/类型/字节真实"
+      ],
+      "risks": [
+        "OWN_WRITE",
+        "PAID"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": "JYT-07",
+      "historical_evidence": {
+        "round": "R5",
+        "date": "2026-11-10",
+        "result": "PASS",
+        "scope": "Original core case only, not this catalog execution",
+        "baseline": "../juyiting-skill-execution/core-ui-regression-baseline.json",
+        "report": "/home/isp/state/juyiting-root-cause-20261109/full-r5/report.md",
+        "legacy_id": "JYT-07"
+      },
+      "depends_on": [
+        "JYT-SKILL-03"
+      ]
+    },
+    {
+      "id": "JYT-SKILL-05",
+      "category": "SKILL",
+      "title": "PDF多轮修订",
+      "priority": "P0",
+      "fixture_preconditions": "F2、F3；原PDF已提交",
+      "steps": [
+        "只发一次修订150文10人及30/35/60/15/10要求",
+        "预览新版",
+        "读取旧版"
+      ],
+      "expected": [
+        "实际读取旧PDF",
+        "自动续轮",
+        "新版一页且数字改齐/其他内容保留",
+        "旧版SHA不变",
+        "REPLACE对话关系不冒充文件级替换"
+      ],
+      "risks": [
+        "OWN_WRITE",
+        "PAID"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": "JYT-08",
+      "historical_evidence": {
+        "round": "R5",
+        "date": "2026-11-10",
+        "result": "PASS",
+        "scope": "Original core case only, not this catalog execution",
+        "baseline": "../juyiting-skill-execution/core-ui-regression-baseline.json",
+        "report": "/home/isp/state/juyiting-root-cause-20261109/full-r5/report.md",
+        "legacy_id": "JYT-08"
+      },
+      "depends_on": [
+        "JYT-SKILL-04"
+      ]
+    },
+    {
+      "id": "JYT-SKILL-06",
+      "category": "SKILL",
+      "title": "图片识别提交文字",
+      "priority": "P0",
+      "fixture_preconditions": "F2、F3；固定红方蓝圆PNG且识别能力就绪",
+      "steps": [
+        "仅要求识别并提交一句文字",
+        "核对模型实际载体和提交成果"
+      ],
+      "expected": [
+        "输入摘要匹配",
+        "红色正方形/蓝色圆形正确",
+        "不生图",
+        "文字正式待验收",
+        "原生阅读不伪称独立执行技能"
+      ],
+      "risks": [
+        "OWN_WRITE",
+        "PAID"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": "JYT-09",
+      "historical_evidence": {
+        "round": "R5",
+        "date": "2026-11-10",
+        "result": "PASS",
+        "scope": "Original core case only, not this catalog execution",
+        "baseline": "../juyiting-skill-execution/core-ui-regression-baseline.json",
+        "report": "/home/isp/state/juyiting-root-cause-20261109/full-r5/report.md",
+        "legacy_id": "JYT-09"
+      },
+      "depends_on": [
+        "JYT-TASK-03"
+      ]
+    },
+    {
+      "id": "JYT-SKILL-07",
+      "category": "SKILL",
+      "title": "修订子轮自动生图",
+      "priority": "P0",
+      "fixture_preconditions": "F2、F3；原识别文字已提交",
+      "steps": [
+        "仅一次要求保留文字并追加800×600白底红方蓝圆",
+        "等正常修订及执行"
+      ],
+      "expected": [
+        "REVISION_REQUEST→delivery-revision→ACTION_REQUEST→真实生成",
+        "无需催促",
+        "尺寸/背景明确入参",
+        "文字保留",
+        "唯一Provider调用需回执"
+      ],
+      "risks": [
+        "OWN_WRITE",
+        "PAID"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": "JYT-10",
+      "historical_evidence": {
+        "round": "R5",
+        "date": "2026-11-10",
+        "result": "PASS",
+        "scope": "Original core case only, not this catalog execution",
+        "baseline": "../juyiting-skill-execution/core-ui-regression-baseline.json",
+        "report": "/home/isp/state/juyiting-root-cause-20261109/full-r5/report.md",
+        "legacy_id": "JYT-10"
+      },
+      "depends_on": [
+        "JYT-SKILL-06"
+      ]
+    },
+    {
+      "id": "JYT-SKILL-08",
+      "category": "SKILL",
+      "title": "图片编辑与原图保留",
+      "priority": "P0",
+      "fixture_preconditions": "F2、F3；刚生成PNG可读",
+      "steps": [
+        "仅一次要求蓝圆改绿、保留红方白底/800×600",
+        "预览下载",
+        "读取原图"
+      ],
+      "expected": [
+        "来源真实为原生成图",
+        "绿圆/红方/无文字符合视觉要求",
+        "原图独立且SHA不变",
+        "不宣称未编辑区逐像素相同"
+      ],
+      "risks": [
+        "OWN_WRITE",
+        "PAID"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": "JYT-11",
+      "historical_evidence": {
+        "round": "R5",
+        "date": "2026-11-10",
+        "result": "PASS",
+        "scope": "Original core case only, not this catalog execution",
+        "baseline": "../juyiting-skill-execution/core-ui-regression-baseline.json",
+        "report": "/home/isp/state/juyiting-root-cause-20261109/full-r5/report.md",
+        "legacy_id": "JYT-11"
+      },
+      "depends_on": [
+        "JYT-SKILL-07"
+      ]
+    },
+    {
+      "id": "JYT-SKILL-09",
+      "category": "SKILL",
+      "title": "严格背景与透明度",
+      "priority": "P0",
+      "fixture_preconditions": "F3；当前生成图及编辑图原字节",
+      "steps": [
+        "运行既有背景checker",
+        "核对前景框/8px排除区",
+        "验证254负例"
+      ],
+      "expected": [
+        "全图alpha255",
+        "颜色定义前景框及8px外所有像素RGB255",
+        "254负例失败",
+        "不能把固定条带遇图形误判成背景",
+        "不证明全语义背景"
+      ],
+      "risks": [
+        "READ"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": "JYT-17",
+      "historical_evidence": {
+        "round": "R5",
+        "date": "2026-11-10",
+        "result": "PASS_WITH_ORACLE_CORRECTION",
+        "scope": "Original core case only, not this catalog execution",
+        "baseline": "../juyiting-skill-execution/core-ui-regression-baseline.json",
+        "report": "/home/isp/state/juyiting-root-cause-20261109/full-r5/report.md",
+        "legacy_id": "JYT-17"
+      },
+      "depends_on": [
+        "JYT-SKILL-07",
+        "JYT-SKILL-08"
+      ]
+    },
+    {
+      "id": "JYT-SKILL-10",
+      "category": "SKILL",
+      "title": "DOCX/表格/PPTX按实际能力交付",
+      "priority": "P1",
+      "fixture_preconditions": "F0、F1；已启用document-workbench所支持格式",
+      "steps": [
+        "分别提出明确格式输入/修改/生成请求",
+        "下载",
+        "用对应解析器或应用核对"
+      ],
+      "expected": [
+        "每种格式独立记录执行/内容/SHA",
+        "PPTX仅文件交付无在线渲染要求",
+        "不支持能力明确说明不伪造成功"
+      ],
+      "risks": [
+        "OWN_WRITE",
+        "PAID"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-SKILL-11",
+      "category": "SKILL",
+      "title": "合法工具故障与协议错误展示",
+      "priority": "P0",
+      "fixture_preconditions": "F0；隔离环境可控工具失败/错误响应",
+      "steps": [
+        "发一次合法请求",
+        "注入工具失败/不合法响应",
+        "查看UI和权威状态"
+      ],
+      "expected": [
+        "失败状态、相关标识与可操作范围准确",
+        "无5xx掩盖业务拒绝",
+        "不无限处理中、不假成果或自动重放"
+      ],
+      "risks": [
+        "OWN_WRITE",
+        "FAULT"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "ISOLATED_UI_FAULT",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-SKILL-12",
+      "category": "SKILL",
+      "title": "新技能通用接入与隔离",
+      "priority": "P1",
+      "fixture_preconditions": "F0、F5；隔离测试包及独立测试主体",
+      "steps": [
+        "按真实技能管理入口装普通测试包",
+        "获得任务授权",
+        "执行读写固定fixture"
+      ],
+      "expected": [
+        "不修改通用层按技能名/好汉名编排",
+        "不越出授权目录/任务",
+        "无凭据泄漏",
+        "只证明该包实际能力"
+      ],
+      "risks": [
+        "SHARED_WRITE",
+        "PAID"
+      ],
+      "availability": "ISOLATED_AND_AUTHORIZED",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-DELIVERY-01",
+      "category": "DELIVERY",
+      "title": "JSON和截图预览下载",
+      "priority": "P0",
+      "fixture_preconditions": "F2；网页输出已提交",
+      "steps": [
+        "真实点JSON预览",
+        "点截图预览",
+        "认证下载同输出"
+      ],
+      "expected": [
+        "内容而非响应信封展示",
+        "图片实际加载",
+        "长度/SHA与目录相符",
+        "议事预览不新增下载按钮"
+      ],
+      "risks": [
+        "READ"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": "JYT-04",
+      "historical_evidence": {
+        "round": "R5",
+        "date": "2026-11-10",
+        "result": "PASS",
+        "scope": "Original core case only, not this catalog execution",
+        "baseline": "../juyiting-skill-execution/core-ui-regression-baseline.json",
+        "report": "/home/isp/state/juyiting-root-cause-20261109/full-r5/report.md",
+        "legacy_id": "JYT-04"
+      },
+      "depends_on": [
+        "JYT-SKILL-02"
+      ]
+    },
+    {
+      "id": "JYT-DELIVERY-02",
+      "category": "DELIVERY",
+      "title": "原文字与编辑图两项选版验收",
+      "priority": "P0",
+      "fixture_preconditions": "F2；B原文字、旧蓝图、新绿图各已提交",
+      "steps": [
+        "点编辑图验收此版",
+        "同时选原文字",
+        "核对两项",
+        "确认"
+      ],
+      "expected": [
+        "不误选旧图/附加文本",
+        "finalization COMPLETED/review COMMITTED/delivery ACCEPTED/task completed",
+        "只结算一次"
+      ],
+      "risks": [
+        "OWN_WRITE",
+        "PAID"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": "JYT-12",
+      "historical_evidence": {
+        "round": "R5",
+        "date": "2026-11-10",
+        "result": "PASS",
+        "scope": "Original core case only, not this catalog execution",
+        "baseline": "../juyiting-skill-execution/core-ui-regression-baseline.json",
+        "report": "/home/isp/state/juyiting-root-cause-20261109/full-r5/report.md",
+        "legacy_id": "JYT-12"
+      },
+      "depends_on": [
+        "JYT-SKILL-08"
+      ]
+    },
+    {
+      "id": "JYT-DELIVERY-03",
+      "category": "DELIVERY",
+      "title": "完成后历史成果可读",
+      "priority": "P0",
+      "fixture_preconditions": "F2；B已完成",
+      "steps": [
+        "重新认证读取原生成图与编辑图",
+        "对比验收前SHA",
+        "看完成态UI"
+      ],
+      "expected": [
+        "两版200且长度/SHA一致",
+        "完成后不再执行/验收",
+        "无下载权限误收紧"
+      ],
+      "risks": [
+        "READ"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": "JYT-13",
+      "historical_evidence": {
+        "round": "R5",
+        "date": "2026-11-10",
+        "result": "PASS",
+        "scope": "Original core case only, not this catalog execution",
+        "baseline": "../juyiting-skill-execution/core-ui-regression-baseline.json",
+        "report": "/home/isp/state/juyiting-root-cause-20261109/full-r5/report.md",
+        "legacy_id": "JYT-13"
+      },
+      "depends_on": [
+        "JYT-DELIVERY-02"
+      ]
+    },
+    {
+      "id": "JYT-DELIVERY-04",
+      "category": "DELIVERY",
+      "title": "工具栏验收与空选择",
+      "priority": "P1",
+      "fixture_preconditions": "F0、F2；至少两版可验成果",
+      "steps": [
+        "从工具栏打开验收",
+        "保持空选",
+        "取消",
+        "再从某消息验收"
+      ],
+      "expected": [
+        "工具栏默认不选",
+        "消息入口只预选固定版",
+        "取消不提交",
+        "空选不能错误结算"
+      ],
+      "risks": [
+        "OWN_WRITE"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-DELIVERY-05",
+      "category": "DELIVERY",
+      "title": "历史版、多文件及明确替换关系",
+      "priority": "P1",
+      "fixture_preconditions": "F0、F2；同文件/多成果历史版本",
+      "steps": [
+        "选一历史版和其他文件",
+        "核对清单",
+        "验收",
+        "查看交付manifest"
+      ],
+      "expected": [
+        "所有source/hash固定且清单一致",
+        "不默选latest",
+        "对话REPLACE与文件级replaces不混淆"
+      ],
+      "risks": [
+        "OWN_WRITE",
+        "PAID"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-DELIVERY-06",
+      "category": "DELIVERY",
+      "title": "预览或已查看不等于验收",
+      "priority": "P0",
+      "fixture_preconditions": "F0、F2；待验收成果",
+      "steps": [
+        "预览/下载/标已查看/归档",
+        "查看事项及资金",
+        "明确验收"
+      ],
+      "expected": [
+        "查看/归档不改变验收事实或结算",
+        "仅显式验收才完成，不自动替用户验收"
+      ],
+      "risks": [
+        "OWN_WRITE",
+        "PAID"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-DELIVERY-07",
+      "category": "DELIVERY",
+      "title": "验收冲突与重复提交",
+      "priority": "P0",
+      "fixture_preconditions": "F0、F2；两个tab同一交付",
+      "steps": [
+        "A选版确认",
+        "B以旧版本确认",
+        "刷新/核对原操作"
+      ],
+      "expected": [
+        "并发冲突明确",
+        "原操作可查且不重结算/重生成",
+        "已接受manifest不被旧tab替换"
+      ],
+      "risks": [
+        "OWN_WRITE",
+        "PAID"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-DELIVERY-08",
+      "category": "DELIVERY",
+      "title": "损坏、加密PDF与大图布局",
+      "priority": "P1",
+      "fixture_preconditions": "F0、F1；坏PDF/密码PDF/长页/临界高度文件",
+      "steps": [
+        "逐项打开预览",
+        "输入密码或按错误返回",
+        "分页/缩放/关闭"
+      ],
+      "expected": [
+        "坏文件明确失败",
+        "密码不假成功",
+        "经典滚动条/临界高度不反复重绘",
+        "移动端contain与页码正确"
+      ],
+      "risks": [
+        "READ",
+        "DEVICE"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-DELIVERY-09",
+      "category": "DELIVERY",
+      "title": "成果来源未确认与读取失败",
+      "priority": "P0",
+      "fixture_preconditions": "F0；隔离丢失来源映射/读取失败",
+      "steps": [
+        "打开成果",
+        "查看预览及验收入口",
+        "恢复读取"
+      ],
+      "expected": [
+        "未知来源不猜测关联或冒称可验收",
+        "保留具体读取错误和重读",
+        "不复制另一事项成果填充"
+      ],
+      "risks": [
+        "READ",
+        "FAULT"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "ISOLATED_UI_FAULT",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-ECON-01",
+      "category": "ECON",
+      "title": "WEN金额和无SILVER兼容",
+      "priority": "P0",
+      "fixture_preconditions": "F0；授权测试钱包/明确币种样本",
+      "steps": [
+        "打开钱包/报价/资金记录",
+        "查看API权威字段及页面"
+      ],
+      "expected": [
+        "当前合同统一WEN及amountMinor整数",
+        "不靠SILVER兼容兜底",
+        "无误乘汇率或浮点精度损失"
+      ],
+      "risks": [
+        "READ"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-ECON-02",
+      "category": "ECON",
+      "title": "余额不足原子拒绝",
+      "priority": "P0",
+      "fixture_preconditions": "F0；隔离低余额钱包和可承办事项",
+      "steps": [
+        "保存需求",
+        "确认超过余额的报价",
+        "核对任务/授权/账本"
+      ],
+      "expected": [
+        "不产生部分预占或执行授权",
+        "拒绝原因明确",
+        "草稿/事项可继续处理"
+      ],
+      "risks": [
+        "OWN_WRITE",
+        "PAID"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-ECON-03",
+      "category": "ECON",
+      "title": "创建、推荐、承办的扣费时点",
+      "priority": "P0",
+      "fixture_preconditions": "F0；独立钱包记录和新事项",
+      "steps": [
+        "只保存需求",
+        "查看推荐",
+        "显式确认承办",
+        "读取钱包"
+      ],
+      "expected": [
+        "保存/推荐不冒充承办预占",
+        "确认报价与冻结一致",
+        "不再套旧合成预览价"
+      ],
+      "risks": [
+        "OWN_WRITE",
+        "PAID"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-ECON-04",
+      "category": "ECON",
+      "title": "失败及取消释放预占",
+      "priority": "P0",
+      "fixture_preconditions": "F0；隔离确定失败执行与独立取消事项",
+      "steps": [
+        "使执行确定失败或取消",
+        "按现行终态流程收口",
+        "读取资金"
+      ],
+      "expected": [
+        "应释放部分只释放一次",
+        "未知不直接退款/重跑",
+        "外部已发生成本不补扣用户"
+      ],
+      "risks": [
+        "OWN_WRITE",
+        "PAID",
+        "FAULT"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "ISOLATED_UI_FAULT",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-ECON-05",
+      "category": "ECON",
+      "title": "验收幂等及多轮固定报价",
+      "priority": "P0",
+      "fixture_preconditions": "F0；明确报价的一事项多轮修改",
+      "steps": [
+        "确认报价",
+        "多轮议事/修订",
+        "验收一次",
+        "重读结算"
+      ],
+      "expected": [
+        "按现行固定报价结算，不按Provider实际成本追补",
+        "重复验收无重复扣费",
+        "清晰区分费用与方案内预算"
+      ],
+      "risks": [
+        "OWN_WRITE",
+        "PAID"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-ECON-06",
+      "category": "ECON",
+      "title": "人民币用量、迟到回执和未知成本",
+      "priority": "P1",
+      "fixture_preconditions": "F0；隔离usage迟到/重复/缺价样本",
+      "steps": [
+        "执行单次有成本操作",
+        "延迟或重复usage回执",
+        "核对成本账"
+      ],
+      "expected": [
+        "按原执行/用户/调用前价格版本归属",
+        "缺价/PENDING_USAGE不是0",
+        "幂等",
+        "不将图片成本当全任务成本"
+      ],
+      "risks": [
+        "OWN_WRITE",
+        "PAID",
+        "FAULT"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "ISOLATED_UI_FAULT",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-ECON-07",
+      "category": "ECON",
+      "title": "赠送领取、刷新与重复领取",
+      "priority": "P1",
+      "fixture_preconditions": "F0；隔离活动及未领取专用账号",
+      "steps": [
+        "首次进入领取合同入口",
+        "刷新/重复进入",
+        "更改活动价格后查询旧领取事实"
+      ],
+      "expected": [
+        "符合活动条件才发",
+        "同活动幂等一次",
+        "已领事实不因现价变化重发",
+        "不凭本用例生产发款"
+      ],
+      "risks": [
+        "OWN_WRITE",
+        "PAID"
+      ],
+      "availability": "ISOLATED_AND_AUTHORIZED",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-ECON-08",
+      "category": "ECON",
+      "title": "报价变更、缺价与过期意图",
+      "priority": "P1",
+      "fixture_preconditions": "F0；隔离价格版本变更场景",
+      "steps": [
+        "打开报价",
+        "修改价格配置/需求",
+        "提交旧确认",
+        "读回原操作"
+      ],
+      "expected": [
+        "按合同绑定需求及价格快照",
+        "不能套无依据TTL",
+        "缺价不假免费",
+        "不重复扣款"
+      ],
+      "risks": [
+        "OWN_WRITE",
+        "PAID",
+        "FAULT"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "ISOLATED_UI_FAULT",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-AGENT-01",
+      "category": "AGENT",
+      "title": "名册、默认模型和就绪事实",
+      "priority": "P0",
+      "fixture_preconditions": "F0；两名模型/就绪情况不同的好汉",
+      "steps": [
+        "打开详情",
+        "切好汉",
+        "刷新",
+        "查看离线记录"
+      ],
+      "expected": [
+        "真实已上报默认模型、安装、原生就绪分别展示",
+        "缺值不借上一位",
+        "不泄漏渠道/凭据",
+        "默认模型不是某次调用模型"
+      ],
+      "risks": [
+        "READ"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-AGENT-02",
+      "category": "AGENT",
+      "title": "刷新技能与能力代际",
+      "priority": "P1",
+      "fixture_preconditions": "F0；隔离新注册/旧响应延迟",
+      "steps": [
+        "打开目录",
+        "模拟安装或能力更新",
+        "刷新",
+        "旧响应到达"
+      ],
+      "expected": [
+        "消费最新授权代际事实",
+        "旧结果不覆盖新状态",
+        "不靠重装/重新enroll恢复正常刷新"
+      ],
+      "risks": [
+        "OWN_WRITE",
+        "FAULT"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "ISOLATED_UI_FAULT",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-AGENT-03",
+      "category": "AGENT",
+      "title": "普通技能安装/升级/停用/卸载",
+      "priority": "P1",
+      "fixture_preconditions": "F0、F5；专用普通包及权限/预算",
+      "steps": [
+        "通过真实管理入口逐项确认",
+        "查看完成状态",
+        "执行可用性检查"
+      ],
+      "expected": [
+        "权限及版本差异明确",
+        "状态来自安装回执",
+        "停用/卸载不冒称已安装可执行",
+        "失败不伪报升级成功"
+      ],
+      "risks": [
+        "SHARED_WRITE",
+        "PAID"
+      ],
+      "availability": "ISOLATED_AND_AUTHORIZED",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-AGENT-04",
+      "category": "AGENT",
+      "title": "安装升级失败、未知及保旧版",
+      "priority": "P1",
+      "fixture_preconditions": "F0、F5；隔离传输/安装失败",
+      "steps": [
+        "安装或升级一次",
+        "注入失败/未知",
+        "核对原操作",
+        "重读当前版本"
+      ],
+      "expected": [
+        "确定失败按合同保留有效旧版",
+        "UNKNOWN不重复买/装",
+        "未完成不计已安装",
+        "不破坏在途合法执行"
+      ],
+      "risks": [
+        "SHARED_WRITE",
+        "FAULT"
+      ],
+      "availability": "ISOLATED_AND_AUTHORIZED",
+      "verification_mode": "ISOLATED_UI_FAULT",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-AGENT-05",
+      "category": "AGENT",
+      "title": "岗位技能与普通手动安装边界",
+      "priority": "P1",
+      "fixture_preconditions": "F0、F5、F6；独立岗位授权样本",
+      "steps": [
+        "无任命账号尝试岗位技能",
+        "合法任命",
+        "核对技能/资源范围",
+        "解除专用任命"
+      ],
+      "expected": [
+        "任命、技能安装、任务授权各自独立",
+        "共享目录分类一致",
+        "不能因换Owner或本地缺定义绕过岗位权限"
+      ],
+      "risks": [
+        "TWO_ACCOUNT",
+        "SHARED_WRITE"
+      ],
+      "availability": "ISOLATED_AND_AUTHORIZED",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-AGENT-06",
+      "category": "AGENT",
+      "title": "技能管理密议写操作",
+      "priority": "P1",
+      "fixture_preconditions": "F0、F5；专用未发布技能及明确维护权",
+      "steps": [
+        "密议建立草稿",
+        "修改",
+        "校验",
+        "明确发布/下架",
+        "实际只读查回"
+      ],
+      "expected": [
+        "模型回复不替代平台操作回执",
+        "无权限则明确拒绝而非500",
+        "不同阶段不混为发布完成",
+        "不改公共在用技能"
+      ],
+      "risks": [
+        "SHARED_WRITE",
+        "PAID"
+      ],
+      "availability": "ISOLATED_AND_AUTHORIZED",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-AGENT-07",
+      "category": "AGENT",
+      "title": "邀请托管首期与续费",
+      "priority": "P1",
+      "fixture_preconditions": "F0、F5；隔离可租实例及资金",
+      "steps": [
+        "查看资格/技能首期价",
+        "显式邀请",
+        "就绪",
+        "到模拟续费时点核对"
+      ],
+      "expected": [
+        "租约、预占、真实通道就绪分别确认",
+        "幂等一次",
+        "续费/不足依当前合同，不以进程存在伪报ready"
+      ],
+      "risks": [
+        "SHARED_WRITE",
+        "PAID",
+        "FAULT"
+      ],
+      "availability": "ISOLATED_AND_AUTHORIZED",
+      "verification_mode": "ISOLATED_UI_FAULT",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-AGENT-08",
+      "category": "AGENT",
+      "title": "移除、收尾及跨用户重新邀请",
+      "priority": "P1",
+      "fixture_preconditions": "F0、F5、F6；已部署当前移除合同后执行",
+      "steps": [
+        "有旧事项时明确移除",
+        "收妥旧执行/事项",
+        "完成私有交接",
+        "B尝试新邀请"
+      ],
+      "expected": [
+        "停止续费不等于已交接",
+        "旧执行未收口不可串用户",
+        "私有目录/会话/凭据隔离，公共技能保留",
+        "迟到成本仍属旧执行"
+      ],
+      "risks": [
+        "TWO_ACCOUNT",
+        "SHARED_WRITE",
+        "PAID"
+      ],
+      "availability": "CONTRACT_OR_IMPLEMENTATION_PENDING",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-AGENT-09",
+      "category": "AGENT",
+      "title": "免费重整/自托管重连",
+      "priority": "P1",
+      "fixture_preconditions": "F0、F5；授权专用实例且当前入口已实现",
+      "steps": [
+        "读取身份租约",
+        "执行允许的重整/断线重连",
+        "核对新就绪及旧事项"
+      ],
+      "expected": [
+        "保留身份/授权/状态且无重复首期收费",
+        "不重启其他Agent",
+        "不以复制HOME/换钥/移除锁绕过恢复"
+      ],
+      "risks": [
+        "SHARED_WRITE",
+        "FAULT"
+      ],
+      "availability": "ISOLATED_AND_AUTHORIZED",
+      "verification_mode": "ISOLATED_UI_FAULT",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-ARCHIVE-01",
+      "category": "ARCHIVE",
+      "title": "普通密议查询典籍维护事实",
+      "priority": "P0",
+      "fixture_preconditions": "F0、F4；自有可读已发布job",
+      "steps": [
+        "新建普通密议",
+        "仅archive_read读取固定job",
+        "核对UI及工具回执"
+      ],
+      "expected": [
+        "真实当轮查询标题/workId/PUBLISHED/active/章节数",
+        "taskId为空",
+        "无导入/发布/重试",
+        "不是目录列举能力证明"
+      ],
+      "risks": [
+        "OWN_WRITE",
+        "PAID"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": "JYT-15",
+      "historical_evidence": {
+        "round": "R5",
+        "date": "2026-11-10",
+        "result": "PASS",
+        "scope": "Original core case only, not this catalog execution",
+        "baseline": "../juyiting-skill-execution/core-ui-regression-baseline.json",
+        "report": "/home/isp/state/juyiting-root-cause-20261109/full-r5/report.md",
+        "legacy_id": "JYT-15"
+      },
+      "depends_on": []
+    },
+    {
+      "id": "JYT-ARCHIVE-02",
+      "category": "ARCHIVE",
+      "title": "书架、目录与逐章阅读",
+      "priority": "P1",
+      "fixture_preconditions": "F0、F4；两书籍/不同章节数量和可空引首",
+      "steps": [
+        "书架选书",
+        "目录",
+        "前后章",
+        "切书"
+      ],
+      "expected": [
+        "按活动READY版/实际章节数读取",
+        "不硬编码水浒传/120章/必需引首",
+        "不混读两个版本"
+      ],
+      "risks": [
+        "READ"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-ARCHIVE-03",
+      "category": "ARCHIVE",
+      "title": "续读与跨端进度",
+      "priority": "P1",
+      "fixture_preconditions": "F0、F4；同账号两个自有设备",
+      "steps": [
+        "阅读到固定锚点",
+        "退出再进",
+        "第二设备继续",
+        "并发保存进度"
+      ],
+      "expected": [
+        "进度按用户/work/edition保存",
+        "冲突明确不静默覆盖",
+        "不是其他用户进度"
+      ],
+      "risks": [
+        "OWN_WRITE",
+        "DEVICE"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-ARCHIVE-04",
+      "category": "ARCHIVE",
+      "title": "书签与私人手札",
+      "priority": "P1",
+      "fixture_preconditions": "F0、F4、F6；专用可清理笔记",
+      "steps": [
+        "创建书签/手札",
+        "编辑删除",
+        "B查看同位置"
+      ],
+      "expected": [
+        "固定选文锚点/版本正确",
+        "仅A可见私人内容",
+        "未保存冲突不丢失",
+        "不误删共享正文"
+      ],
+      "risks": [
+        "OWN_WRITE",
+        "TWO_ACCOUNT"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-ARCHIVE-05",
+      "category": "ARCHIVE",
+      "title": "选文提问及起草",
+      "priority": "P1",
+      "fixture_preconditions": "F0、F4；有效与失效锚点",
+      "steps": [
+        "选择正文提问/起草",
+        "核对edition及选文",
+        "尝试已失效锚点"
+      ],
+      "expected": [
+        "引用来源准确且服务端核验选文",
+        "不自动执行正式事项",
+        "失效不猜测另一版文本"
+      ],
+      "risks": [
+        "OWN_WRITE",
+        "PAID"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-ARCHIVE-06",
+      "category": "ARCHIVE",
+      "title": "案卷搜索、全文及引用",
+      "priority": "P1",
+      "fixture_preconditions": "F0、F6；有权/无权案卷和长文本",
+      "steps": [
+        "按关键词或语义搜索",
+        "打开命中",
+        "引入议事草稿"
+      ],
+      "expected": [
+        "相关性与授权分别验证",
+        "无ES/向量依赖时真实降级/失败",
+        "摘录不冒称全文",
+        "不泄漏他人私有案卷"
+      ],
+      "risks": [
+        "READ",
+        "TWO_ACCOUNT"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-ARCHIVE-07",
+      "category": "ARCHIVE",
+      "title": "成果入案卷与重复归档",
+      "priority": "P1",
+      "fixture_preconditions": "F0、F2；专用可归档成果",
+      "steps": [
+        "已完成成果收入案卷",
+        "重复点击",
+        "搜索重开"
+      ],
+      "expected": [
+        "归档记录关联固定来源且幂等",
+        "不是再次验收/生成",
+        "下载内容与已提交版本一致"
+      ],
+      "risks": [
+        "OWN_WRITE"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-ARCHIVE-08",
+      "category": "ARCHIVE",
+      "title": "典籍草稿、校验及受控发布",
+      "priority": "P1",
+      "fixture_preconditions": "F0、F4、F5；专用合法公版小书/任职授权",
+      "steps": [
+        "密议要求整理",
+        "创建草稿/版本",
+        "校验",
+        "显式发布",
+        "阅读器读回"
+      ],
+      "expected": [
+        "各阶段均有真实回执",
+        "READY版本不可原位改",
+        "活动版一致",
+        "无权发布明确拒绝不500"
+      ],
+      "risks": [
+        "SHARED_WRITE",
+        "PAID"
+      ],
+      "availability": "ISOLATED_AND_AUTHORIZED",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-ARCHIVE-09",
+      "category": "ARCHIVE",
+      "title": "书籍版本切换及并发维护",
+      "priority": "P1",
+      "fixture_preconditions": "F0、F4、F5；专用两版本内容",
+      "steps": [
+        "打开旧版阅读及维护草稿",
+        "发布新版",
+        "切书/活动版",
+        "旧锚点回读"
+      ],
+      "expected": [
+        "活动版本切换一致",
+        "旧响应不污染新书",
+        "不偷偷迁移个人锚点",
+        "并发校验不部分发布"
+      ],
+      "risks": [
+        "SHARED_WRITE",
+        "FAULT"
+      ],
+      "availability": "ISOLATED_AND_AUTHORIZED",
+      "verification_mode": "ISOLATED_UI_FAULT",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-HELP-01",
+      "category": "HELP",
+      "title": "我的入口与账号退出",
+      "priority": "P1",
+      "fixture_preconditions": "F0；登录且有私有草稿",
+      "steps": [
+        "从我的打开资料/钱包/帮助",
+        "返回",
+        "显式退出"
+      ],
+      "expected": [
+        "入口为真实能力",
+        "退出保留合法路由但撤销私有操作",
+        "无隐藏账户假页面",
+        "不丢其他用户状态"
+      ],
+      "risks": [
+        "OWN_WRITE"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-HELP-02",
+      "category": "HELP",
+      "title": "消息列表、未读和定位",
+      "priority": "P1",
+      "fixture_preconditions": "F0；自有不同事项通知及多页消息",
+      "steps": [
+        "进入消息",
+        "翻页/标读",
+        "点事项通知",
+        "返回"
+      ],
+      "expected": [
+        "未读计数与列表事实一致",
+        "定位正确事项/会话",
+        "首页有限投影不限制独立消息页",
+        "不重复动作"
+      ],
+      "risks": [
+        "OWN_WRITE"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-HELP-03",
+      "category": "HELP",
+      "title": "帮助分类、搜索与业务跳转",
+      "priority": "P1",
+      "fixture_preconditions": "F0；帮助内容启用",
+      "steps": [
+        "从工作台和我的开帮助",
+        "搜索同义词",
+        "打开文章",
+        "跳真实业务页",
+        "返回"
+      ],
+      "expected": [
+        "两入口共用真实内容",
+        "搜索无结果明确",
+        "跳转不多占详情深度/不自动提交",
+        "焦点可恢复"
+      ],
+      "risks": [
+        "READ"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-HELP-04",
+      "category": "HELP",
+      "title": "新手引导隔离与重看",
+      "priority": "P1",
+      "fixture_preconditions": "F0；新/老引导版本及两个账号",
+      "steps": [
+        "首次进入引导",
+        "稍后/跳过/完成",
+        "从帮助重开",
+        "换账号"
+      ],
+      "expected": [
+        "按身份及版本隔离",
+        "引导本身不创建/发送/承办",
+        "PC与手机定位可见真实入口"
+      ],
+      "risks": [
+        "OWN_WRITE",
+        "TWO_ACCOUNT"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-HELP-05",
+      "category": "HELP",
+      "title": "反馈提交与未知结果",
+      "priority": "P1",
+      "fixture_preconditions": "F0、F5；专用反馈收件环境",
+      "steps": [
+        "编辑反馈",
+        "取消",
+        "再提交一次并丢失响应",
+        "核对原结果"
+      ],
+      "expected": [
+        "取消不发送",
+        "未知不自动重发",
+        "成功提示有回执",
+        "身份变化清草稿并隔离迟到响应，不污染真实客服"
+      ],
+      "risks": [
+        "OWN_WRITE",
+        "FAULT"
+      ],
+      "availability": "ISOLATED_AND_AUTHORIZED",
+      "verification_mode": "ISOLATED_UI_FAULT",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-VOICE-01",
+      "category": "VOICE",
+      "title": "录音权限和取消",
+      "priority": "P1",
+      "fixture_preconditions": "F0、F7；实际支持麦克风的授权设备",
+      "steps": [
+        "拒绝麦克风",
+        "再授权开始录音",
+        "取消"
+      ],
+      "expected": [
+        "拒绝提示明确",
+        "取消不清文字草稿/引用、不发消息",
+        "设备轨道释放，不持续录音"
+      ],
+      "risks": [
+        "DEVICE"
+      ],
+      "availability": "FEATURE_FLAG_AND_REAL_DEVICE",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-VOICE-02",
+      "category": "VOICE",
+      "title": "转写进入草稿不自动发送",
+      "priority": "P1",
+      "fixture_preconditions": "F0、F7；固定无隐私语音片段",
+      "steps": [
+        "录音",
+        "停止并转写",
+        "修改转写文字",
+        "明确发送一次"
+      ],
+      "expected": [
+        "真实语音转写正确，入草稿而非自动发送",
+        "不重复请求",
+        "保留原引用/明确目标"
+      ],
+      "risks": [
+        "DEVICE",
+        "PAID"
+      ],
+      "availability": "FEATURE_FLAG_AND_REAL_DEVICE",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-VOICE-03",
+      "category": "VOICE",
+      "title": "语音输出与播放生命周期",
+      "priority": "P1",
+      "fixture_preconditions": "F0、F7；语音输出已授权启用",
+      "steps": [
+        "取得文字回复",
+        "播放/暂停",
+        "切话头/身份/退出"
+      ],
+      "expected": [
+        "语音与实际回复一致",
+        "旧会话音频不串播放",
+        "释放设备/URL",
+        "文本可继续使用"
+      ],
+      "risks": [
+        "DEVICE",
+        "PAID"
+      ],
+      "availability": "FEATURE_FLAG_AND_REAL_DEVICE",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-VOICE-04",
+      "category": "VOICE",
+      "title": "断网、解码及转写失败",
+      "priority": "P1",
+      "fixture_preconditions": "F0、F7；隔离音频传输/Provider故障",
+      "steps": [
+        "录制或播放中断网/注入错误",
+        "恢复",
+        "用文本继续"
+      ],
+      "expected": [
+        "不把网关健康/文字mock当音频通过",
+        "错误可区分",
+        "不自动重发付费语音/议事",
+        "设备可释放"
+      ],
+      "risks": [
+        "DEVICE",
+        "FAULT"
+      ],
+      "availability": "FEATURE_FLAG_AND_REAL_DEVICE",
+      "verification_mode": "ISOLATED_UI_FAULT",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-VOICE-05",
+      "category": "VOICE",
+      "title": "实时语音打断与方向切换",
+      "priority": "P1",
+      "fixture_preconditions": "F0、F7；Realtime实际已启用且合同已落地",
+      "steps": [
+        "开始实时会话",
+        "明确打断",
+        "切方向/退后台",
+        "结束"
+      ],
+      "expected": [
+        "按真实协议收口当前回合",
+        "无旧音频/双连接/麦克风泄漏",
+        "不把打断等同取消正式事项"
+      ],
+      "risks": [
+        "DEVICE",
+        "PAID"
+      ],
+      "availability": "CONTRACT_OR_IMPLEMENTATION_PENDING",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-RELIABILITY-01",
+      "category": "RELIABILITY",
+      "title": "断网重连与漏事件补读",
+      "priority": "P0",
+      "fixture_preconditions": "F0、F2；隔离可控网络",
+      "steps": [
+        "发起一次请求",
+        "断开SSE/WS",
+        "重连并补读",
+        "观察终态"
+      ],
+      "expected": [
+        "HTTP/DB权威状态补齐",
+        "无重复执行/消息/扣费",
+        "SSE EOF不直接当业务完成"
+      ],
+      "risks": [
+        "OWN_WRITE",
+        "PAID",
+        "FAULT"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "ISOLATED_UI_FAULT",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-RELIABILITY-02",
+      "category": "RELIABILITY",
+      "title": "刷新与浏览器重开恢复",
+      "priority": "P0",
+      "fixture_preconditions": "F0、F2；进行中及已完成请求",
+      "steps": [
+        "发送一次",
+        "刷新/重开页面",
+        "打开原事项/执行"
+      ],
+      "expected": [
+        "只恢复原请求/成果",
+        "不重新发POST/Provider调用",
+        "草稿/引用和终态按各自事实恢复"
+      ],
+      "risks": [
+        "OWN_WRITE",
+        "PAID"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-RELIABILITY-03",
+      "category": "RELIABILITY",
+      "title": "UNKNOWN与RECOVERY_REQUIRED",
+      "priority": "P0",
+      "fixture_preconditions": "F0；隔离确定响应丢失及恢复环境缺失",
+      "steps": [
+        "发一次请求",
+        "制造UNKNOWN/恢复前提缺失",
+        "查看核对入口"
+      ],
+      "expected": [
+        "未知不等于未提交/失败重跑",
+        "明确原因及可读原事实",
+        "不换Agent/换钥/清状态制造新执行"
+      ],
+      "risks": [
+        "OWN_WRITE",
+        "FAULT"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "ISOLATED_UI_FAULT",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-RELIABILITY-04",
+      "category": "RELIABILITY",
+      "title": "Runtime/工具Owner重启恢复",
+      "priority": "P1",
+      "fixture_preconditions": "F0、F5；专用隔离Runtime及实际执行合同",
+      "steps": [
+        "执行后受控重启该实例",
+        "恢复回执/成果",
+        "核对Provider次数"
+      ],
+      "expected": [
+        "仅新方案自身合法恢复",
+        "不恢复退役runner",
+        "身份/ACK/幂等保留，无重复外部副作用",
+        "不动生产其他实例"
+      ],
+      "risks": [
+        "SHARED_WRITE",
+        "FAULT"
+      ],
+      "availability": "ISOLATED_AND_AUTHORIZED",
+      "verification_mode": "ISOLATED_UI_FAULT",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-RELIABILITY-05",
+      "category": "RELIABILITY",
+      "title": "登录过期与换身份迟到响应",
+      "priority": "P0",
+      "fixture_preconditions": "F0、F6；A在途读写、B独立会话",
+      "steps": [
+        "A请求中退出或令牌过期",
+        "B登录",
+        "A响应到达"
+      ],
+      "expected": [
+        "清理A私有草稿/缓存/文件访问",
+        "旧响应不覆盖B",
+        "刷新不绕认证/自动重放A操作"
+      ],
+      "risks": [
+        "TWO_ACCOUNT",
+        "FAULT"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "ISOLATED_UI_FAULT",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-RELIABILITY-06",
+      "category": "RELIABILITY",
+      "title": "跨事项、Agent和租户隔离",
+      "priority": "P0",
+      "fixture_preconditions": "F0、F6；不同事项/好汉及隔离不同tenant/client样本",
+      "steps": [
+        "分别正常访问自有资源",
+        "UI尝试不获准资源",
+        "收集受控越权证据"
+      ],
+      "expected": [
+        "身份/业务关系由责任层统一校验",
+        "不跨租户发现/领取/读取",
+        "拒绝无副作用，不做单用户补丁"
+      ],
+      "risks": [
+        "TWO_ACCOUNT",
+        "FAULT"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "ISOLATED_UI_FAULT",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-RELIABILITY-07",
+      "category": "RELIABILITY",
+      "title": "业务拒绝与5xx可诊断性",
+      "priority": "P0",
+      "fixture_preconditions": "F0；隔离无权限/状态冲突/不可用依赖",
+      "steps": [
+        "通过合法UI触发三类拒绝",
+        "查看提示/请求关联",
+        "读取原结果"
+      ],
+      "expected": [
+        "业务拒绝不是通用500",
+        "保留安全requestId/错误码便于定位",
+        "不展示栈/密钥",
+        "失败不伪成功或无限等待"
+      ],
+      "risks": [
+        "OWN_WRITE",
+        "FAULT"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "ISOLATED_UI_FAULT",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-RELIABILITY-08",
+      "category": "RELIABILITY",
+      "title": "多tab事件乱序与重复回执",
+      "priority": "P1",
+      "fixture_preconditions": "F0、F2；隔离乱序/重复提示",
+      "steps": [
+        "两个tab查看同任务",
+        "延迟/重复状态事件",
+        "刷新"
+      ],
+      "expected": [
+        "按代际/版本/权威快照收敛",
+        "无状态倒退或重复成果/账本",
+        "不同请求不按文本误去重"
+      ],
+      "risks": [
+        "OWN_WRITE",
+        "FAULT"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "ISOLATED_UI_FAULT",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-RELIABILITY-09",
+      "category": "RELIABILITY",
+      "title": "性能与资源生命周期观测",
+      "priority": "P1",
+      "fixture_preconditions": "F0、F5；固定同类负载、只读采样范围",
+      "steps": [
+        "同一真实场景采首字/完成/查询/字节",
+        "多次开关页面",
+        "比较基线"
+      ],
+      "expected": [
+        "记录实际延迟/内存/连接及范围",
+        "不以超时杀业务或快速失败冒充提速",
+        "无新增无依据资源门槛"
+      ],
+      "risks": [
+        "READ"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-RELIABILITY-10",
+      "category": "RELIABILITY",
+      "title": "测试资金与自有进程收尾",
+      "priority": "P0",
+      "fixture_preconditions": "F0；当轮所有测试ID与进程归属已记录",
+      "steps": [
+        "结束或取消自有测试事项",
+        "核对钱包/Provider",
+        "关闭自有browser/collector并核对"
+      ],
+      "expected": [
+        "held归零或逐笔解释",
+        "累计预算不重置",
+        "证据留存",
+        "只清自有profile/进程，不删生产身份/备份/他人缓存"
+      ],
+      "risks": [
+        "OWN_WRITE"
+      ],
+      "availability": "VERIFY_DEPLOYED_ENTRY",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-COLLAB-01",
+      "category": "COLLAB",
+      "title": "公共议事参与者与可见范围",
+      "priority": "P1",
+      "fixture_preconditions": "F0、F8；真实已启用公共议事入口",
+      "steps": [
+        "选择明确参与者",
+        "发只读问题",
+        "查看各自回话和可见范围"
+      ],
+      "expected": [
+        "公共不等于泄露私人会话/文件",
+        "目标来自显式参与者",
+        "不自动广播全部好汉或创建正式事项"
+      ],
+      "risks": [
+        "OWN_WRITE",
+        "PAID"
+      ],
+      "availability": "FEATURE_FLAG_AND_CONTRACT",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-COLLAB-02",
+      "category": "COLLAB",
+      "title": "团队推荐与显式确认",
+      "priority": "P1",
+      "fixture_preconditions": "F0、F8；真实团队入口及候选",
+      "steps": [
+        "提出适合协作需求",
+        "查看推荐团队",
+        "修改成员",
+        "取消/确认"
+      ],
+      "expected": [
+        "推荐不等于授权",
+        "角色/成员/任务范围明确",
+        "未确认无执行，不把单承办流程冒充团队通过"
+      ],
+      "risks": [
+        "OWN_WRITE",
+        "PAID"
+      ],
+      "availability": "FEATURE_FLAG_AND_CONTRACT",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-COLLAB-03",
+      "category": "COLLAB",
+      "title": "多成员工作项与独立成果",
+      "priority": "P1",
+      "fixture_preconditions": "F0、F8；已交付多成员合同才执行",
+      "steps": [
+        "显式派发两个工作项",
+        "两成员分别产出",
+        "查看聚合状态"
+      ],
+      "expected": [
+        "请求/回合/执行/成果各自绑定",
+        "局部完成不冒称整任务完成或自动验收",
+        "不重复派工"
+      ],
+      "risks": [
+        "OWN_WRITE",
+        "PAID"
+      ],
+      "availability": "CONTRACT_OR_IMPLEMENTATION_PENDING",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-COLLAB-04",
+      "category": "COLLAB",
+      "title": "局部失败、退出与其他成员",
+      "priority": "P1",
+      "fixture_preconditions": "F0、F8；隔离两个在途工作项",
+      "steps": [
+        "一成员失败/退出",
+        "另一成员完成",
+        "核对任务与资源"
+      ],
+      "expected": [
+        "失败不污染无关执行/租约",
+        "不强停共享Runtime",
+        "成员终态和事项聚合准确，无权限外转单"
+      ],
+      "risks": [
+        "OWN_WRITE",
+        "PAID",
+        "FAULT"
+      ],
+      "availability": "CONTRACT_OR_IMPLEMENTATION_PENDING",
+      "verification_mode": "ISOLATED_UI_FAULT",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    },
+    {
+      "id": "JYT-COLLAB-05",
+      "category": "COLLAB",
+      "title": "协调管理及资源权限",
+      "priority": "P1",
+      "fixture_preconditions": "F0、F5、F8；明确协调权限及独立资源",
+      "steps": [
+        "合法协调者查看/操作专用成员或计划",
+        "无权限者尝试",
+        "实际查回"
+      ],
+      "expected": [
+        "协调工具不越过任职/资源/事项授权",
+        "无权限明确拒绝",
+        "原型/M4/M5规划不能填为已实现"
+      ],
+      "risks": [
+        "SHARED_WRITE",
+        "PAID"
+      ],
+      "availability": "CONTRACT_OR_IMPLEMENTATION_PENDING",
+      "verification_mode": "REAL_UI",
+      "current_execution": "NOT_RUN",
+      "legacy_core_id": null,
+      "historical_evidence": null,
+      "depends_on": []
+    }
+  ],
+  "excluded": [
+    {
+      "id": "JYT-EXCLUDED-CAMERA",
+      "title": "拍照实际调用",
+      "reason": "用户此前明确排除，保留排除范围，不计PASS或已测"
+    },
+    {
+      "id": "JYT-EXCLUDED-ALBUM",
+      "title": "相册实际调用",
+      "reason": "用户此前明确排除，保留排除范围，不计PASS或已测"
+    }
+  ],
+  "executionSets": {
+    "CORE17": {
+      "caseIds": [
+        "JYT-TASK-03",
+        "JYT-SKILL-01",
+        "JYT-SKILL-02",
+        "JYT-DELIVERY-01",
+        "JYT-TALK-03",
+        "JYT-SKILL-03",
+        "JYT-SKILL-04",
+        "JYT-SKILL-05",
+        "JYT-SKILL-06",
+        "JYT-SKILL-07",
+        "JYT-SKILL-08",
+        "JYT-DELIVERY-02",
+        "JYT-DELIVERY-03",
+        "JYT-TASK-04",
+        "JYT-ARCHIVE-01",
+        "JYT-TALK-04",
+        "JYT-SKILL-09"
+      ],
+      "scope": "Frozen historical 17-case natural UI flow; inventory changes require explicit coverage mapping, not an automatic all-skills claim"
+    },
+    "FULL": {
+      "caseIds": [
+        "JYT-ENTRY-01",
+        "JYT-ENTRY-02",
+        "JYT-ENTRY-03",
+        "JYT-ENTRY-04",
+        "JYT-ENTRY-05",
+        "JYT-ENTRY-06",
+        "JYT-ENTRY-07",
+        "JYT-ENTRY-08",
+        "JYT-TASK-01",
+        "JYT-TASK-02",
+        "JYT-TASK-03",
+        "JYT-TASK-04",
+        "JYT-TASK-05",
+        "JYT-TASK-06",
+        "JYT-TASK-07",
+        "JYT-TASK-08",
+        "JYT-TASK-09",
+        "JYT-TASK-10",
+        "JYT-ASSIGN-01",
+        "JYT-ASSIGN-02",
+        "JYT-ASSIGN-03",
+        "JYT-ASSIGN-04",
+        "JYT-ASSIGN-05",
+        "JYT-ASSIGN-06",
+        "JYT-ASSIGN-07",
+        "JYT-TALK-01",
+        "JYT-TALK-02",
+        "JYT-TALK-03",
+        "JYT-TALK-04",
+        "JYT-TALK-05",
+        "JYT-TALK-06",
+        "JYT-TALK-07",
+        "JYT-TALK-08",
+        "JYT-TALK-09",
+        "JYT-TALK-10",
+        "JYT-TALK-11",
+        "JYT-MATERIAL-01",
+        "JYT-MATERIAL-02",
+        "JYT-MATERIAL-03",
+        "JYT-MATERIAL-04",
+        "JYT-MATERIAL-05",
+        "JYT-MATERIAL-06",
+        "JYT-MATERIAL-07",
+        "JYT-MATERIAL-08",
+        "JYT-MATERIAL-09",
+        "JYT-MATERIAL-10",
+        "JYT-MATERIAL-11",
+        "JYT-SKILL-01",
+        "JYT-SKILL-02",
+        "JYT-SKILL-03",
+        "JYT-SKILL-04",
+        "JYT-SKILL-05",
+        "JYT-SKILL-06",
+        "JYT-SKILL-07",
+        "JYT-SKILL-08",
+        "JYT-SKILL-09",
+        "JYT-SKILL-10",
+        "JYT-SKILL-11",
+        "JYT-SKILL-12",
+        "JYT-DELIVERY-01",
+        "JYT-DELIVERY-02",
+        "JYT-DELIVERY-03",
+        "JYT-DELIVERY-04",
+        "JYT-DELIVERY-05",
+        "JYT-DELIVERY-06",
+        "JYT-DELIVERY-07",
+        "JYT-DELIVERY-08",
+        "JYT-DELIVERY-09",
+        "JYT-ECON-01",
+        "JYT-ECON-02",
+        "JYT-ECON-03",
+        "JYT-ECON-04",
+        "JYT-ECON-05",
+        "JYT-ECON-06",
+        "JYT-ECON-07",
+        "JYT-ECON-08",
+        "JYT-AGENT-01",
+        "JYT-AGENT-02",
+        "JYT-AGENT-03",
+        "JYT-AGENT-04",
+        "JYT-AGENT-05",
+        "JYT-AGENT-06",
+        "JYT-AGENT-07",
+        "JYT-AGENT-08",
+        "JYT-AGENT-09",
+        "JYT-ARCHIVE-01",
+        "JYT-ARCHIVE-02",
+        "JYT-ARCHIVE-03",
+        "JYT-ARCHIVE-04",
+        "JYT-ARCHIVE-05",
+        "JYT-ARCHIVE-06",
+        "JYT-ARCHIVE-07",
+        "JYT-ARCHIVE-08",
+        "JYT-ARCHIVE-09",
+        "JYT-HELP-01",
+        "JYT-HELP-02",
+        "JYT-HELP-03",
+        "JYT-HELP-04",
+        "JYT-HELP-05",
+        "JYT-VOICE-01",
+        "JYT-VOICE-02",
+        "JYT-VOICE-03",
+        "JYT-VOICE-04",
+        "JYT-VOICE-05",
+        "JYT-RELIABILITY-01",
+        "JYT-RELIABILITY-02",
+        "JYT-RELIABILITY-03",
+        "JYT-RELIABILITY-04",
+        "JYT-RELIABILITY-05",
+        "JYT-RELIABILITY-06",
+        "JYT-RELIABILITY-07",
+        "JYT-RELIABILITY-08",
+        "JYT-RELIABILITY-09",
+        "JYT-RELIABILITY-10",
+        "JYT-COLLAB-01",
+        "JYT-COLLAB-02",
+        "JYT-COLLAB-03",
+        "JYT-COLLAB-04",
+        "JYT-COLLAB-05"
+      ],
+      "scope": "All cases evaluated against actual enabled contracts and authorized fixtures; no silent omission"
+    },
+    "CHANGE_IMPACT": {
+      "selection": "CORE17 plus cases selected by changed contracts, responsible layers and actual consumers; record exact IDs",
+      "scope": "Not equivalent to FULL"
+    }
+  },
+  "dependencySemantics": "depends_on requires upstream fixture/milestone. JYT-TASK-03 is an aggregate: its create/confirm milestone enables skill cases; its final wallet assertions run only after B acceptance and A cancellation."
+}

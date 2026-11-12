@@ -1,0 +1,41 @@
+# Local workspace and operational artifacts
+.git.empty.*
+.worktrees/
+.safeguards/
+.superpowers/
+.agents/
+tmp/
+deliverables/
+
+# Local credentials and environment overrides
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Root-level generated dependency/build artifacts
+node_modules/
+dist/
+build/
+.gradle/
+
+# Python bytecode and editor/merge artifacts
+__pycache__/
+*.py[cod]
+*.orig
+
+# Private credentials, host state and local-only history
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*.p12
+*.pfx
+*.jks
+*.keystore
+.evidence/
+node_modules/
+__pycache__/
+*.py[cod]

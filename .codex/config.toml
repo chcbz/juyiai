@@ -1,0 +1,29 @@
+# CYF project-only roles, replanned 2026-10-23. No legacy dispatch aliases.
+[features]
+multi_agent = true
+
+[agents]
+# Existing capacity, not a requirement to spawn: 3 writers + 1 source-read-only helper + coordinator.
+max_threads = 5
+max_depth = 1
+job_max_runtime_seconds = 3600
+
+[agents.architect]
+description = "Read-only CYF architecture and contract design across Web, API and Runtime; state machines, identity, transactions and recovery."
+config_file = "agents/architect.toml"
+
+[agents.ux_designer]
+description = "CYF UX/UI design owner for task flows, information hierarchy, visual consistency, accessibility and the existing interactive prototype."
+config_file = "agents/ux-designer.toml"
+
+[agents.developer]
+description = "Single-owner CYF implementation across Vue Web, Java API and Agent Runtime, including high-risk correctness, focused tests and self-check."
+config_file = "agents/developer.toml"
+
+[agents.test_runner]
+description = "CYF verification-only specialist for focused tests, browser interactions, existing Flow controls and source-bound evidence; no product source edits."
+config_file = "agents/test-runner.toml"
+
+[agents.explorer]
+description = "Read-only CYF code and evidence exploration: narrow facts, dependency/call-chain maps, consumer coverage and ownership conflicts."
+config_file = "agents/explorer.toml"

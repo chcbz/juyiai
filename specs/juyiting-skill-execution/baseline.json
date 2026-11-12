@@ -1,0 +1,74 @@
+{
+  "as_of": "2026-10-13",
+  "timezone": "Asia/Shanghai",
+  "purpose": "design_read_baseline_not_release",
+  "remote_develop_queried": false,
+  "repositories": {
+    "root": {
+      "path": "/home/isp/wsps/cyf",
+      "branch": "develop",
+      "head": "77bd860c3660763911dc79bce7a3278420a5e2b2",
+      "tree": "1ff257e9893688845d1f9f4ba482ab9ae1383871",
+      "tracked_dirty_count": 42
+    },
+    "api": {
+      "path": "/home/isp/wsps/cyf/api",
+      "branch": "develop",
+      "head": "0fe830d1ea39b89de89475ef2d1f21dfc7577da2",
+      "tree": "b365003e141101350af123185b2bf2ec0e80ec16",
+      "tracked_dirty_count": 0
+    },
+    "web": {
+      "path": "/home/isp/wsps/cyf/web",
+      "branch": "develop",
+      "head": "cb730681570688e0051b5cd79737a3c004817881",
+      "tree": "6e4620d9c55600f4f4376c4964c839d8cccdc9d0",
+      "tracked_dirty_count": 0
+    },
+    "runtime": {
+      "path": "/home/isp/wsps/chcbz/isp-install",
+      "branch": "develop",
+      "head": "a39c0856b0d68ae931b592420e283255668eca45",
+      "tree": "92e440f29f95873ba0b346efdf9b6133bf76d122",
+      "tracked_dirty_count": 0
+    }
+  },
+  "runtime_compared_files": [
+    {
+      "file": "agent-client.mjs",
+      "installed_sha256": "700dc62cd4a66055b7d2037368959f822674a839b81eea0af7ad2730cd81662a",
+      "source_sha256": "35f902504951edb6d59896571a0eedba3e6bacca4bd3e4072c0cafe10eb76b2c",
+      "same_bytes": false
+    },
+    {
+      "file": "chat-runtime.mjs",
+      "installed_sha256": "b9c81e68f0801e7a9ad6cefce3a64e1912fa181eb7b2f34b08cdcd19445e0dea",
+      "source_sha256": "b9c81e68f0801e7a9ad6cefce3a64e1912fa181eb7b2f34b08cdcd19445e0dea",
+      "same_bytes": true
+    },
+    {
+      "file": "skill-install-manager.mjs",
+      "installed_sha256": "83a97b8332a6c9d92abed2731f6e16df0d2a127e66d582c774d6437cb64d1765",
+      "source_sha256": "83a97b8332a6c9d92abed2731f6e16df0d2a127e66d582c774d6437cb64d1765",
+      "same_bytes": true
+    },
+    {
+      "file": "workspace-file-bridge.mjs",
+      "installed_sha256": "73589622651a0d429f570cee9c9d01400a6a1334ffc6d01f04e02db41f402ff6",
+      "source_sha256": "73589622651a0d429f570cee9c9d01400a6a1334ffc6d01f04e02db41f402ff6",
+      "same_bytes": true
+    },
+    {
+      "file": "controlled-image-http-executor-v3.mjs",
+      "installed_sha256": "001cef874d40b351897d1e0fd68dcb7d1783599b7f8680613deb183869c08e78",
+      "source_sha256": "001cef874d40b351897d1e0fd68dcb7d1783599b7f8680613deb183869c08e78",
+      "same_bytes": true
+    },
+    {
+      "file": "juyiting-action-outcome.mjs",
+      "installed_sha256": "f8072ecf4c1b8c110ad04f8b03dfb7b23ef9c3bbeef32838d71cf35c713a49ad",
+      "source_sha256": "f8072ecf4c1b8c110ad04f8b03dfb7b23ef9c3bbeef32838d71cf35c713a49ad",
+      "same_bytes": true
+    }
+  ]
+}

@@ -1,0 +1,258 @@
+{
+  "checkedOn": "2026-10-06",
+  "method": "JSDOM DOM/interaction/resource checks; not Chromium or visual screenshot acceptance",
+  "status": "PASS",
+  "count": 49,
+  "results": [
+    {
+      "page": "home",
+      "width": 390,
+      "result": "PASS"
+    },
+    {
+      "page": "tasks",
+      "width": 390,
+      "result": "PASS"
+    },
+    {
+      "page": "create",
+      "width": 390,
+      "result": "PASS"
+    },
+    {
+      "page": "agents",
+      "width": 390,
+      "result": "PASS"
+    },
+    {
+      "page": "detail",
+      "width": 390,
+      "result": "PASS"
+    },
+    {
+      "page": "chat",
+      "width": 390,
+      "result": "PASS"
+    },
+    {
+      "page": "private",
+      "width": 390,
+      "result": "PASS"
+    },
+    {
+      "page": "public",
+      "width": 390,
+      "result": "PASS"
+    },
+    {
+      "page": "workspace",
+      "width": 390,
+      "result": "PASS"
+    },
+    {
+      "page": "mine",
+      "width": 390,
+      "result": "PASS"
+    },
+    {
+      "page": "library",
+      "width": 390,
+      "result": "PASS"
+    },
+    {
+      "page": "messages",
+      "width": 390,
+      "result": "PASS"
+    },
+    {
+      "page": "catalog",
+      "width": 390,
+      "result": "PASS"
+    },
+    {
+      "page": "map",
+      "width": 390,
+      "result": "PASS"
+    },
+    {
+      "page": "file",
+      "width": 390,
+      "result": "PASS"
+    },
+    {
+      "page": "reader",
+      "width": 390,
+      "result": "PASS"
+    },
+    {
+      "page": "help",
+      "width": 390,
+      "result": "PASS"
+    },
+    {
+      "page": "account",
+      "width": 390,
+      "result": "PASS"
+    },
+    {
+      "page": "home",
+      "width": 1440,
+      "result": "PASS"
+    },
+    {
+      "page": "tasks",
+      "width": 1440,
+      "result": "PASS"
+    },
+    {
+      "page": "create",
+      "width": 1440,
+      "result": "PASS"
+    },
+    {
+      "page": "agents",
+      "width": 1440,
+      "result": "PASS"
+    },
+    {
+      "page": "detail",
+      "width": 1440,
+      "result": "PASS"
+    },
+    {
+      "page": "chat",
+      "width": 1440,
+      "result": "PASS"
+    },
+    {
+      "page": "private",
+      "width": 1440,
+      "result": "PASS"
+    },
+    {
+      "page": "public",
+      "width": 1440,
+      "result": "PASS"
+    },
+    {
+      "page": "workspace",
+      "width": 1440,
+      "result": "PASS"
+    },
+    {
+      "page": "mine",
+      "width": 1440,
+      "result": "PASS"
+    },
+    {
+      "page": "library",
+      "width": 1440,
+      "result": "PASS"
+    },
+    {
+      "page": "messages",
+      "width": 1440,
+      "result": "PASS"
+    },
+    {
+      "page": "catalog",
+      "width": 1440,
+      "result": "PASS"
+    },
+    {
+      "page": "map",
+      "width": 1440,
+      "result": "PASS"
+    },
+    {
+      "page": "file",
+      "width": 1440,
+      "result": "PASS"
+    },
+    {
+      "page": "reader",
+      "width": 1440,
+      "result": "PASS"
+    },
+    {
+      "page": "help",
+      "width": 1440,
+      "result": "PASS"
+    },
+    {
+      "page": "account",
+      "width": 1440,
+      "result": "PASS"
+    },
+    {
+      "page": "chat",
+      "scenario": "ready",
+      "width": 390,
+      "result": "PASS"
+    },
+    {
+      "page": "chat",
+      "scenario": "empty",
+      "width": 390,
+      "result": "PASS"
+    },
+    {
+      "page": "chat",
+      "scenario": "waiting",
+      "width": 390,
+      "result": "PASS"
+    },
+    {
+      "page": "chat",
+      "scenario": "streaming",
+      "width": 390,
+      "result": "PASS"
+    },
+    {
+      "page": "chat",
+      "scenario": "error",
+      "width": 390,
+      "result": "PASS"
+    },
+    {
+      "page": "chat",
+      "scenario": "recording",
+      "width": 390,
+      "result": "PASS"
+    },
+    {
+      "page": "chat",
+      "scenario": "voice-review",
+      "width": 390,
+      "result": "PASS"
+    },
+    {
+      "page": "chat",
+      "scenario": "results",
+      "width": 390,
+      "result": "PASS"
+    },
+    {
+      "page": "chat",
+      "scenario": "completed",
+      "width": 390,
+      "result": "PASS"
+    },
+    {
+      "interaction": "plus/materials/history/voice-draft",
+      "result": "PASS"
+    },
+    {
+      "interaction": "media/delivery/acceptance",
+      "result": "PASS"
+    },
+    {
+      "interaction": "mine/library/file-management",
+      "result": "PASS"
+    },
+    {
+      "style": "shared capsule tabs/resource and workspace selected state; not pixel acceptance",
+      "result": "PASS"
+    }
+  ]
+}

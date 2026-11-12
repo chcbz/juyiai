@@ -1,0 +1,8 @@
+# Canonical design bundle manifest; run from specs/agent-economy-marketplace/.
+# Verify files: sha256sum -c bundle.sha256
+# Bind this manifest: sha256sum bundle.sha256
+9c90f1f8297285b9e85c4ca5937450cfeb65d59d4a99d528c3511206e27d9b0e  acceptance.md
+6e18f0c7932705c9d1f478a9595d077e78b5ba26319aa92496b3c7750e98568f  design.md
+f5c452cafd465cb066fa834d21170ef830640087f75f34ff9088474e766a7291  integration.yaml
+5a1e133524e592bda4d7e4ef8d246349e09507c038c1a75ac9373375dda91e77  spec.md
+74d524b8676804027d65f4f3a4d5236850775798f7a4ac5f7fb4d8166d9c25a9  tasks.md

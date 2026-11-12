@@ -1,0 +1,958 @@
+#!/bin/bash -p
+set -Eeuo pipefail
+IFS=$'\n\t'
+umask 077
+export PATH=/usr/sbin:/usr/bin:/sbin:/bin
+export LC_ALL=C
+cd /
+
+# BEGIN STARTUP_DIAGNOSTICS
+# Opt-in, value-free control-plane timestamps. Never print argv/environment or
+# let an observation failure change installation/health/lock semantics.
+diagnostic_mark() {
+  [[ "${CYF_API_STARTUP_DIAGNOSTICS:-0}" == 1 ]] || return 0
+  local monotonic ignored
+  if ! IFS=' ' read -r monotonic ignored < /proc/uptime; then return 0; fi
+  [[ "$monotonic" =~ ^[0-9]+\.[0-9]+$ ]] || return 0
+  printf 'CYF_DEPLOY_TIMING component=lifecycle pid=%s point=%s monotonic_s=%s wall=%(%Y-%m-%dT%H:%M:%S%z)T\n' \
+    "$BASHPID" "$1" "$monotonic" -1 >&2 || :
+  return 0
+}
+# END STARTUP_DIAGNOSTICS
+
+ACTION="${1-restart}"
+diagnostic_mark script.enter
+DEPLOY_DIR=/home/isp/hosts/cyf/api
+RUNTIME_DIR=/run/cyf-api
+JAR="$DEPLOY_DIR/cyf-api-kit.jar"
+JAVA=/opt/cyf/runtime/temurin-21-jre/bin/java
+RUNTIME_USER=cyf-api
+RUNTIME_UID=''
+RUNTIME_GID=''
+SECRET_FILE="$DEPLOY_DIR/.jasypt-password"
+VOICE_ENV_FILE="$DEPLOY_DIR/.voice-runtime.env"
+# New release logs use a physical root-owned directory; historical alias is untouched.
+LOG_DIR=/var/log/cyf-api-flow
+PID_FILE="$RUNTIME_DIR/cyf-api-kit.pid"
+ARCHIVE_PID_FILE="$RUNTIME_DIR/archive-reader-enable.pid"
+RUNTIME_RECORD="$RUNTIME_DIR/cyf-api-kit.runtime"
+RELEASE_LOCK_FILE=/tmp/cyf-release-api.lock
+LOCK_FILE=/tmp/cyf-api-lifecycle.lock
+PORT=10018
+HEALTH_URL=http://127.0.0.1:10018/actuator/health
+TRUSTED_JRE_TREE_SHA256=d79c6038ab30702c795a641ff5a1a38d94a6d451b9d40d0dabfea550fa806aef
+
+usage() {
+  cat <<USAGE
+Usage: $0 [start|restart|stop|status]
+
+  start    Start the deployed JAR only when it is not already running.
+  restart  Restart the deployed JAR (default). No git pull or Gradle build.
+  stop     Stop only the process whose argv contains the exact deployed JAR path.
+  status   Show PID, listener and actuator health without changing processes.
+
+Source builds and production deployment use the SHA-pinned workflow under:
+  /home/isp/wsps/cyf/ops/release/
+USAGE
+}
+
+die() {
+  echo "错误：$*" >&2
+  exit 1
+}
+
+canonical_loopback_curl() {
+  /usr/bin/env \
+    -u CURL_CA_BUNDLE -u SSL_CERT_FILE -u SSL_CERT_DIR \
+    -u http_proxy -u https_proxy -u ftp_proxy -u all_proxy -u no_proxy \
+    -u HTTP_PROXY -u HTTPS_PROXY -u FTP_PROXY -u ALL_PROXY -u NO_PROXY \
+    /usr/bin/curl -q --noproxy '*' "$@"
+}
+
+load_validation_root() {
+  VALIDATION_ROOT="$(realpath -e -- "${CYF_API_KIT_VALIDATION_ROOT:-/nonexistent}")" \
+    || die "离线验证 root 不存在"
+  case "$VALIDATION_ROOT" in /tmp/*) ;; *) die "离线验证 root 必须位于私有 /tmp 子目录" ;; esac
+  [[ -d "$VALIDATION_ROOT" && ! -L "$VALIDATION_ROOT" \
+      && "$(stat -Lc '%a:%u' "$VALIDATION_ROOT")" == "700:$(id -u)" ]] \
+    || die "离线验证 root 必须为调用者私有 0700 目录"
+}
+
+if (( $# > 1 )); then
+  usage >&2
+  die "参数过多"
+fi
+case "$ACTION" in
+  -h|--help) usage; exit 0 ;;
+  start|restart|stop|status|validate-lock-contract|validate-curl-contract) ;;
+  *) usage >&2; exit 2 ;;
+esac
+if [[ "$ACTION" == validate-lock-contract || "$ACTION" == validate-curl-contract ]]; then
+  [[ "${CYF_RELEASE_OFFLINE_TEST:-}" == YES ]] || die "验证动作仅允许私有离线 fixture"
+else
+  (( EUID == 0 )) || die "必须使用 root 运行，例如 sudo $0 $ACTION"
+fi
+
+for command in awk base64 basename cat chmod chown date df flock grep id kill mktemp mv nohup ps realpath rm sed seq setpriv setsid sha256sum sleep ss stat tail; do
+  command -v "$command" >/dev/null 2>&1 || die "缺少命令：$command"
+done
+[[ -x /usr/bin/curl ]] || die "缺少可信 curl：/usr/bin/curl"
+
+if [[ "$ACTION" == validate-curl-contract ]]; then
+  load_validation_root
+  VALIDATION_URL="${CYF_API_KIT_VALIDATION_URL:-}"
+  [[ "$VALIDATION_URL" =~ ^http://127\.0\.0\.1:([1-9][0-9]{0,4})/health$ ]] \
+    || die "curl 验证 URL 必须为 127.0.0.1 临时端口 /health"
+  (( 10#${BASH_REMATCH[1]} <= 65535 )) || die "curl 验证端口无效"
+  VALIDATION_BODY="$(mktemp "$VALIDATION_ROOT/.curl-body.XXXXXX")"
+  trap 'rm -f -- "$VALIDATION_BODY"' EXIT
+  VALIDATION_CODE="$(canonical_loopback_curl --proto '=http' --silent --show-error --max-time 5 \
+    --output "$VALIDATION_BODY" --write-out '%{http_code}' "$VALIDATION_URL")" \
+    || die "curl 验证请求失败"
+  [[ "$VALIDATION_CODE" == 200 ]] || die "curl 验证状态失败"
+  grep -qx '{"status":"UP"}' "$VALIDATION_BODY" || die "curl 验证响应失败"
+  rm -f -- "$VALIDATION_BODY"
+  trap - EXIT
+  printf 'CURL_CONTRACT=PASS\nCURL_TARGET=LOOPBACK\n'
+  exit 0
+fi
+
+if [[ "$ACTION" != validate-lock-contract ]]; then
+  RUNTIME_UID="$(id -u "$RUNTIME_USER" 2>/dev/null)" || die "运行账号不存在：$RUNTIME_USER"
+  RUNTIME_GID="$(id -g "$RUNTIME_USER" 2>/dev/null)" || die "无法解析运行账号主组：$RUNTIME_USER"
+  [[ "$RUNTIME_UID" =~ ^[0-9]+$ && "$RUNTIME_GID" =~ ^[0-9]+$ ]] || die "运行账号 UID/GID 无效"
+
+  [[ -d "$DEPLOY_DIR" && ! -L "$DEPLOY_DIR" ]] || die "部署目录不存在或不是物理目录：$DEPLOY_DIR"
+fi
+
+validate_trusted_runtime() {
+  /usr/bin/python3 -I -B - "$(dirname "$(dirname "$JAVA")")" "$JAVA" "$TRUSTED_JRE_TREE_SHA256" <<'PY'
+from pathlib import Path
+import hashlib, os, stat, sys
+root = Path(sys.argv[1])
+java = Path(sys.argv[2])
+expected = sys.argv[3]
+if not root.is_absolute() or java != root / 'bin' / 'java':
+    raise SystemExit(1)
+for parent in [Path('/opt'), Path('/opt/cyf'), Path('/opt/cyf/runtime')]:
+    info = os.lstat(str(parent))
+    if not stat.S_ISDIR(info.st_mode) or info.st_uid != 0 or info.st_mode & 0o022:
+        raise SystemExit(1)
+digest = hashlib.sha256()
+for path in sorted([root, *root.rglob('*')], key=lambda item: '' if item == root else item.relative_to(root).as_posix()):
+    rel = '.' if path == root else path.relative_to(root).as_posix()
+    info = os.lstat(str(path))
+    mode = stat.S_IMODE(info.st_mode)
+    if info.st_uid != 0 or (not stat.S_ISLNK(info.st_mode) and mode & 0o022):
+        raise SystemExit(1)
+    if stat.S_ISREG(info.st_mode):
+        kind = 'f'
+        file_digest = hashlib.sha256()
+        with open(path, 'rb') as stream:
+            for chunk in iter(lambda: stream.read(1024 * 1024), b''):
+                file_digest.update(chunk)
+        content = file_digest.hexdigest()
+    elif stat.S_ISDIR(info.st_mode):
+        kind, content = 'd', '-'
+    elif stat.S_ISLNK(info.st_mode):
+        kind, content = 'l', os.readlink(str(path))
+        target = (path.parent / content).resolve(strict=True)
+        try:
+            target.relative_to(root)
+        except ValueError:
+            raise SystemExit(1)
+    else:
+        raise SystemExit(1)
+    digest.update(f'{rel}\0{kind}\0{mode:04o}\0{info.st_uid}\0{info.st_gid}\0{content}\0'.encode())
+if digest.hexdigest() != expected or not java.is_file() or java.is_symlink() or not os.access(str(java), os.X_OK):
+    raise SystemExit(1)
+PY
+}
+
+load_start_requirements() {
+  local parent
+  for parent in /home /home/isp /home/isp/hosts /home/isp/hosts/cyf; do
+    [[ -d "$parent" && ! -L "$parent" && "$(stat -Lc '%u' "$parent")" == 0 ]] || die "不安全的部署父目录：$parent"
+    (( (8#$(stat -Lc '%a' "$parent") & 0022) == 0 )) || die "部署父目录可被非特权用户写入：$parent"
+  done
+  [[ -d "$DEPLOY_DIR" && ! -L "$DEPLOY_DIR" ]] || die "安全部署目录不存在：$DEPLOY_DIR"
+  [[ "$(stat -Lc '%a %U %G' "$DEPLOY_DIR")" == "755 root root" ]] || die "安全部署目录必须为 755 root root"
+  [[ -d "$RUNTIME_DIR" && ! -L "$RUNTIME_DIR" ]] || die "安全运行目录不存在：$RUNTIME_DIR"
+  [[ "$(stat -Lc '%a %U %G' "$RUNTIME_DIR")" == "750 root root" ]] || die "安全运行目录必须为 750 root root"
+  [[ -d "$LOG_DIR" && ! -L "$LOG_DIR" ]] || die "日志目录不存在或不是物理目录：$LOG_DIR"
+  [[ "$(stat -Lc '%a %U %G' "$LOG_DIR")" == "750 root root" ]] \
+    || die "生命周期日志目录必须为 750 root root：$LOG_DIR"
+  [[ -f "$JAR" && ! -L "$JAR" && -s "$JAR" ]] || die "部署 JAR 不存在、为空或为符号链接：$JAR"
+  [[ "$(stat -Lc '%a %U %G' "$JAR")" == "640 root isp" ]] \
+    || die "部署 JAR 必须为 640 root isp"
+  [[ -x "$JAVA" && ! -L "$JAVA" ]] || die "Java 不可执行或为符号链接：$JAVA"
+  diagnostic_mark jre_validation.begin
+  validate_trusted_runtime || die "Java runtime 路径必须全链路 root-owned 且不可由组/其他用户写入：$JAVA"
+  diagnostic_mark jre_validation.end
+  [[ -f "$SECRET_FILE" && ! -L "$SECRET_FILE" ]] || die "Jasypt 密钥文件缺失或不安全"
+  [[ "$(stat -Lc '%a %U %G' "$SECRET_FILE")" == "600 root root" ]] \
+    || die "Jasypt 密钥文件必须为 600 root root"
+  JASYPT_ENCRYPTOR_PASSWORD=''
+  if ! IFS= read -r JASYPT_ENCRYPTOR_PASSWORD < "$SECRET_FILE"; then
+    [[ -n "$JASYPT_ENCRYPTOR_PASSWORD" ]] || die "无法读取 Jasypt 密钥文件"
+  fi
+  [[ -n "$JASYPT_ENCRYPTOR_PASSWORD" ]] || die "Jasypt 密钥文件为空"
+  export JASYPT_ENCRYPTOR_PASSWORD
+  load_voice_environment
+}
+
+load_voice_environment() {
+  local encoded assignment
+  VOICE_ENV_ASSIGNMENTS=()
+  [[ -e "$VOICE_ENV_FILE" ]] || return 0
+  [[ -f "$VOICE_ENV_FILE" && ! -L "$VOICE_ENV_FILE" ]] || die "语音运行配置必须是物理常规文件"
+  [[ "$(stat -Lc '%a %U %G %h' "$VOICE_ENV_FILE")" == "600 root root 1" ]] \
+    || die "语音运行配置必须为 600 root:root 且链接数为 1"
+  if ! VOICE_ENV_ENCODED="$(/usr/bin/python3 -I -B - "$VOICE_ENV_FILE" <<'PY'
+from pathlib import Path
+from urllib.parse import urlsplit
+import base64, hmac, re, sys
+
+path = Path(sys.argv[1])
+java_names = {
+    'JIA_CHAT_VOICE_ENABLED', 'JIA_CHAT_VOICE_IDENTITY_HMAC_SECRET',
+    'JIA_CHAT_VOICE_CACHE_ENCRYPTION_KEY',
+    'JIA_CHAT_VOICE_COMPATIBILITY_GATEWAY_ALLOWLIST',
+    'JIA_CHAT_VOICE_TRANSCRIPTION_ENABLED', 'JIA_CHAT_VOICE_TRANSCRIPTION_PROVIDER',
+    'JIA_CHAT_VOICE_TRANSCRIPTION_MODEL', 'JIA_CHAT_VOICE_SYNTHESIS_ENABLED',
+    'JIA_CHAT_VOICE_SYNTHESIS_PROVIDER', 'JIA_CHAT_VOICE_SYNTHESIS_MODEL',
+    'JIA_CHAT_VOICE_SYNTHESIS_FORMATS',
+    'JIA_CHAT_VOICE_SYNTHESIS_PROVIDER_VOICE', 'SPRING_AI_OPENAI_API_KEY',
+    'SPRING_AI_OPENAI_BASE_URL', 'SPRING_AI_OPENAI_AUDIO_TRANSCRIPTION_API_KEY',
+    'SPRING_AI_OPENAI_AUDIO_TRANSCRIPTION_BASE_URL',
+    'SPRING_AI_OPENAI_AUDIO_SPEECH_API_KEY', 'SPRING_AI_OPENAI_AUDIO_SPEECH_BASE_URL',
+}
+allowed = java_names | {'CYF_VOICE_SMOKE_BEARER_TOKEN'}
+values = {}
+for number, raw in enumerate(path.read_bytes().splitlines(), 1):
+    if not raw or raw.startswith(b'#'):
+        continue
+    if b'\x00' in raw or any(byte < 32 or byte == 127 for byte in raw):
+        raise SystemExit('invalid control byte on line {}'.format(number))
+    try:
+        line = raw.decode('utf-8')
+    except UnicodeDecodeError:
+        raise SystemExit('configuration must be UTF-8')
+    name, separator, value = line.partition('=')
+    if not separator or not re.fullmatch(r'[A-Z][A-Z0-9_]*', name):
+        raise SystemExit('invalid assignment on line {}'.format(number))
+    if name not in allowed or name in values:
+        raise SystemExit('unknown or duplicate configuration name on line {}'.format(number))
+    values[name] = value
+provider = values.get('JIA_CHAT_VOICE_TRANSCRIPTION_PROVIDER')
+if provider == 'openai-compatible':
+    transcription_model, synthesis_model, synthesis_format = 'whisper-1', 'gpt-4o-mini-tts', 'mp3'
+elif provider == 'cliproxy-realtime':
+    transcription_model, synthesis_model, synthesis_format = 'gpt-realtime', 'gpt-realtime', 'wav'
+else:
+    raise SystemExit('unsupported voice provider profile')
+required_exact = {
+    'JIA_CHAT_VOICE_ENABLED': 'true',
+    'JIA_CHAT_VOICE_TRANSCRIPTION_ENABLED': 'true',
+    'JIA_CHAT_VOICE_TRANSCRIPTION_PROVIDER': provider,
+    'JIA_CHAT_VOICE_TRANSCRIPTION_MODEL': transcription_model,
+    'JIA_CHAT_VOICE_SYNTHESIS_ENABLED': 'true',
+    'JIA_CHAT_VOICE_SYNTHESIS_PROVIDER': provider,
+    'JIA_CHAT_VOICE_SYNTHESIS_MODEL': synthesis_model,
+    'JIA_CHAT_VOICE_SYNTHESIS_PROVIDER_VOICE': 'alloy',
+}
+if provider == 'cliproxy-realtime' or 'JIA_CHAT_VOICE_SYNTHESIS_FORMATS' in values:
+    required_exact['JIA_CHAT_VOICE_SYNTHESIS_FORMATS'] = synthesis_format
+for name, expected in required_exact.items():
+    if values.get(name) != expected:
+        raise SystemExit('required activation setting is missing or invalid: {}'.format(name))
+identity = values.get('JIA_CHAT_VOICE_IDENTITY_HMAC_SECRET', '').encode('utf-8')
+if len(identity) < 32:
+    raise SystemExit('identity key is invalid')
+try:
+    cache = base64.b64decode(values.get('JIA_CHAT_VOICE_CACHE_ENCRYPTION_KEY', ''), validate=True)
+except (ValueError, TypeError):
+    cache = b''
+if len(cache) != 32:
+    raise SystemExit('cache key is invalid')
+provider_key_names = (
+    'SPRING_AI_OPENAI_API_KEY',
+    'SPRING_AI_OPENAI_AUDIO_TRANSCRIPTION_API_KEY',
+    'SPRING_AI_OPENAI_AUDIO_SPEECH_API_KEY',
+)
+for name in provider_key_names:
+    if name in values and not values[name].strip():
+        raise SystemExit('explicit provider API key is blank')
+    if name in values and hmac.compare_digest(identity, values[name].encode('utf-8')):
+        raise SystemExit('identity, cache and provider credentials must be independent')
+for secret in (cache, values.get('JIA_CHAT_VOICE_CACHE_ENCRYPTION_KEY', '').encode('utf-8')):
+    if hmac.compare_digest(identity, secret):
+        raise SystemExit('identity, cache and provider credentials must be independent')
+provider_url_names = (
+    'SPRING_AI_OPENAI_BASE_URL',
+    'SPRING_AI_OPENAI_AUDIO_TRANSCRIPTION_BASE_URL',
+    'SPRING_AI_OPENAI_AUDIO_SPEECH_BASE_URL',
+)
+provided_urls = []
+for name in provider_url_names:
+    if name not in values:
+        continue
+    url = values[name]
+    parsed = urlsplit(url)
+    segments = parsed.path[1:].split('/') if parsed.path.startswith('/') else []
+    if (parsed.scheme.lower() != 'https' or not parsed.hostname or parsed.username or parsed.password
+            or parsed.query or parsed.fragment or parsed.path == '/' or not segments
+            or any(part in ('', '.', '..') for part in segments) or url.endswith('/')
+            or any(ch in url for ch in ('%', '\\', ';')) or parsed.geturl() != url):
+        raise SystemExit('explicit provider gateway is unsafe')
+    provided_urls.append(url)
+allowlist = set(filter(None, values.get('JIA_CHAT_VOICE_COMPATIBILITY_GATEWAY_ALLOWLIST',
+                                        'https://api.openai.com/v1').split(',')))
+if not set(provided_urls).issubset(allowlist):
+    raise SystemExit('provider gateway is not allowlisted')
+common_key_provided = 'SPRING_AI_OPENAI_API_KEY' in values
+common_url_provided = 'SPRING_AI_OPENAI_BASE_URL' in values
+connection_deferred = any(
+    key_name not in values and not common_key_provided
+    for key_name in ('SPRING_AI_OPENAI_AUDIO_TRANSCRIPTION_API_KEY',
+                     'SPRING_AI_OPENAI_AUDIO_SPEECH_API_KEY')) or any(
+    url_name not in values and not common_url_provided
+    for url_name in ('SPRING_AI_OPENAI_AUDIO_TRANSCRIPTION_BASE_URL',
+                     'SPRING_AI_OPENAI_AUDIO_SPEECH_BASE_URL'))
+if connection_deferred:
+    print('VOICE_PROVIDER_CONNECTION_VALIDATION=APPLICATION_STARTUP_REQUIRED', file=sys.stderr)
+for name in sorted(java_names):
+    if name in values:
+        payload=(name + '=' + values[name]).encode('utf-8')
+        print(base64.b64encode(payload).decode('ascii'))
+PY
+  )"; then
+    die "语音运行配置校验失败"
+  fi
+  while IFS= read -r encoded; do
+    [[ -n "$encoded" ]] || continue
+    assignment="$(printf '%s' "$encoded" | base64 -d)" || die "语音运行配置解码失败"
+    VOICE_ENV_ASSIGNMENTS+=("$assignment")
+  done <<< "$VOICE_ENV_ENCODED"
+  unset VOICE_ENV_ENCODED assignment encoded
+}
+
+validate_lock_file() {
+  local path="$1" expected="$2" actual
+  [[ -f "$path" && ! -L "$path" ]] || die "锁文件缺失或不安全：$path；必须由 root 按固定元数据预创建"
+  actual="$(stat -Lc '%a:%u:%g:%h' "$path" 2>/dev/null || true)"
+  [[ "$actual" == "$expected" ]] || die "锁文件权限/所有者/链接数不安全：$path ($actual != $expected)"
+}
+
+verify_lock_fd() {
+  local fd="$1" path="$2" path_identity fd_identity
+  path_identity="$(stat -Lc '%d:%i' "$path")"
+  fd_identity="$(stat -Lc '%d:%i' "/proc/$$/fd/$fd")"
+  [[ "$path_identity" == "$fd_identity" ]] || die "锁文件在打开期间发生变化：$path"
+}
+
+acquire_release_lock_contract() {
+  if [[ -n "${CYF_RELEASE_LOCK_INHERITED_FD:-}${CYF_RELEASE_LOCK_DEVICE:-}${CYF_RELEASE_LOCK_INODE:-}${CYF_RELEASE_LOCK_HELD:-}" ]]; then
+    [[ "${CYF_RELEASE_LOCK_INHERITED_FD:-}" == 8 \
+        && "${CYF_RELEASE_LOCK_DEVICE:-}" =~ ^[0-9]+$ \
+        && "${CYF_RELEASE_LOCK_INODE:-}" =~ ^[0-9]+$ \
+        && "${CYF_RELEASE_LOCK_HELD:-}" == 1 ]] \
+      || die "继承发布锁标记不完整或无效"
+    [[ -e /proc/$$/fd/8 ]] || die "继承发布锁 FD8 不存在"
+    verify_lock_fd 8 "$RELEASE_LOCK_FILE"
+    [[ "$(stat -Lc '%d:%i' /proc/$$/fd/8)" == "$CYF_RELEASE_LOCK_DEVICE:$CYF_RELEASE_LOCK_INODE" ]] \
+      || die "继承发布锁设备/ inode 证明不匹配"
+    /usr/bin/python3 -I -B - "$RELEASE_LOCK_FILE" <<'PY' || die "继承 FD8 没有可证明的排他 flock"
+import os, sys
+path = os.stat(sys.argv[1])
+descriptor = os.fstat(8)
+if (path.st_dev, path.st_ino) != (descriptor.st_dev, descriptor.st_ino):
+    raise SystemExit(1)
+expected = (os.major(descriptor.st_dev), os.minor(descriptor.st_dev), descriptor.st_ino)
+found = False
+with open('/proc/self/fdinfo/8', 'r', encoding='ascii') as stream:
+    for line in stream:
+        fields = line.split()
+        if len(fields) >= 9 and fields[0] == 'lock:' \
+                and fields[2:5] == ['FLOCK', 'ADVISORY', 'WRITE']:
+            try:
+                major, minor, inode = fields[6].split(':')
+                actual = (int(major, 16), int(minor, 16), int(inode))
+            except (ValueError, TypeError):
+                continue
+            if actual == expected:
+                found = True
+                break
+raise SystemExit(0 if found else 1)
+PY
+  else
+    unset CYF_RELEASE_LOCK_INHERITED_FD CYF_RELEASE_LOCK_DEVICE CYF_RELEASE_LOCK_INODE CYF_RELEASE_LOCK_HELD
+    exec 8<>"$RELEASE_LOCK_FILE"
+    verify_lock_fd 8 "$RELEASE_LOCK_FILE"
+    flock -x 8 || die "API 发布锁等待被中断"
+  fi
+}
+
+acquire_lifecycle_lock_contract() {
+  exec 9<>"$LOCK_FILE"
+  verify_lock_fd 9 "$LOCK_FILE"
+  flock -x 9 || die "API 生命周期锁等待被中断"
+}
+
+if [[ "$ACTION" == validate-lock-contract ]]; then
+  load_validation_root
+  RELEASE_LOCK_FILE="$VALIDATION_ROOT/cyf-release-api.lock"
+  LOCK_FILE="$VALIDATION_ROOT/cyf-api-lifecycle.lock"
+  validate_lock_file "$RELEASE_LOCK_FILE" "660:$(id -u):$(id -g):1"
+  validate_lock_file "$LOCK_FILE" "600:$(id -u):$(id -g):1"
+else
+  validate_lock_file "$RELEASE_LOCK_FILE" "660:0:$(id -g isp):1"
+  validate_lock_file "$LOCK_FILE" "600:0:0:1"
+fi
+diagnostic_mark release_lock.begin
+acquire_release_lock_contract
+diagnostic_mark release_lock.end
+diagnostic_mark lifecycle_lock.begin
+acquire_lifecycle_lock_contract
+diagnostic_mark lifecycle_lock.end
+if [[ "$ACTION" == validate-lock-contract ]]; then
+  printf 'LOCK_CONTRACT=PASS\nLOCK_ORDER=FD8,FD9\n'
+  exit 0
+fi
+
+proc_start_ticks() {
+  /usr/bin/python3 -I -B - "$1" <<'PY'
+from pathlib import Path
+import sys
+text = (Path('/proc') / sys.argv[1] / 'stat').read_text()
+end = text.rfind(')')
+if end < 0:
+    raise SystemExit(1)
+print(text[end + 2:].split()[19])
+PY
+}
+
+process_generation_alive() {
+  local pid="$1" ticks="$2"
+  /usr/bin/python3 -I -B - "$pid" "$ticks" <<'PY'
+from pathlib import Path
+import sys
+try:
+    text = (Path('/proc') / sys.argv[1] / 'stat').read_text()
+    end = text.rfind(')')
+    fields = text[end + 2:].split()
+    if end < 0 or fields[19] != sys.argv[2] or fields[0] == 'Z':
+        raise SystemExit(1)
+except (FileNotFoundError, PermissionError, ProcessLookupError, OSError, IndexError):
+    raise SystemExit(1)
+PY
+}
+
+confirm_port_free() {
+  local listener
+  listener="$(port_listener_line)"
+  [[ -z "$listener" ]] || die "API 进程退出后端口 $PORT 仍被监听：$listener"
+}
+
+exact_api_process() {
+  local pid="$1" ticks="$2" signal_name="${3:-}"
+  /usr/bin/python3 -I -B - "$pid" "$ticks" "$JAR" "$JAVA" "$RUNTIME_UID" "$RUNTIME_GID" "$signal_name" <<'PY'
+from pathlib import Path
+import os, signal, sys
+pid_text, expected_ticks, jar_text, java_text, uid_text, gid_text, signal_name = sys.argv[1:]
+try:
+    pid = int(pid_text)
+    expected_uid = int(uid_text)
+    expected_gid = int(gid_text)
+    proc = Path('/proc') / pid_text
+    stat_text = (proc / 'stat').read_text()
+    end = stat_text.rfind(')')
+    if end < 0 or stat_text[end + 2:].split()[19] != expected_ticks:
+        raise ValueError('start ticks mismatch')
+    if (proc / 'exe').resolve(strict=True) != Path(java_text).resolve(strict=True):
+        raise ValueError('executable mismatch')
+    args = (proc / 'cmdline').read_bytes().split(b'\0')
+    if args and args[-1] == b'':
+        args.pop()
+    jar = jar_text.encode()
+    jar_indexes = [index for index, arg in enumerate(args) if arg == b'-jar']
+    if len(jar_indexes) != 1:
+        raise ValueError('jar option mismatch')
+    index = jar_indexes[0]
+    if index < 1 or index + 1 >= len(args) or args[index + 1] != jar:
+        raise ValueError('jar path mismatch')
+    if not all(arg.startswith(b'-') for arg in args[1:index]):
+        raise ValueError('unexpected pre-jar argv')
+    status = {}
+    for line in (proc / 'status').read_text().splitlines():
+        if line.startswith(('Uid:', 'Gid:')):
+            key, values = line.split(':', 1)
+            status[key] = [int(value) for value in values.split()]
+    if status.get('Uid') != [expected_uid] * 4 or status.get('Gid') != [expected_gid] * 4:
+        raise ValueError('runtime identity mismatch')
+    if signal_name:
+        os.kill(pid, getattr(signal, 'SIG' + signal_name))
+except (FileNotFoundError, PermissionError, ProcessLookupError, OSError, ValueError, IndexError, AttributeError):
+    raise SystemExit(1)
+PY
+}
+
+find_api_pids() {
+  /usr/bin/python3 -I -B - "$JAR" "$JAVA" <<'PY'
+from pathlib import Path
+import os, sys
+jar = sys.argv[1].encode()
+java = Path(sys.argv[2]).resolve()
+found = []
+for proc in Path('/proc').iterdir():
+    if not proc.name.isdigit() or int(proc.name) == os.getpid():
+        continue
+    try:
+        args = (proc / 'cmdline').read_bytes().split(b'\0')
+        executable = (proc / 'exe').resolve(strict=True)
+    except (FileNotFoundError, PermissionError, ProcessLookupError, OSError):
+        continue
+    if executable != java:
+        continue
+    jar_indexes = [index for index, arg in enumerate(args) if arg == b'-jar']
+    if len(jar_indexes) != 1:
+        continue
+    index = jar_indexes[0]
+    if index < 1 or index + 1 >= len(args) or args[index + 1] != jar:
+        continue
+    if not all(arg.startswith(b'-') for arg in args[1:index]):
+        continue
+    found.append(int(proc.name))
+for pid in sorted(found):
+    print(pid)
+PY
+}
+
+current_pid() {
+  local output
+  local -a pids=()
+  output="$(find_api_pids)" || die "无法扫描 API 进程"
+  if [[ -n "$output" ]]; then
+    mapfile -t pids <<< "$output"
+  fi
+  if (( ${#pids[@]} > 1 )); then
+    local joined
+    printf -v joined '%s,' "${pids[@]}"
+    die "发现多个使用同一 JAR 的 Java 进程：${joined%,}，拒绝自动操作"
+  fi
+  if (( ${#pids[@]} == 1 )); then
+    process_owned_by_runtime_user "${pids[0]}" \
+      || die "发现使用部署 JAR 但运行身份不是 $RUNTIME_USER 的进程：${pids[0]}"
+    printf '%s\n' "${pids[0]}"
+  fi
+}
+
+port_listener_line() {
+  ss -lntpH "sport = :$PORT" 2>/dev/null || true
+}
+
+listener_snapshot_owned_by() {
+  local pid="$1" snapshot="$2"
+  [[ -n "$snapshot" ]] || return 1
+  /usr/bin/python3 -I -B - "$pid" "$snapshot" <<'PY'
+import re, sys
+expected = int(sys.argv[1])
+lines = [line for line in sys.argv[2].splitlines() if line.strip()]
+if not lines:
+    raise SystemExit(1)
+owners = []
+for line in lines:
+    pids = [int(value) for value in re.findall(r'pid=(\d+)', line)]
+    if not pids:
+        raise SystemExit(1)
+    owners.extend(pids)
+raise SystemExit(0 if owners and set(owners) == {expected} else 1)
+PY
+}
+
+listener_owned_by() {
+  local pid="$1" snapshot
+  snapshot="$(port_listener_line)"
+  listener_snapshot_owned_by "$pid" "$snapshot"
+}
+
+healthy_endpoint_owned_by() {
+  local pid="$1" ticks="$2" before after
+  exact_api_process "$pid" "$ticks" || return 1
+  before="$(port_listener_line)"
+  listener_snapshot_owned_by "$pid" "$before" || return 1
+  health_up || return 1
+  exact_api_process "$pid" "$ticks" || return 1
+  after="$(port_listener_line)"
+  listener_snapshot_owned_by "$pid" "$after"
+}
+
+process_owned_by_runtime_user() {
+  local pid="$1"
+  [[ "$(awk '/^Uid:/ {print $2 ":" $3}' "/proc/$pid/status" 2>/dev/null || true)" == "$RUNTIME_UID:$RUNTIME_UID" ]]
+  [[ "$(awk '/^Gid:/ {print $2 ":" $3}' "/proc/$pid/status" 2>/dev/null || true)" == "$RUNTIME_GID:$RUNTIME_GID" ]]
+}
+
+health_up() {
+  local body code
+  body="$(mktemp /tmp/cyf-api-health.XXXXXX.json)"
+  code="$(canonical_loopback_curl --silent --show-error --max-time 5 --output "$body" --write-out '%{http_code}' "$HEALTH_URL" 2>/dev/null || true)"
+  if [[ "$code" == 200 ]] && /usr/bin/python3 -I -B - "$body" <<'PY'
+import json, sys
+try:
+    payload = json.load(open(sys.argv[1], encoding='utf-8'))
+except Exception:
+    raise SystemExit(1)
+status = payload.get('status')
+if isinstance(status, dict):
+    status = status.get('code')
+raise SystemExit(0 if status == 'UP' else 1)
+PY
+  then
+    rm -f "$body"
+    return 0
+  fi
+  rm -f "$body"
+  return 1
+}
+
+write_pid_files() {
+  local pid="$1" target tmp
+  for target in "$PID_FILE" "$ARCHIVE_PID_FILE"; do
+    tmp="$(mktemp --tmpdir="$RUNTIME_DIR" ."$(basename "$target")".XXXXXX)"
+    printf '%s\n' "$pid" > "$tmp"
+    chmod 0644 "$tmp"
+    chown root:root "$tmp"
+    mv -f "$tmp" "$target"
+  done
+}
+
+write_runtime_record() {
+  local pid="$1" ticks="$2" jar_sha="$3" tmp
+  tmp="$(mktemp --tmpdir="$RUNTIME_DIR" .cyf-api-kit.runtime.XXXXXX)"
+  printf 'pid=%s\nstart_ticks=%s\njar_sha256=%s\n' "$pid" "$ticks" "$jar_sha" > "$tmp"
+  chmod 0644 "$tmp"
+  chown root:root "$tmp"
+  mv -f "$tmp" "$RUNTIME_RECORD"
+}
+
+runtime_record_matches() {
+  local pid="$1" ticks="$2" jar_sha="$3"
+  [[ -f "$RUNTIME_RECORD" && ! -L "$RUNTIME_RECORD" ]] || return 2
+  [[ "$(stat -Lc '%a %U %G' "$RUNTIME_RECORD" 2>/dev/null || true)" == "644 root root" ]] || return 1
+  /usr/bin/python3 -I -B - "$RUNTIME_RECORD" "$pid" "$ticks" "$jar_sha" <<'PY'
+from pathlib import Path
+import sys
+path, pid, ticks, jar_sha = sys.argv[1:]
+values = {}
+try:
+    for line in Path(path).read_text(encoding='utf-8').splitlines():
+        key, separator, value = line.partition('=')
+        if not separator or key in values:
+            raise ValueError('invalid runtime record')
+        values[key] = value
+except (OSError, ValueError):
+    raise SystemExit(1)
+expected = {'pid': pid, 'start_ticks': ticks, 'jar_sha256': jar_sha}
+raise SystemExit(0 if values == expected else 1)
+PY
+}
+
+clear_pid_files() {
+  rm -f "$PID_FILE" "$ARCHIVE_PID_FILE" "$RUNTIME_RECORD"
+}
+
+show_status() {
+  local pid="${1:-}" status_file listener ticks jar_sha attestation_rc
+  if [[ -z "$pid" ]]; then
+    echo "STATUS=STOPPED"
+    listener="$(port_listener_line)"
+    if [[ -n "$listener" ]]; then
+      echo "PORT_${PORT}=LISTENING_BY_OTHER_PROCESS"
+      echo "LISTENER=$listener"
+      echo "HEALTH=NOT_CHECKED_UNOWNED_PORT"
+      return 5
+    fi
+    echo "PORT_${PORT}=NOT_LISTENING"
+    return 3
+  fi
+  ticks="$(proc_start_ticks "$pid" 2>/dev/null || true)"
+  if [[ -z "$ticks" ]]; then
+    echo "STATUS=STOPPED_DURING_CHECK"
+    return 3
+  fi
+  status_file="$(mktemp /tmp/cyf-api-status.XXXXXX.txt)"
+  if ! ps -p "$pid" -o pid,ppid,lstart,etime,stat,%cpu,%mem,rss,cmd > "$status_file"; then
+    rm -f "$status_file"
+    echo "STATUS=STOPPED_DURING_CHECK"
+    return 3
+  fi
+  echo "STATUS=RUNNING"
+  echo "PID=$pid"
+  cat "$status_file"
+  rm -f "$status_file"
+
+  diagnostic_mark status_jar_hash.begin
+  jar_sha=''
+  if [[ -f "$JAR" && ! -L "$JAR" ]]; then
+    jar_sha="$(sha256sum "$JAR" | awk '{print $1}')"
+  fi
+  diagnostic_mark status_jar_hash.end
+  set +e
+  runtime_record_matches "$pid" "$ticks" "$jar_sha"
+  attestation_rc=$?
+  set -e
+  case "$attestation_rc" in
+    0) echo "ARTIFACT_ATTESTATION=MATCH" ;;
+    2) echo "ARTIFACT_ATTESTATION=MISSING" ;;
+    *) echo "ARTIFACT_ATTESTATION=MISMATCH" ;;
+  esac
+
+  listener="$(port_listener_line)"
+  if listener_snapshot_owned_by "$pid" "$listener"; then
+    echo "PORT_${PORT}=LISTENING_BY_PID"
+  elif [[ -n "$listener" ]]; then
+    echo "PORT_${PORT}=LISTENING_BY_OTHER_PROCESS"
+    echo "LISTENER=$listener"
+    echo "HEALTH=NOT_CHECKED_UNOWNED_PORT"
+    return 5
+  else
+    echo "PORT_${PORT}=NOT_LISTENING"
+    echo "HEALTH=NOT_READY"
+    return 4
+  fi
+  if (( attestation_rc != 0 )); then
+    echo "HEALTH=NOT_TRUSTED_ARTIFACT_MISMATCH"
+    return 5
+  fi
+  if ! process_owned_by_runtime_user "$pid"; then
+    echo "RUNTIME_IDENTITY=MISMATCH"
+    echo "HEALTH=NOT_TRUSTED_RUNTIME_IDENTITY"
+    return 5
+  fi
+  echo "RUNTIME_IDENTITY=$RUNTIME_USER($RUNTIME_UID:$RUNTIME_GID)"
+  diagnostic_mark status_health.begin
+  if healthy_endpoint_owned_by "$pid" "$ticks"; then
+    diagnostic_mark status_health.end
+    echo "HEALTH=UP"
+    return 0
+  fi
+  diagnostic_mark status_health.failed
+  echo "HEALTH=NOT_READY"
+  return 4
+}
+
+stop_api() {
+  local pid ticks waited
+  pid="$(current_pid)"
+  if [[ -z "$pid" ]]; then
+    clear_pid_files
+    local foreign_listener
+    foreign_listener="$(port_listener_line)"
+    [[ -z "$foreign_listener" ]] || die "未发现可信 API 进程，但端口 $PORT 仍被其他进程监听：$foreign_listener"
+    echo ">> 后端未运行，无需停止"
+    return 0
+  fi
+  ticks="$(proc_start_ticks "$pid" 2>/dev/null || true)"
+  if [[ -z "$ticks" ]]; then
+    clear_pid_files
+    echo ">> 后端已在停止检查期间退出"
+    return 0
+  fi
+  echo ">> 停止后端 PID=$pid"
+  if ! exact_api_process "$pid" "$ticks"; then
+    if process_generation_alive "$pid" "$ticks"; then
+      die "PID=$pid 仍存活但完整 API 身份已变化，拒绝误报停止"
+    fi
+    confirm_port_free
+    clear_pid_files
+    echo ">> 后端已在发送 TERM 前退出"
+    return 0
+  fi
+  exact_api_process "$pid" "$ticks" TERM || die "TERM 前完整进程身份复核失败，拒绝发送信号"
+  # Wait for the exact process to exit. Do not force-kill it after an arbitrary delay.
+  waited=0
+  while true; do
+    waited=$((waited + 1))
+    if ! exact_api_process "$pid" "$ticks"; then
+      if process_generation_alive "$pid" "$ticks"; then
+        die "PID=$pid 在 TERM 后仍存活但身份变化，拒绝误报停止"
+      fi
+      confirm_port_free
+      clear_pid_files
+      echo ">> 后端已停止（${waited}s）"
+      return 0
+    fi
+    sleep 1
+  done
+
+}
+
+report_resources() {
+  # Observability only: no unmeasured memory minimum or fixed disk reserve.
+  local memory_available disk_available
+  memory_available="$(awk '/^MemAvailable:/ {print $2 * 1024}' /proc/meminfo)"
+  disk_available="$(df -PB1 -- "$DEPLOY_DIR" | awk 'NR == 2 {print $4}')"
+  echo "HOST_MEM_AVAILABLE_BYTES=$memory_available"
+  echo "HOST_DISK_AVAILABLE_BYTES=$disk_available"
+}
+
+start_api() {
+  # Narrow startup loggers only: no root DEBUG, environment report, Hikari
+  # configuration, JDBC/SQL parameters, HTTP wire traffic, security or AI payloads.
+  local -a startup_debug_args=()
+  if [[ "${CYF_API_STARTUP_DIAGNOSTICS:-0}" == 1 ]]; then
+    startup_debug_args=(
+      --logging.level.org.springframework.beans.factory.support.DefaultListableBeanFactory=DEBUG
+      --logging.level.org.springframework.context.support.DefaultLifecycleProcessor=TRACE
+      --cyf.startup-tracing.enabled=true
+      --logging.level.org.mybatis.spring.mapper.ClassPathMapperScanner=DEBUG
+    )
+  fi
+  local pid ticks stamp log_file elapsed listener jar_sha attestation_rc
+  pid="$(current_pid)"
+  if [[ -n "$pid" ]]; then
+    ticks="$(proc_start_ticks "$pid" 2>/dev/null || true)"
+    if [[ -n "$ticks" ]] && healthy_endpoint_owned_by "$pid" "$ticks"; then
+      jar_sha="$(sha256sum "$JAR" | awk '{print $1}')"
+      set +e
+      runtime_record_matches "$pid" "$ticks" "$jar_sha"
+      attestation_rc=$?
+      set -e
+      (( attestation_rc == 0 )) \
+        || die "PID=$pid 健康但运行制品与当前 JAR 无法一致证明；请执行 restart"
+      write_pid_files "$pid"
+      echo ">> 后端已经健康运行，PID=$pid"
+      return 0
+    fi
+    die "PID=$pid 已存在但尚未健康；拒绝重复启动，请使用 status 查看"
+  fi
+  listener="$(port_listener_line)"
+  [[ -z "$listener" ]] || die "端口 $PORT 已被其他进程占用：$listener"
+  report_resources
+
+  diagnostic_mark startup_jar_hash.begin
+  jar_sha="$(sha256sum "$JAR" | awk '{print $1}')"
+  diagnostic_mark startup_jar_hash.end
+  stamp="$(date +%Y%m%d_%H%M%S)"
+  log_file="$(mktemp --tmpdir="$LOG_DIR" startlog_${stamp}.XXXXXX.log)"
+  chmod 0640 "$log_file"
+  chown root:root "$log_file"
+  echo ">> 使用现有 JAR 启动后端（运行用户 $RUNTIME_USER）"
+  echo ">> JAR_SHA256=$jar_sha"
+  echo ">> LOG=$log_file"
+
+  cd "$DEPLOY_DIR"
+  diagnostic_mark jvm_spawn.begin
+  (
+  local environment_name assignment name value
+  while IFS= read -r environment_name; do
+    case "$environment_name" in PATH|LC_ALL|JASYPT_ENCRYPTOR_PASSWORD) ;; *) unset "$environment_name" ;; esac
+  done < <(compgen -e)
+  export PATH=/usr/sbin:/usr/bin:/sbin:/bin LC_ALL=C HOME=/home/isp USER="$RUNTIME_USER" LOGNAME="$RUNTIME_USER"
+  for assignment in "${VOICE_ENV_ASSIGNMENTS[@]}"; do
+    name="${assignment%%=*}"
+    value="${assignment#*=}"
+    printf -v "$name" '%s' "$value"
+    export "$name"
+  done
+  exec nohup setsid setpriv --reuid="$RUNTIME_USER" --regid="$RUNTIME_GID" --init-groups --no-new-privs "$JAVA" \
+    -Xms256m -Xmx768m -Xss256k \
+    -XX:MaxMetaspaceSize=256m -XX:MaxDirectMemorySize=64m \
+    -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/home/isp/state/cyf-api-dumps/ \
+    -XX:+UseG1GC -XX:MaxGCPauseMillis=200 \
+    '-Xlog:gc*::time,uptime,tags' \
+    -jar "$JAR" \
+    --server.port="$PORT" \
+    --server.address=127.0.0.1 \
+    --spring.profiles.active=prod \
+    --logging.level.root=info \
+    --logging.level.org.springframework.security=info \
+    "${startup_debug_args[@]}" \
+    --spring.ai.mcp.client.enabled=false \
+    --spring.ai.mcp.client.toolcallback.enabled=false \
+    '--spring.autoconfigure.exclude=org.springframework.ai.mcp.client.common.autoconfigure.McpClientAutoConfiguration,org.springframework.ai.mcp.client.common.autoconfigure.McpToolCallbackAutoConfiguration,org.springframework.ai.mcp.client.common.autoconfigure.annotations.McpClientAnnotationScannerAutoConfiguration' \
+    --archive.reader.enabled=true \
+    --archive.reader.allowed-scopes[0].tenant-id=oH2zD1PUPvspicVak69uB4wDaFLg \
+    --archive.reader.allowed-scopes[0].client-id=jiafewnnv58ec2379c \
+  ) > "$log_file" 2>&1 < /dev/null 5>&- 6>&- 7>&- 8>&- 9>&- &
+  pid=$!
+  diagnostic_mark jvm_spawn.end
+  diagnostic_mark startup_identity.begin
+  ticks=''
+  for _ in $(seq 1 20); do
+    ticks="$(proc_start_ticks "$pid" 2>/dev/null || true)"
+    [[ -n "$ticks" ]] && break
+    sleep 0.1
+  done
+  [[ -n "$ticks" ]] || { tail -n 100 "$log_file" >&2 || true; die "Java 在身份捕获前退出"; }
+  [[ "$(sha256sum "$JAR" | awk '{print $1}')" == "$jar_sha" ]] \
+    || { exact_api_process "$pid" "$ticks" TERM 2>/dev/null || true; die "JAR 在启动身份捕获期间发生变化"; }
+  write_pid_files "$pid"
+  write_runtime_record "$pid" "$ticks" "$jar_sha"
+  diagnostic_mark startup_identity.end
+  diagnostic_mark health_wait.begin
+  echo ">> Java 已启动，PID=$pid；等待实际健康状态（取消由 Flow 作业控制）"
+
+  local started_at=$SECONDS next_report=60
+  while true; do
+    elapsed=$((SECONDS - started_at))
+    if ! exact_api_process "$pid" "$ticks"; then
+      clear_pid_files
+      tail -n 160 "$log_file" >&2 || true
+      die "Java 在启动期间退出"
+    fi
+    if healthy_endpoint_owned_by "$pid" "$ticks"; then
+      diagnostic_mark health_wait.end
+      diagnostic_mark health_stability.begin
+      sleep 5
+      exact_api_process "$pid" "$ticks" || die "健康后进程立即退出或身份变化"
+      listener_owned_by "$pid" || die "健康后端口所有者发生变化"
+      process_owned_by_runtime_user "$pid" || die "健康后运行用户不匹配"
+      diagnostic_mark stable_jar_hash.begin
+      [[ "$(sha256sum "$JAR" | awk '{print $1}')" == "$jar_sha" ]] || die "健康后 live JAR SHA 发生变化"
+      diagnostic_mark stable_jar_hash.end
+      runtime_record_matches "$pid" "$ticks" "$jar_sha" || die "健康后运行制品记录不匹配"
+      healthy_endpoint_owned_by "$pid" "$ticks" || die "健康状态或端口归属未能稳定"
+      diagnostic_mark health_stability.end
+      diagnostic_mark actual_ready
+      echo ">> 后端启动完成"
+      echo "PID=$pid"
+      echo "HEALTH=UP"
+      echo "READY_AFTER_SECONDS=$elapsed"
+      echo "LOG=$log_file"
+      return 0
+    fi
+    if (( elapsed >= next_report )); then
+      echo ">> 仍在启动：${elapsed}s（该应用历史冷启动约 9-13 分钟）"
+      tail -n 2 "$log_file" | sed 's/^/   /' || true
+      next_report=$((next_report + 60))
+    fi
+    sleep 1
+  done
+}
+
+case "$ACTION" in
+  status)
+    diagnostic_mark status.begin
+    status_pid="$(current_pid)"
+    show_status "$status_pid"
+    diagnostic_mark status.end
+    ;;
+  stop)
+    diagnostic_mark stop.begin
+    stop_api
+    diagnostic_mark stop.end
+    ;;
+  start)
+    diagnostic_mark start.begin
+    load_start_requirements
+    start_api
+    diagnostic_mark start.end
+    ;;
+  restart)
+    load_start_requirements
+    stop_api
+    start_api
+    ;;
+esac

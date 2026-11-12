@@ -1,0 +1,1144 @@
+#!/usr/bin/python3
+"""Bounded E05 CREATE-only schema runner.
+
+The production interface is intentionally closed: no arguments plans the exact E05
+contract and the sole mutating form is ``--apply``.  Artifact, schema, socket,
+identity, resource, table, and SQL digest are fixed here; only the password enters
+through a protected environment variable and is passed to the mysql child through
+its environment.
+"""
+from __future__ import print_function
+
+import fcntl
+import hashlib
+import io
+import json
+import os
+from pathlib import Path
+import re
+import stat
+import subprocess
+import sys
+import tarfile
+import tempfile
+import zipfile
+
+
+PRODUCTION_PATH = Path('/usr/local/sbin/cyf-api-e05-additive-schema')
+CANONICAL_JAR = Path('/home/isp/hosts/cyf/api/cyf-api-kit.jar')
+PACKAGE = Path('/home/isp/state/cyf-api-flow/incoming/package.tgz')
+RECORD = Path('/home/isp/state/cyf-api-flow/record.json')
+MYSQL = Path('/usr/bin/mysql')
+MYSQL_SOCKET = '/home/isp/apps/mysql/mysql.sock'
+MYSQL_SCHEMA = 'jia'
+MYSQL_USER = 'cyf_e05_schema_runner'
+PASSWORD_ENV = 'CYF_E05_MYSQL_PASSWORD'
+RUNNER_LOCK = Path('/tmp/cyf-api-e05-additive-schema.lock')
+DB_LOCK = 'cyf:e05:additive-schema:v1'
+EXPECTED_ORG = '5fb7d76ee6f9d07f148529c7'
+EXPECTED_PIPELINE = '5260799'
+EXPECTED_JOB = 'cloud_ci.api_ci'
+EXPECTED_PACKAGE_MEMBERS = frozenset((
+    'application.jar', 'application.metadata.json', 'application.sidecar.json',
+    'dependency.provenance.json', 'receipt.json',
+))
+NESTED_MAPPER_JAR = 'BOOT-INF/lib/jia-agent-mapper-1.1.2-SNAPSHOT.jar'
+RESOURCE_PATH = 'db/agent-work-item-reassignment-e05.sql'
+RESOURCE_SHA256 = '3c287315e1d6126c652b219e6b4f14ebf02546ee7458c5d6abc3bf46e46b048c'
+TABLE_ORDER = ('agent_work_item_reassignment',)
+SHA256_RE = re.compile(r'^[0-9a-f]{64}$')
+GIT_RE = re.compile(r'^[0-9a-f]{40}$')
+RUN_RE = re.compile(r'^[1-9][0-9]*$')
+
+# This byte-exact allowlist is the fixed E05 mapper resource.  It is not a generic DDL parser.
+E05_SQL_BYTES = b"-- M4-E05 bounded additive migration candidate.\n-- DDL only: no backfill, no lease mutation, and no transport/history rewrite.\nCREATE TABLE IF NOT EXISTS agent_work_item_reassignment (\n    id                          BIGINT NOT NULL AUTO_INCREMENT,\n    reassignment_id             VARCHAR(100) NOT NULL COMMENT 'Deterministic scope/task/work-item/idempotency receipt identity',\n    request_sha256              CHAR(64) NOT NULL COMMENT 'Canonical exact request digest',\n    task_id                     VARCHAR(100) NOT NULL,\n    work_item_id                VARCHAR(100) NOT NULL,\n    operator_subject            VARCHAR(100) NOT NULL COMMENT 'Exact authenticated JWT sub',\n    coordinator_agent_id        VARCHAR(100) NOT NULL COMMENT 'Exact active task coordinator',\n    previous_agent_id           VARCHAR(100) NOT NULL,\n    target_agent_id             VARCHAR(100) NOT NULL,\n    source_command_id           VARCHAR(100) NOT NULL,\n    command_id                  VARCHAR(100) NOT NULL COMMENT 'New immutable WORK_ITEM_EXECUTE command',\n    message_id                  VARCHAR(100) NOT NULL,\n    outbox_event_id             VARCHAR(100) NOT NULL,\n    expected_work_item_version  BIGINT NOT NULL,\n    result_work_item_version    BIGINT NOT NULL,\n    task_version                BIGINT NOT NULL,\n    lease_fence_sha256          CHAR(64) NOT NULL COMMENT 'SHA-256 of fresh lease token; token is never stored here',\n    previous_lease_until        BIGINT NOT NULL,\n    lease_until                 BIGINT NOT NULL,\n    attempt_count               INT NOT NULL,\n    max_attempts                INT NOT NULL,\n    tenant_id                   VARCHAR(50) NOT NULL,\n    client_id                   VARCHAR(50) NOT NULL,\n    create_time                 BIGINT NOT NULL,\n    update_time                 BIGINT NOT NULL,\n    owner_jiacn                  VARCHAR(50) NOT NULL COMMENT 'Authenticated task owner',\n    PRIMARY KEY (id),\n    UNIQUE KEY uk_work_item_reassignment_id\n        (tenant_id, client_id, reassignment_id),\n    UNIQUE KEY uk_work_item_reassignment_command\n        (tenant_id, client_id, command_id),\n    KEY idx_work_item_reassignment_latest\n        (tenant_id, client_id, task_id, work_item_id, id),\n    KEY idx_agent_work_item_reassignment_owner_scope\n        (tenant_id, client_id, owner_jiacn, task_id, work_item_id)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4\n  COMMENT='Immutable E05 explicit-target expired-lease reassignment receipts';\n"
+
+
+class SchemaError(Exception):
+    def __init__(self, code, detail=None):
+        Exception.__init__(self, code)
+        self.code = code
+        self.detail = detail
+
+
+def sha256_bytes(value):
+    return hashlib.sha256(value).hexdigest()
+
+
+if sha256_bytes(E05_SQL_BYTES) != RESOURCE_SHA256:
+    raise RuntimeError('embedded E05 SQL allowlist digest is inconsistent')
+
+
+def column(name, sql_type, nullable=False, extra=''):
+    return (name, sql_type, 'YES' if nullable else 'NO', None, extra)
+
+
+def index(name, unique, columns):
+    return (name, 0 if unique else 1, tuple(columns), 'BTREE')
+
+
+EXPECTED_TABLES = {
+    'agent_work_item_reassignment': {
+        'columns': (
+            column('id', 'bigint', extra='auto_increment'),
+            column('reassignment_id', 'varchar(100)'),
+            column('request_sha256', 'char(64)'),
+            column('task_id', 'varchar(100)'),
+            column('work_item_id', 'varchar(100)'),
+            column('operator_subject', 'varchar(100)'),
+            column('coordinator_agent_id', 'varchar(100)'),
+            column('previous_agent_id', 'varchar(100)'),
+            column('target_agent_id', 'varchar(100)'),
+            column('source_command_id', 'varchar(100)'),
+            column('command_id', 'varchar(100)'),
+            column('message_id', 'varchar(100)'),
+            column('outbox_event_id', 'varchar(100)'),
+            column('expected_work_item_version', 'bigint'),
+            column('result_work_item_version', 'bigint'),
+            column('task_version', 'bigint'),
+            column('lease_fence_sha256', 'char(64)'),
+            column('previous_lease_until', 'bigint'),
+            column('lease_until', 'bigint'),
+            column('attempt_count', 'int'),
+            column('max_attempts', 'int'),
+            column('tenant_id', 'varchar(50)'),
+            column('client_id', 'varchar(50)'),
+            column('create_time', 'bigint'),
+            column('update_time', 'bigint'),
+        ),
+        'indexes': (
+            index('PRIMARY', True, ('id',)),
+            index('uk_work_item_reassignment_id', True,
+                  ('tenant_id', 'client_id', 'reassignment_id')),
+            index('uk_work_item_reassignment_command', True,
+                  ('tenant_id', 'client_id', 'command_id')),
+            index('idx_work_item_reassignment_latest', False,
+                  ('tenant_id', 'client_id', 'task_id', 'work_item_id', 'id')),
+        ),
+        'checks': {},
+        'unique_constraints': (
+            'PRIMARY', 'uk_work_item_reassignment_id',
+            'uk_work_item_reassignment_command',
+        ),
+    },
+}
+
+
+# The same-batch canonical E05 CREATE now includes the mandatory owner column
+# and ordered owner-scope index. Existing ownerless tables still fail strictly;
+# CREATE IF NOT EXISTS never upgrades or infers existing owners.
+_spec = EXPECTED_TABLES['agent_work_item_reassignment']
+_spec['columns'] = _spec['columns'] + (column('owner_jiacn', 'varchar(50)'),)
+_spec['indexes'] = _spec['indexes'] + (
+    index('idx_agent_work_item_reassignment_owner_scope', False,
+          ('tenant_id', 'client_id', 'owner_jiacn', 'task_id', 'work_item_id')),
+)
+
+QUERY_SQL = {
+    # Explicit DEFAULT CHARSET=utf8mb4 without COLLATE uses this session default,
+    # not jia's default charset/collation (MySQL 8.0.21 sql/sql_table.cc).
+    'DEFAULTS': "/*CYF_E05:DEFAULTS*/ SELECT HEX(@@SESSION.default_collation_for_utf8mb4)",
+    'GRANTS': "/*CYF_E05:GRANTS*/ SHOW GRANTS FOR CURRENT_USER()",
+    'SCHEMA': """/*CYF_E05:SCHEMA*/ SELECT HEX(DEFAULT_CHARACTER_SET_NAME),HEX(DEFAULT_COLLATION_NAME) FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME='jia'""",
+    'TABLES': """/*CYF_E05:TABLES*/ SELECT HEX(TABLE_NAME),HEX(ENGINE),HEX(TABLE_COLLATION) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA='jia' AND TABLE_NAME='agent_work_item_reassignment' ORDER BY TABLE_NAME""",
+    'COLUMNS': """/*CYF_E05:COLUMNS*/ SELECT HEX(TABLE_NAME),ORDINAL_POSITION,HEX(COLUMN_NAME),HEX(COLUMN_TYPE),HEX(IS_NULLABLE),CASE WHEN COLUMN_DEFAULT IS NULL THEN '-' ELSE CONCAT('+',HEX(COLUMN_DEFAULT)) END,HEX(EXTRA),CASE WHEN CHARACTER_SET_NAME IS NULL THEN '-' ELSE CONCAT('+',HEX(CHARACTER_SET_NAME)) END,CASE WHEN COLLATION_NAME IS NULL THEN '-' ELSE CONCAT('+',HEX(COLLATION_NAME)) END FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='jia' AND TABLE_NAME='agent_work_item_reassignment' ORDER BY TABLE_NAME,ORDINAL_POSITION""",
+    'STATISTICS': """/*CYF_E05:STATISTICS*/ SELECT HEX(TABLE_NAME),HEX(INDEX_NAME),NON_UNIQUE,SEQ_IN_INDEX,HEX(COLUMN_NAME),CASE WHEN SUB_PART IS NULL THEN '-' ELSE CONCAT('+',SUB_PART) END,HEX(INDEX_TYPE),HEX(COLLATION),HEX(IS_VISIBLE) FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_SCHEMA='jia' AND TABLE_NAME='agent_work_item_reassignment' ORDER BY TABLE_NAME,INDEX_NAME,SEQ_IN_INDEX""",
+    'CONSTRAINTS': """/*CYF_E05:CONSTRAINTS*/ SELECT HEX(TABLE_NAME),HEX(CONSTRAINT_NAME),HEX(CONSTRAINT_TYPE),HEX(ENFORCED) FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA='jia' AND TABLE_NAME='agent_work_item_reassignment' ORDER BY TABLE_NAME,CONSTRAINT_NAME""",
+    'CHECKS': """/*CYF_E05:CHECKS*/ SELECT HEX(tc.TABLE_NAME),HEX(tc.CONSTRAINT_NAME),HEX(cc.CHECK_CLAUSE) FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS tc JOIN INFORMATION_SCHEMA.CHECK_CONSTRAINTS cc ON cc.CONSTRAINT_SCHEMA=tc.CONSTRAINT_SCHEMA AND cc.CONSTRAINT_NAME=tc.CONSTRAINT_NAME WHERE tc.TABLE_SCHEMA='jia' AND tc.TABLE_NAME='agent_work_item_reassignment' AND tc.CONSTRAINT_TYPE='CHECK' ORDER BY tc.TABLE_NAME,tc.CONSTRAINT_NAME""",
+}
+
+
+# No caller-supplied identifier or arbitrary SHOW/SQL path.
+SHOW_SQL = {
+    'agent_work_item_reassignment': "/*CYF_E05:SHOWFIRST*/ SHOW CREATE TABLE `jia`.`agent_work_item_reassignment`",
+}
+
+
+def decode_hex(value):
+    try:
+        return bytes.fromhex(value).decode('utf-8')
+    except (ValueError, UnicodeDecodeError):
+        raise SchemaError('metadata_encoding_invalid')
+
+
+def decode_optional(value):
+    if value == '-':
+        return None
+    if not value.startswith('+'):
+        raise SchemaError('metadata_encoding_invalid')
+    return decode_hex(value[1:])
+
+
+def file_signature(info):
+    return (info.st_dev, info.st_ino, info.st_size, getattr(info, 'st_mtime_ns', int(info.st_mtime * 1000000000)))
+
+
+def safe_regular(path, uid, mode):
+    try:
+        info = os.lstat(str(path))
+    except OSError:
+        raise SchemaError('required_file_missing')
+    if (not stat.S_ISREG(info.st_mode) or info.st_uid != uid or info.st_nlink != 1
+            or stat.S_IMODE(info.st_mode) != mode):
+        raise SchemaError('required_file_metadata_unsafe')
+    return info
+
+
+def read_stable(path, uid, mode):
+    before = safe_regular(path, uid, mode)
+    flags = os.O_RDONLY | getattr(os, 'O_NOFOLLOW', 0)
+    fd = os.open(str(path), flags)
+    try:
+        opened = os.fstat(fd)
+        if file_signature(opened) != file_signature(before):
+            raise SchemaError('required_file_changed')
+        with os.fdopen(fd, 'rb', closefd=False) as stream:
+            value = stream.read()
+        after = os.fstat(fd)
+    finally:
+        os.close(fd)
+    current = safe_regular(path, uid, mode)
+    if file_signature(before) != file_signature(after) or file_signature(after) != file_signature(current):
+        raise SchemaError('required_file_changed')
+    return value, file_signature(current)
+
+
+def digest_stream(stream):
+    digest = hashlib.sha256()
+    for block in iter(lambda: stream.read(1024 * 1024), b''):
+        digest.update(block)
+    return digest.hexdigest()
+
+
+def load_package(path, uid, mode):
+    before = safe_regular(path, uid, mode)
+    flags = os.O_RDONLY | getattr(os, 'O_NOFOLLOW', 0)
+    fd = os.open(str(path), flags)
+    receipt_bytes = None
+    jar_digest = None
+    jar_size = None
+    provenance_digest = None
+    provenance_size = None
+    try:
+        opened = os.fstat(fd)
+        if file_signature(opened) != file_signature(before):
+            raise SchemaError('package_changed')
+        with os.fdopen(fd, 'rb', closefd=False) as raw:
+            try:
+                with tarfile.open(fileobj=raw, mode='r:*') as archive:
+                    members = {}
+                    report_seen = set()
+                    root_directory_seen = False
+                    for member in archive.getmembers():
+                        raw_name = member.name
+                        # Flow ArtifactUpload includes one empty archive-root directory.
+                        # It is metadata, not a sixth payload member or an extraction path.
+                        if raw_name in ('.', './'):
+                            if root_directory_seen or not member.isdir() or member.size != 0:
+                                raise SchemaError('package_member_invalid')
+                            root_directory_seen = True
+                            continue
+                        normalized = raw_name[2:] if raw_name.startswith('./') else raw_name
+                        if (not normalized or normalized.startswith('/') or '\\' in normalized
+                                or '\x00' in normalized
+                                or any(part in ('', '.', '..') for part in normalized.split('/'))):
+                            raise SchemaError('package_member_invalid')
+                        if normalized == 'test-results' or normalized.startswith('test-results/'):
+                            if (normalized in report_seen or not (member.isdir() or
+                                    (member.isfile() and member.size >= 0 and
+                                     (normalized == 'test-results/summary.json' or normalized.endswith('.xml'))))):
+                                raise SchemaError('package_member_invalid')
+                            report_seen.add(normalized)
+                            continue
+                        if ('/' in normalized or normalized in members or not member.isfile()
+                                or member.size < 0):
+                            raise SchemaError('package_member_invalid')
+                        members[normalized] = member
+                    if frozenset(members) != EXPECTED_PACKAGE_MEMBERS:
+                        raise SchemaError('package_member_set_invalid')
+                    receipt_handle = archive.extractfile(members['receipt.json'])
+                    jar_handle = archive.extractfile(members['application.jar'])
+                    provenance_handle = archive.extractfile(members['dependency.provenance.json'])
+                    if receipt_handle is None or jar_handle is None or provenance_handle is None:
+                        raise SchemaError('package_member_unavailable')
+                    receipt_bytes = receipt_handle.read()
+                    jar_digest = digest_stream(jar_handle)
+                    jar_size = members['application.jar'].size
+                    provenance_digest = digest_stream(provenance_handle)
+                    provenance_size = members['dependency.provenance.json'].size
+            except (tarfile.TarError, OSError):
+                raise SchemaError('package_archive_invalid')
+        after = os.fstat(fd)
+    finally:
+        os.close(fd)
+    current = safe_regular(path, uid, mode)
+    if file_signature(before) != file_signature(after) or file_signature(after) != file_signature(current):
+        raise SchemaError('package_changed')
+    return (receipt_bytes, jar_digest, jar_size, provenance_digest,
+            provenance_size, file_signature(current))
+
+
+def inspect_canonical_jar(path, uid, mode):
+    before = safe_regular(path, uid, mode)
+    flags = os.O_RDONLY | getattr(os, 'O_NOFOLLOW', 0)
+    fd = os.open(str(path), flags)
+    digest = hashlib.sha256()
+    resource = None
+    try:
+        opened = os.fstat(fd)
+        if file_signature(opened) != file_signature(before):
+            raise SchemaError('canonical_jar_changed')
+        with os.fdopen(fd, 'rb', closefd=False) as raw:
+            for block in iter(lambda: raw.read(1024 * 1024), b''):
+                digest.update(block)
+            raw.seek(0)
+            try:
+                with zipfile.ZipFile(raw) as boot:
+                    names = boot.namelist()
+                    if names.count(NESTED_MAPPER_JAR) != 1:
+                        raise SchemaError('mapper_jar_location_invalid')
+                    nested_bytes = boot.read(NESTED_MAPPER_JAR)
+                with zipfile.ZipFile(io.BytesIO(nested_bytes)) as nested:
+                    nested_names = nested.namelist()
+                    if nested_names.count(RESOURCE_PATH) != 1:
+                        raise SchemaError('e05_resource_location_invalid')
+                    resource = nested.read(RESOURCE_PATH)
+            except zipfile.BadZipFile:
+                raise SchemaError('canonical_jar_archive_invalid')
+        after = os.fstat(fd)
+    finally:
+        os.close(fd)
+    current = safe_regular(path, uid, mode)
+    if file_signature(before) != file_signature(after) or file_signature(after) != file_signature(current):
+        raise SchemaError('canonical_jar_changed')
+    if resource != E05_SQL_BYTES or sha256_bytes(resource) != RESOURCE_SHA256:
+        raise SchemaError('e05_resource_digest_mismatch')
+    return digest.hexdigest(), file_signature(current)
+
+
+def exact_keys(value, keys, code):
+    if not isinstance(value, dict) or set(value) != set(keys):
+        raise SchemaError(code)
+
+
+def local_coordinator_validator():
+    # Reuse the fixed coordinator's CLOSED LOCAL grammar and publication verifier;
+    # no alternate runner, caller-selected imports or fake numeric Flow identity.
+    offline = os.environ.get('CYF_E05_SCHEMA_OFFLINE_TEST') == 'YES'
+    path = Path(__file__).parent / 'cyf-api-flow-deploy' if offline else Path('/usr/local/sbin/cyf-api-flow-deploy')
+    if not offline:
+        for parent in (Path('/'),) + tuple(reversed(tuple(path.parents)[:-1])):
+            info = os.lstat(str(parent))
+            if not stat.S_ISDIR(info.st_mode) or info.st_uid != 0 or info.st_mode & 0o022:
+                raise SchemaError('local_validator_path_unsafe')
+    fd = os.open(str(path), os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC)
+    try:
+        before = os.fstat(fd)
+        if (not stat.S_ISREG(before.st_mode) or before.st_uid != os.geteuid()
+                or before.st_nlink != 1 or before.st_mode & 0o022):
+            raise SchemaError('local_validator_metadata_unsafe')
+        with os.fdopen(os.dup(fd), 'rb') as stream:
+            code = stream.read()
+        if before != os.fstat(fd) or before != os.lstat(str(path)):
+            raise SchemaError('local_validator_changed')
+        validator = {'__name__': '_cyf_local_schema_validator', '__file__': str(path)}
+        exec(compile(code, str(path), 'exec'), validator)
+    finally:
+        os.close(fd)
+    return validator
+
+
+def verify_local_release_binding(paths, uid, modes, record_bytes, record_signature):
+    validator = local_coordinator_validator()
+    try:
+        record = validator['local_install_record'](validator['local_json'](record_bytes),
+                                                    paths['record'].parent / 'backups')
+        validator['local_need'](record['status'] == 'installed' and record['phase'] == 'installed'
+            and record['recovery'] == 'not_required' and record['candidate_stop_rc'] == 0,
+            'DURABLE_RECORD_INCOMPLETE')
+        release = record['release']
+        inputs = validator['local_read_install_inputs'](release['decision']['path'], release['decision']['sha256'])
+        validator['local_need'](inputs['release'] == release, 'RECOVERY_BINDING_MISMATCH')
+        validator['local_authority_matches'](inputs['decision'], inputs['authority'], ('schemaApply',))
+        approval_raw = validator['local_read_slot'](paths['record'].parent / 'approval.json', uid=uid)
+        validator['local_need'](approval_raw is not None, 'DURABLE_RECORD_INCOMPLETE')
+        approval = validator['local_approval'](validator['local_json'](approval_raw))
+        validator['local_need'](approval['consumed'] and approval['release'] == release,
+                               'RECOVERY_BINDING_MISMATCH')
+        package_info = safe_regular(paths['package'], uid, modes['package'])
+        with paths['package'].open('rb') as stream:
+            package_digest = digest_stream(stream)
+        validator['local_need'](package_info.st_size == release['package']['size']
+            and package_digest == release['package']['sha256']
+            and file_signature(package_info) == file_signature(safe_regular(paths['package'], uid, modes['package'])),
+            'PACKAGE_INVALID')
+        canonical_digest, canonical_signature = inspect_canonical_jar(paths['jar'], uid, modes['jar'])
+        validator['local_need'](canonical_digest == record['candidate_sha256'], 'PRECONDITION_CHANGED')
+        entry = next(item for item in inputs['schemaPlan']['entries'] if item['feature'] == 'E05')
+        expected_catalog = sha256_bytes(validator['local_canonical'](EXPECTED_TABLES))
+        validator['local_need'](entry['expectedCatalogSha256'] == expected_catalog,
+                               'SCHEMA_CATALOG_DRIFT')
+        helper = Path(__file__)
+        # __file__ may be the authenticated inherited FD. Do not resolve/reopen it
+        # before checking that its original bytes still match the fixed catalog.
+        with helper.open('rb') as stream:
+            validator['local_need'](digest_stream(stream) == entry['runner']['sha256']
+                and helper.stat().st_size == entry['runner']['size'], 'HELPER_CATALOG_MISMATCH')
+        inputs['reader'].recheck()
+    except validator['LocalRejected'] as exc:
+        raise SchemaError('local_' + exc.code.lower())
+    return {
+        'source': release['source'], 'binding_sha256': record['binding_sha256'],
+        'decision_sha256': release['decision']['sha256'],
+        'schema_plan_sha256': release['schemaPlan']['sha256'],
+        'admission_sha256': release['admission']['sha256'],
+        'package_sha256': release['package']['sha256'],
+        'jar_sha256': canonical_digest, 'receipt_sha256': release['payloads']['receipt.json']['sha256'],
+        'resource_sha256': RESOURCE_SHA256, 'expected_catalog_sha256': expected_catalog,
+        'signatures': {'jar': canonical_signature, 'package': file_signature(package_info),
+                       'record': record_signature},
+        'record_bytes_sha256': sha256_bytes(record_bytes),
+        'local_inputs': inputs,
+    }
+
+
+def verify_release_binding(paths, uid, modes):
+    record_bytes, record_signature = read_stable(paths['record'], uid, modes['record'])
+    try:
+        record = json.loads(record_bytes.decode('utf-8'))
+    except (ValueError, UnicodeDecodeError):
+        raise SchemaError('record_json_invalid')
+    if type(record) is dict and record.get('schema_version') == 3:
+        return verify_local_release_binding(paths, uid, modes, record_bytes, record_signature)
+    record_keys = {
+        'schema_version', 'status', 'phase', 'recovery', 'ticket_sha256',
+        'source_commit_sha', 'source_tree_sha', 'run_id', 'receipt_sha256',
+        'candidate_sha256', 'previous_sha256', 'backup', 'candidate_stop_rc', 'timestamp',
+    }
+    exact_keys(record, record_keys, 'record_schema_invalid')
+    if (record.get('schema_version') != 2 or record.get('status') != 'installed'
+            or record.get('phase') != 'installed' or record.get('recovery') != 'not_required'
+            or record.get('candidate_stop_rc') != 0
+            or not SHA256_RE.fullmatch(str(record.get('ticket_sha256', '')))
+            or not SHA256_RE.fullmatch(str(record.get('receipt_sha256', '')))
+            or not SHA256_RE.fullmatch(str(record.get('candidate_sha256', '')))
+            or not GIT_RE.fullmatch(str(record.get('source_commit_sha', '')))
+            or not GIT_RE.fullmatch(str(record.get('source_tree_sha', '')))
+            or not RUN_RE.fullmatch(str(record.get('run_id', '')))):
+        raise SchemaError('record_not_installed_exact_release')
+
+    (receipt_bytes, package_jar_digest, package_jar_size, package_provenance_digest,
+     package_provenance_size, package_signature) = load_package(
+        paths['package'], uid, modes['package'])
+    if sha256_bytes(receipt_bytes) != record['receipt_sha256']:
+        raise SchemaError('record_receipt_digest_mismatch')
+    try:
+        receipt = json.loads(receipt_bytes.decode('utf-8'))
+    except (ValueError, UnicodeDecodeError):
+        raise SchemaError('receipt_json_invalid')
+    exact_keys(receipt, {
+        'schema_version', 'status', 'gradle_exit_code', 'bridge_exit_code',
+        'ticket_sha256', 'flow', 'source', 'files',
+    }, 'receipt_schema_invalid')
+    flow = receipt.get('flow')
+    source = receipt.get('source')
+    exact_keys(flow, {'organization_id', 'pipeline_id', 'job_id', 'run_id', 'source_tip_sha'},
+               'receipt_flow_schema_invalid')
+    exact_keys(source, {'branch', 'commit_sha', 'tree_sha', 'clean_before', 'clean_after'},
+               'receipt_source_schema_invalid')
+    if (not isinstance(source.get('branch'), str) or not source['branch']
+            or receipt.get('schema_version') != 1 or receipt.get('status') != 'success'
+            or receipt.get('gradle_exit_code') != 0 or receipt.get('bridge_exit_code') != 0
+            or flow != {
+                'organization_id': EXPECTED_ORG,
+                'pipeline_id': EXPECTED_PIPELINE,
+                'job_id': EXPECTED_JOB,
+                'run_id': record['run_id'],
+                'source_tip_sha': record['source_commit_sha'],
+            }
+            or source != {
+                # Branch is provenance, not a release allowlist; exact commit/tree/ticket remain bound.
+                'branch': source['branch'],
+                'commit_sha': record['source_commit_sha'],
+                'tree_sha': record['source_tree_sha'],
+                'clean_before': True,
+                'clean_after': True,
+            }):
+        raise SchemaError('receipt_release_identity_mismatch')
+    identity = sha256_bytes((json.dumps({'flow': flow, 'source': source}, sort_keys=True,
+                                        separators=(',', ':')) + '\n').encode('utf-8'))
+    if receipt.get('ticket_sha256') != identity or record['ticket_sha256'] != identity:
+        raise SchemaError('release_identity_digest_mismatch')
+    files = receipt.get('files')
+    if not isinstance(files, list) or len(files) != 2:
+        raise SchemaError('receipt_files_invalid')
+    by_kind = {}
+    for item in files:
+        if (not isinstance(item, dict)
+                or item.get('kind') not in ('application_jar', 'dependency_provenance')
+                or item['kind'] in by_kind):
+            raise SchemaError('receipt_files_invalid')
+        exact_keys(item, {'kind', 'path', 'sha256', 'size'}, 'receipt_files_invalid')
+        by_kind[item['kind']] = item
+    if set(by_kind) != {'application_jar', 'dependency_provenance'}:
+        raise SchemaError('receipt_files_invalid')
+    jar_record = by_kind['application_jar']
+    provenance_record = by_kind['dependency_provenance']
+    if (jar_record.get('path') != 'application.jar'
+            or jar_record.get('sha256') != package_jar_digest
+            or jar_record.get('size') != package_jar_size
+            or not SHA256_RE.fullmatch(str(jar_record.get('sha256', '')))):
+        raise SchemaError('receipt_jar_record_mismatch')
+    if (provenance_record.get('path') != 'dependency.provenance.json'
+            or provenance_record.get('sha256') != package_provenance_digest
+            or provenance_record.get('size') != package_provenance_size
+            or not SHA256_RE.fullmatch(str(provenance_record.get('sha256', '')))):
+        raise SchemaError('receipt_provenance_record_mismatch')
+
+    canonical_digest, canonical_signature = inspect_canonical_jar(
+        paths['jar'], uid, modes['jar'])
+    if canonical_digest != package_jar_digest or canonical_digest != record['candidate_sha256']:
+        raise SchemaError('canonical_release_binding_mismatch')
+    return {
+        'source_commit': source['commit_sha'],
+        'source_tree': source['tree_sha'],
+        'run': flow['run_id'],
+        'jar_sha256': canonical_digest,
+        'receipt_sha256': record['receipt_sha256'],
+        'resource_sha256': RESOURCE_SHA256,
+        'signatures': {
+            'jar': canonical_signature,
+            'package': package_signature,
+            'record': record_signature,
+        },
+        'record_bytes_sha256': sha256_bytes(record_bytes),
+    }
+
+
+def assert_binding_paths_unchanged(paths, uid, modes, binding, full_digest=False):
+    for name in ('jar', 'package', 'record'):
+        current = safe_regular(paths[name], uid, modes[name])
+        if file_signature(current) != binding['signatures'][name]:
+            raise SchemaError('release_binding_changed_before_ddl')
+    record_bytes, _ = read_stable(paths['record'], uid, modes['record'])
+    if sha256_bytes(record_bytes) != binding['record_bytes_sha256']:
+        raise SchemaError('release_binding_changed_before_ddl')
+    if 'local_inputs' in binding:
+        try:
+            binding['local_inputs']['reader'].recheck()
+        except Exception:
+            raise SchemaError('local_immutable_input_changed')
+    if full_digest:
+        jar_digest, signature = inspect_canonical_jar(paths['jar'], uid, modes['jar'])
+        if jar_digest != binding['jar_sha256'] or signature != binding['signatures']['jar']:
+            raise SchemaError('release_binding_changed_before_ddl')
+
+
+def split_exact_statements(resource):
+    if resource != E05_SQL_BYTES or sha256_bytes(resource) != RESOURCE_SHA256:
+        raise SchemaError('e05_resource_digest_mismatch')
+    text = resource.decode('utf-8')
+    text = re.sub(r'(?m)^--[^\n]*(?:\n|$)', '', text)
+    parts = []
+    start = 0
+    quoted = False
+    position = 0
+    while position < len(text):
+        character = text[position]
+        if character == "'":
+            if quoted and position + 1 < len(text) and text[position + 1] == "'":
+                position += 2
+                continue
+            quoted = not quoted
+        elif character == ';' and not quoted:
+            part = text[start:position].strip()
+            if part:
+                parts.append(part)
+            start = position + 1
+        position += 1
+    if quoted or text[start:].strip() or len(parts) != len(TABLE_ORDER):
+        raise SchemaError('e05_statement_catalog_invalid')
+    statements = {}
+    for part in parts:
+        match = re.match(r'^CREATE\s+TABLE\s+IF\s+NOT\s+EXISTS\s+([a-z0-9_]+)\s*\(',
+                         part, re.I)
+        if not match or match.group(1).lower() not in TABLE_ORDER:
+            raise SchemaError('e05_statement_catalog_invalid')
+        table = match.group(1).lower()
+        if table in statements:
+            raise SchemaError('e05_statement_catalog_invalid')
+        statements[table] = re.sub(r'\s+', ' ', part).strip() + ';'
+    if tuple(table for table in TABLE_ORDER if table in statements) != TABLE_ORDER:
+        raise SchemaError('e05_statement_catalog_invalid')
+    return statements
+
+
+def parse_metadata(rows):
+    result = {
+        'schema_charset': None,
+        'schema_collation': None,
+        'tables': {},
+        'columns': {name: [] for name in TABLE_ORDER},
+        'indexes': {name: {} for name in TABLE_ORDER},
+        'constraints': {name: {} for name in TABLE_ORDER},
+        'checks': {name: {} for name in TABLE_ORDER},
+    }
+    defaults = rows['DEFAULTS']
+    if len(defaults) != 1 or len(defaults[0]) != 1:
+        raise SchemaError('create_collation_metadata_invalid')
+    result['create_collation'] = decode_hex(defaults[0][0]).lower()
+    # MySQL 8.0.21 sys_vars.cc permits exactly these session defaults. Matching
+    # any utf8mb4_* collation, or matching the schema default, is not sufficient.
+    if result['create_collation'] not in ('utf8mb4_0900_ai_ci', 'utf8mb4_general_ci'):
+        raise SchemaError('create_collation_metadata_invalid')
+    schema_rows = rows['SCHEMA']
+    if len(schema_rows) != 1 or len(schema_rows[0]) != 2:
+        raise SchemaError('schema_identity_invalid')
+    result['schema_charset'] = decode_hex(schema_rows[0][0]).lower()
+    result['schema_collation'] = decode_hex(schema_rows[0][1]).lower()
+    for row in rows['TABLES']:
+        if len(row) != 3:
+            raise SchemaError('table_metadata_invalid')
+        table = decode_hex(row[0]).lower()
+        if table not in TABLE_ORDER or table in result['tables']:
+            raise SchemaError('table_metadata_invalid')
+        result['tables'][table] = (decode_hex(row[1]).lower(), decode_hex(row[2]).lower())
+    for row in rows['COLUMNS']:
+        if len(row) != 9:
+            raise SchemaError('column_metadata_invalid')
+        table = decode_hex(row[0]).lower()
+        if table not in TABLE_ORDER:
+            raise SchemaError('column_metadata_invalid')
+        try:
+            ordinal = int(row[1])
+        except ValueError:
+            raise SchemaError('column_metadata_invalid')
+        result['columns'][table].append((
+            ordinal, decode_hex(row[2]).lower(), decode_hex(row[3]).lower(),
+            decode_hex(row[4]).upper(), decode_optional(row[5]), decode_hex(row[6]).lower(),
+            decode_optional(row[7]), decode_optional(row[8]),
+        ))
+    for row in rows['STATISTICS']:
+        if len(row) != 9:
+            raise SchemaError('index_metadata_invalid')
+        table = decode_hex(row[0]).lower()
+        if table not in TABLE_ORDER:
+            raise SchemaError('index_metadata_invalid')
+        name = decode_hex(row[1])
+        try:
+            non_unique, sequence = int(row[2]), int(row[3])
+        except ValueError:
+            raise SchemaError('index_metadata_invalid')
+        result['indexes'][table].setdefault(name, []).append((
+            non_unique, sequence, decode_hex(row[4]).lower(), decode_optional(row[5]),
+            decode_hex(row[6]).upper(), decode_hex(row[7]).upper(), decode_hex(row[8]).upper(),
+        ))
+    for row in rows['CONSTRAINTS']:
+        if len(row) != 4:
+            raise SchemaError('constraint_metadata_invalid')
+        table = decode_hex(row[0]).lower()
+        if table not in TABLE_ORDER:
+            raise SchemaError('constraint_metadata_invalid')
+        name = decode_hex(row[1])
+        if name in result['constraints'][table]:
+            raise SchemaError('constraint_metadata_invalid')
+        result['constraints'][table][name] = (decode_hex(row[2]).upper(), decode_hex(row[3]).upper())
+    for row in rows['CHECKS']:
+        if len(row) != 3:
+            raise SchemaError('check_metadata_invalid')
+        table = decode_hex(row[0]).lower()
+        if table not in TABLE_ORDER:
+            raise SchemaError('check_metadata_invalid')
+        name = decode_hex(row[1])
+        if name in result['checks'][table]:
+            raise SchemaError('check_metadata_invalid')
+        result['checks'][table][name] = decode_hex(row[2])
+    return result
+
+
+def compare_table(metadata, table):
+    if table not in metadata['tables']:
+        stray = (metadata['columns'][table] or metadata['indexes'][table]
+                 or metadata['constraints'][table] or metadata['checks'][table])
+        return ('drift', ['absent_table_has_metadata']) if stray else ('absent', [])
+    mismatches = []
+    engine, collation = metadata['tables'][table]
+    if engine != 'innodb':
+        mismatches.append('engine')
+    if collation != metadata['create_collation']:
+        mismatches.append('table_collation')
+    expected = EXPECTED_TABLES[table]
+    actual_columns = []
+    for ordinal, name, sql_type, nullable, default, extra, charset, column_collation in metadata['columns'][table]:
+        actual_columns.append((name, sql_type, nullable, default, extra))
+        expected_ordinal = len(actual_columns)
+        if ordinal != expected_ordinal:
+            mismatches.append('column_ordinal')
+        string_type = sql_type.startswith('varchar(') or sql_type.startswith('char(')
+        if string_type:
+            if charset is None or charset.lower() != 'utf8mb4':
+                mismatches.append('column_charset')
+            if column_collation is None or column_collation.lower() != collation:
+                mismatches.append('column_collation')
+        elif charset is not None or column_collation is not None:
+            mismatches.append('non_string_collation')
+    if tuple(actual_columns) != expected['columns']:
+        mismatches.append('columns')
+
+    actual_indexes = []
+    for name, entries in metadata['indexes'][table].items():
+        entries = sorted(entries, key=lambda value: value[1])
+        first_non_unique = entries[0][0] if entries else None
+        columns = []
+        for non_unique, sequence, column_name, sub_part, index_type, direction, visible in entries:
+            if (non_unique != first_non_unique or sequence != len(columns) + 1 or sub_part is not None
+                    or index_type != 'BTREE' or direction != 'A' or visible != 'YES'):
+                mismatches.append('index_attributes')
+            columns.append(column_name)
+        actual_indexes.append((name, first_non_unique, tuple(columns),
+                               entries[0][4] if entries else None))
+    expected_indexes = sorted(expected['indexes'], key=lambda value: value[0])
+    if sorted(actual_indexes, key=lambda value: value[0]) != expected_indexes:
+        mismatches.append('indexes')
+
+    # Business CHECKs are retired. Inspect metadata without enforcing their semantics.
+    expected_constraints = {
+        name: ('PRIMARY KEY' if name == 'PRIMARY' else 'UNIQUE', 'YES')
+        for name in expected['unique_constraints']
+    }
+    actual_constraints = {name: value for name, value in metadata['constraints'][table].items()
+                          if value[0] != 'CHECK'}
+    if actual_constraints != expected_constraints:
+        mismatches.append('constraints')
+    return ('equivalent', sorted(set(mismatches))) if not mismatches else ('drift', sorted(set(mismatches)))
+
+
+class MysqlSession(object):
+    def __init__(self, mysql_path, socket_path, password):
+        args = [
+            str(mysql_path), '--protocol=SOCKET', '--socket=' + socket_path,
+            '--user=' + MYSQL_USER, '--database=' + MYSQL_SCHEMA,
+            '--batch', '--raw', '--skip-column-names', '--unbuffered', '--force',
+            '--default-character-set=utf8mb4',
+        ]
+        child_env = {'PATH': '/usr/sbin:/usr/bin:/sbin:/bin', 'LC_ALL': 'C', 'MYSQL_PWD': password}
+        self.stderr = tempfile.TemporaryFile(mode='w+b')
+        try:
+            self.process = subprocess.Popen(
+                args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=self.stderr,
+                universal_newlines=True, env=child_env, close_fds=True,
+            )
+        except OSError:
+            self.stderr.close()
+            raise SchemaError('mysql_client_start_failed')
+        self.counter = 0
+        self.released = False
+
+    def stderr_size(self):
+        return os.fstat(self.stderr.fileno()).st_size
+
+    def command(self, sql):
+        if self.process.poll() is not None:
+            raise SchemaError('mysql_session_ended')
+        self.counter += 1
+        marker = '_CYF_E05_%04d_END_' % self.counter
+        before_error = self.stderr_size()
+        try:
+            self.process.stdin.write(sql.rstrip(';\n') + ';\n')
+            self.process.stdin.write("SELECT '%s';\n" % marker)
+            self.process.stdin.flush()
+        except (IOError, OSError):
+            raise SchemaError('mysql_session_write_failed')
+        rows = []
+        while True:
+            line = self.process.stdout.readline()
+            if line == '':
+                raise SchemaError('mysql_session_ended')
+            line = line.rstrip('\r\n')
+            if line == marker:
+                break
+            rows.append(line.split('\t'))
+        return rows, self.stderr_size() != before_error
+
+    def acquire(self):
+        rows, errored = self.command("SELECT GET_LOCK('%s',-1)" % DB_LOCK)
+        if errored or rows != [['1']]:
+            raise SchemaError('database_lock_acquire_failed')
+
+    def release(self):
+        rows, errored = self.command("SELECT RELEASE_LOCK('%s')" % DB_LOCK)
+        if errored or rows != [['1']]:
+            raise SchemaError('database_lock_release_failed')
+        self.released = True
+
+    def close(self):
+        if not self.released and self.process.poll() is None:
+            try:
+                self.command("SELECT RELEASE_LOCK('%s')" % DB_LOCK)
+            except SchemaError:
+                pass
+        try:
+            self.process.stdin.close()
+        except (IOError, OSError):
+            pass
+        return_code = self.process.wait()
+        had_stderr = self.stderr_size() != 0
+        self.stderr.close()
+        if return_code != 0 or had_stderr:
+            raise SchemaError('mysql_backend_reported_error')
+
+
+def verify_metadata_privileges(session):
+    # F06 Run49 proves CREATE-only can SHOW CREATE despite invisible COLUMNS.
+    # Apply that metadata strategy to only the fixed E05 table; require CREATE before
+    # writing. No REFERENCES/SELECT or new grant is required/executed. Existing
+    # zero-column tables additionally need a successful, complete SHOW below;
+    # partial COLUMNS are never filled in. An absent table is verified after
+    # CREATE, not manufactured just to probe metadata visibility.
+    rows, errored = session.command(QUERY_SQL['GRANTS'])
+    if errored:
+        raise SchemaError('metadata_privilege_query_failed')
+    account = '`cyf_e05_schema_runner`@`localhost`'
+    grants = {table: set() for table in TABLE_ORDER}
+    for row in rows:
+        if len(row) != 1:
+            raise SchemaError('metadata_privilege_scope_invalid')
+        if row[0] == 'GRANT USAGE ON *.* TO ' + account:
+            continue
+        match = re.fullmatch(
+            r'GRANT (CREATE|REFERENCES|CREATE, REFERENCES|REFERENCES, CREATE) '
+            r'ON `jia`\.`([a-z_]+)` TO ' + re.escape(account), row[0])
+        if not match or match.group(2) not in grants:
+            # Roles, column-only grants, wildcard scopes and data privileges
+            # are not substitutes for this fixed CREATE-only principal.
+            raise SchemaError('metadata_privilege_scope_invalid')
+        grants[match.group(2)].update(match.group(1).split(', '))
+    for table in TABLE_ORDER:
+        if 'CREATE' not in grants[table]:
+            raise SchemaError('exact_table_create_privilege_required', table)
+
+
+# Deliberately a closed SHOW CREATE grammar, not a general SQL parser. Unknown
+# options, generated expressions, index prefixes, FK clauses, escapes, etc. stop.
+SHOW_NAME = r'`([a-z_][a-z0-9_]*)`'
+SHOW_COMMENT = r"'(?:''|[^'\\])*'"
+SHOW_COLUMN = re.compile(
+    r'  ' + SHOW_NAME + r' (bigint|int|varchar\([1-9][0-9]*\)|char\([1-9][0-9]*\))'
+    r'(?: CHARACTER SET ([a-z0-9_]+))?(?: COLLATE ([a-z0-9_]+))?'
+    r' (NOT NULL|DEFAULT NULL)( AUTO_INCREMENT)?(?: COMMENT ' + SHOW_COMMENT + r')?')
+SHOW_KEY = re.compile(
+    r'  (PRIMARY KEY|UNIQUE KEY ' + SHOW_NAME + r'|KEY ' + SHOW_NAME + r') '
+    r'\((`[a-z_][a-z0-9_]*`(?:,`[a-z_][a-z0-9_]*`)*)\)')
+SHOW_CHECK = re.compile(r'  CONSTRAINT ' + SHOW_NAME + r' CHECK \((.+)\)')
+SHOW_OPTIONS = re.compile(
+    r'\) ENGINE=([A-Za-z0-9_]+)(?: AUTO_INCREMENT=[1-9][0-9]*)?'
+    r' DEFAULT CHARSET=([a-z0-9_]+) COLLATE=([a-z0-9_]+)'
+    r'(?: COMMENT=' + SHOW_COMMENT + r')?')
+
+
+def parse_show_create(rows, table, create_collation):
+    if (table not in SHOW_SQL or len(rows) < 3 or len(rows[0]) != 2
+            or rows[0] != [table, 'CREATE TABLE `%s` (' % table]
+            or any(len(row) != 1 for row in rows[1:])):
+        raise SchemaError('show_create_metadata_invalid', table)
+    options = SHOW_OPTIONS.fullmatch(rows[-1][0])
+    if not options:
+        raise SchemaError('show_create_metadata_invalid', table)
+    engine, charset, collation = options.groups()
+    result = {
+        'create_collation': create_collation,
+        'tables': {table: (engine.lower(), collation)},
+        'columns': {table: []}, 'indexes': {table: {}},
+        'constraints': {table: {}}, 'checks': {table: {}},
+    }
+    if charset != 'utf8mb4':
+        raise SchemaError('show_create_schema_drift', table)
+    phase = 0
+    for at, row in enumerate(rows[1:-1]):
+        line = row[0]
+        if at < len(rows) - 3:
+            if not line.endswith(','):
+                raise SchemaError('show_create_metadata_invalid', table)
+            line = line[:-1]
+        column = SHOW_COLUMN.fullmatch(line)
+        key = SHOW_KEY.fullmatch(line)
+        check = SHOW_CHECK.fullmatch(line)
+        if column and phase == 0:
+            name, sql_type, column_charset, column_collation, nullable, extra = column.groups()
+            string_type = sql_type.startswith(('varchar(', 'char('))
+            if not string_type and (column_charset or column_collation):
+                raise SchemaError('show_create_metadata_invalid', table)
+            result['columns'][table].append((
+                len(result['columns'][table]) + 1, name, sql_type,
+                'NO' if nullable == 'NOT NULL' else 'YES', None,
+                'auto_increment' if extra else '',
+                (column_charset or charset) if string_type else None,
+                (column_collation or collation) if string_type else None,
+            ))
+        elif key and phase <= 1:
+            phase = 1
+            kind, unique_name, ordinary_name, columns = key.groups()
+            name = unique_name or ordinary_name or 'PRIMARY'
+            if name in result['indexes'][table]:
+                raise SchemaError('show_create_metadata_invalid', table)
+            non_unique = 1 if ordinary_name else 0
+            result['indexes'][table][name] = [
+                (non_unique, ordinal, col[1:-1], None, 'BTREE', 'A', 'YES')
+                for ordinal, col in enumerate(columns.split(','), 1)]
+            if not non_unique:
+                result['constraints'][table][name] = (
+                    'PRIMARY KEY' if kind == 'PRIMARY KEY' else 'UNIQUE', 'YES')
+        elif check:
+            phase = 2
+            name, clause = check.groups()
+            if name in result['constraints'][table]:
+                raise SchemaError('show_create_metadata_invalid', table)
+            result['constraints'][table][name] = ('CHECK', 'YES')
+            result['checks'][table][name] = clause
+        else:
+            raise SchemaError('show_create_metadata_invalid', table)
+    # SHOW is independently compared in full (not just used to supply columns).
+    # I_S indexes/constraints/checks then undergo their original exact comparison.
+    state, ignored = compare_table(result, table)
+    if state != 'equivalent':
+        raise SchemaError('show_create_schema_drift', table)
+    return result['columns'][table]
+
+
+def introspect(session):
+    rows = {}
+    for name in ('DEFAULTS', 'SCHEMA', 'TABLES', 'COLUMNS', 'STATISTICS', 'CONSTRAINTS', 'CHECKS'):
+        result, errored = session.command(QUERY_SQL[name])
+        if errored:
+            raise SchemaError('metadata_query_failed')
+        rows[name] = result
+    metadata = parse_metadata(rows)
+    for table in TABLE_ORDER:
+        if table in metadata['tables'] and not metadata['columns'][table]:
+            shown, errored = session.command(SHOW_SQL[table])
+            if errored:
+                raise SchemaError('metadata_visibility_show_create_failed', table)
+            metadata['columns'][table] = parse_show_create(
+                shown, table, metadata['create_collation'])
+    return metadata
+
+
+def acquire_runner_lock(path, uid):
+    try:
+        existing = os.lstat(str(path))
+    except OSError:
+        existing = None
+    if existing is not None and (not stat.S_ISREG(existing.st_mode)
+                                 or existing.st_uid != uid or existing.st_nlink != 1
+                                 or stat.S_IMODE(existing.st_mode) != 0o600):
+        raise SchemaError('runner_lock_metadata_unsafe')
+    flags = os.O_RDWR | os.O_CREAT | getattr(os, 'O_NOFOLLOW', 0)
+    try:
+        fd = os.open(str(path), flags, 0o600)
+    except OSError:
+        raise SchemaError('runner_lock_open_failed')
+    try:
+        os.fchmod(fd, 0o600)
+        info = os.fstat(fd)
+        current = os.lstat(str(path))
+        if (not stat.S_ISREG(info.st_mode) or info.st_uid != uid or info.st_nlink != 1
+                or file_signature(info) != file_signature(current)
+                or stat.S_IMODE(info.st_mode) != 0o600):
+            raise SchemaError('runner_lock_metadata_unsafe')
+        fcntl.flock(fd, fcntl.LOCK_EX)
+        return fd
+    except BaseException:
+        os.close(fd)
+        raise
+
+
+def runtime_paths():
+    offline = os.environ.get('CYF_E05_SCHEMA_OFFLINE_TEST') == 'YES'
+    if offline:
+        root_value = os.environ.get('CYF_E05_SCHEMA_TEST_ROOT', '')
+        root = Path(root_value)
+        try:
+            info = os.lstat(str(root))
+        except OSError:
+            raise SchemaError('offline_root_invalid')
+        if (not root_value.startswith('/tmp/') or not stat.S_ISDIR(info.st_mode)
+                or stat.S_IMODE(info.st_mode) != 0o700 or info.st_uid != os.geteuid()
+                or stat.S_ISLNK(info.st_mode)):
+            raise SchemaError('offline_root_invalid')
+        return ({
+            'jar': root / 'service/cyf-api-kit.jar',
+            'package': root / 'state/incoming/package.tgz',
+            'record': root / 'state/record.json',
+            'mysql': root / 'bin/mysql',
+            'lock': root / 'e05-runner.lock',
+            'socket': str(root / 'mysql.sock'),
+        }, os.geteuid(), {'jar': 0o600, 'package': 0o600, 'record': 0o600}, True)
+    if os.geteuid() != 0:
+        raise SchemaError('root_required')
+    try:
+        script = Path(os.path.realpath(__file__))
+    except OSError:
+        raise SchemaError('runner_path_invalid')
+    if script != PRODUCTION_PATH:
+        raise SchemaError('runner_path_invalid')
+    safe_regular(PRODUCTION_PATH, 0, 0o755)
+    socket_info = os.lstat(MYSQL_SOCKET)
+    if not stat.S_ISSOCK(socket_info.st_mode):
+        raise SchemaError('mysql_socket_invalid')
+    return ({
+        'jar': CANONICAL_JAR,
+        'package': PACKAGE,
+        'record': RECORD,
+        'mysql': MYSQL,
+        'lock': RUNNER_LOCK,
+        'socket': MYSQL_SOCKET,
+    }, 0, {'jar': 0o640, 'package': 0o600, 'record': 0o600}, False)
+
+
+def table_report(status, mismatches=None):
+    value = {'status': status}
+    if mismatches:
+        value['mismatches'] = mismatches
+    return value
+
+
+def run(operation, report):
+    paths, uid, modes, offline = runtime_paths()
+    mysql_info = safe_regular(paths['mysql'], uid, 0o700 if offline else 0o755)
+    if mysql_info.st_mode & 0o022:
+        raise SchemaError('mysql_client_metadata_unsafe')
+    password = os.environ.get(PASSWORD_ENV)
+    if not isinstance(password, str) or not password or '\n' in password or '\r' in password:
+        raise SchemaError('mysql_password_environment_missing')
+    lock_fd = acquire_runner_lock(paths['lock'], uid)
+    session = None
+    primary_error = None
+    try:
+        binding = verify_release_binding(paths, uid, modes)
+        if 'source' in binding:
+            report.update(schema_version=2, error=None, failed_table=None)
+            report['binding'] = {key: binding[key] for key in (
+                'source', 'binding_sha256', 'decision_sha256',
+                'jar_sha256', 'receipt_sha256', 'package_sha256')}
+        else:
+            report['binding'] = {
+            'organization': EXPECTED_ORG,
+            'pipeline': EXPECTED_PIPELINE,
+            'run': binding['run'],
+            'source_commit': binding['source_commit'],
+            'source_tree': binding['source_tree'],
+            'jar_sha256': binding['jar_sha256'],
+            'receipt_sha256': binding['receipt_sha256'],
+        }
+        statements = split_exact_statements(E05_SQL_BYTES)
+        report['candidate'] = {
+            'resource_outer': NESTED_MAPPER_JAR,
+            'resource_inner': RESOURCE_PATH,
+            'sql_sha256': binding['resource_sha256'],
+            'tables': list(TABLE_ORDER),
+            'statement_policy': 'exact_create_table_if_not_exists_only',
+        }
+        if 'source' in binding:
+            report['candidate']['expected_catalog_sha256'] = binding['expected_catalog_sha256']
+        session = MysqlSession(paths['mysql'], paths['socket'], password)
+        session.acquire()
+        verify_metadata_privileges(session)
+        metadata = introspect(session)
+        states = {}
+        drift = False
+        for table in TABLE_ORDER:
+            state, mismatches = compare_table(metadata, table)
+            states[table] = state
+            if state == 'drift':
+                report['tables'][table] = table_report('drift', mismatches)
+                drift = True
+            elif state == 'equivalent':
+                report['tables'][table] = table_report('existing_equivalent')
+            else:
+                report['tables'][table] = table_report(
+                    'planned_create' if operation == 'plan' else 'pending_create')
+        if drift:
+            raise SchemaError('existing_schema_drift')
+        if operation == 'plan':
+            session.release()
+            return
+
+        assert_binding_paths_unchanged(paths, uid, modes, binding, full_digest=True)
+        for table in TABLE_ORDER:
+            if states[table] == 'equivalent':
+                continue
+            assert_binding_paths_unchanged(paths, uid, modes, binding, full_digest=False)
+            report['tables'][table] = table_report('create_attempted_unverified')
+            ignored_rows, ddl_errored = session.command(statements[table])
+            if ignored_rows:
+                ddl_errored = True
+            # DDL autocommits.  Always inspect the durable table state; never drop it.
+            try:
+                after = introspect(session)
+                state, mismatches = compare_table(after, table)
+            except SchemaError:
+                state, mismatches = 'unknown', ['post_create_introspection']
+            if ddl_errored:
+                report['tables'][table] = table_report(
+                    'create_backend_error_' + state, mismatches)
+                raise SchemaError('create_statement_failed', table)
+            if state != 'equivalent':
+                report['tables'][table] = table_report('create_result_' + state, mismatches)
+                raise SchemaError('created_table_not_equivalent', table)
+            report['tables'][table] = table_report('created_equivalent')
+            states[table] = 'equivalent'
+        assert_binding_paths_unchanged(paths, uid, modes, binding, full_digest=False)
+        session.release()
+    except SchemaError as exc:
+        primary_error = exc
+        raise
+    finally:
+        close_error = None
+        if session is not None:
+            try:
+                session.close()
+            except SchemaError as exc:
+                close_error = exc
+        os.close(lock_fd)
+        if primary_error is None and close_error is not None:
+            raise close_error
+
+
+def main(argv=None):
+    argv = list(sys.argv[1:] if argv is None else argv)
+    report = {
+        'schema_version': 1,
+        'operation': 'apply' if argv == ['--apply'] else 'plan',
+        'status': 'failed',
+        'transaction_model': 'mysql_ddl_autocommit_per_create_no_rollback_or_drop',
+        'lock_order': ['e05_runner_file_lock', 'e05_mysql_named_lock'],
+        'tables': {},
+    }
+    if argv not in ([], ['--apply']):
+        report['error'] = 'arguments_rejected'
+        print(json.dumps(report, sort_keys=True, separators=(',', ':')))
+        return 2
+    try:
+        run(report['operation'], report)
+    except SchemaError as exc:
+        report['error'] = exc.code
+        if exc.detail in TABLE_ORDER:
+            report['failed_table'] = exc.detail
+        for table in TABLE_ORDER:
+            if table not in report['tables']:
+                report['tables'][table] = table_report('not_attempted')
+        if report['schema_version'] == 2:
+            for table in TABLE_ORDER:
+                report['tables'][table].setdefault('mismatches', [])
+        print(json.dumps(report, sort_keys=True, separators=(',', ':')))
+        return 1
+    report['status'] = 'pass'
+    if report['schema_version'] == 2:
+        for table in TABLE_ORDER:
+            report['tables'][table].setdefault('mismatches', [])
+    print(json.dumps(report, sort_keys=True, separators=(',', ':')))
+    return 0
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())

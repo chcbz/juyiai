@@ -1,0 +1,151 @@
+schema_version: 2
+updated_at: "2026-09-11"
+source_scope:
+  declared_surface:
+    controllers_glob: "api/**/*Controller.java"
+    expand_http_methods: true
+    expand_paths: true
+    include_inherited_mappings: true
+    include_conditional_components: true
+    framework_manifest_sources: [spring_configuration, actuator_configuration, dependency_versions, explicit_allowlist]
+    include_management_error_framework_endpoints: true
+  runtime:
+    profiles: [grey, prod]
+    sources: [RequestMappingHandlerMapping, management_mappings]
+    compare_against_declared_surface: true
+    bidirectional_match_required: true
+  current_checkout_observation:
+    controller_files: 42
+    method_mappings: 401
+    note: "只读观察值；PERF-01 必须在 exact API tree/profile 上重生成并绑定 hash。"
+default:
+  class: SYNC_STANDARD
+  server_p95_ms: 1000
+  server_p99_ms: 2500
+  sli_3s_min: 0.99
+  semantic_success_min: 0.999
+  hard_response_ms: 3000
+classes:
+  SYNC_CRITICAL:
+    server_p95_ms: 500
+    server_p99_ms: 1000
+    sli_1s_min: 0.99
+    hard_response_ms: 1000
+  SYNC_STANDARD:
+    server_p95_ms: 1000
+    server_p99_ms: 2500
+    sli_3s_min: 0.99
+    semantic_success_min: 0.999
+    hard_response_ms: 3000
+  ASYNC_ACK:
+    ack_p95_ms: 1000
+    ack_p99_ms: 2500
+    ack_within_3s_min: 0.99
+    hard_ack_ms: 3000
+  STREAM_FIRST_EVENT:
+    handshake_p95_ms: 1000
+    handshake_within_3s_min: 0.99
+    first_application_event_within_3s_min: 0.99
+    hard_handshake_ms: 3000
+    hard_first_application_event_ms: 3000
+  TRANSFER_TTFB:
+    post_body_ack_within_3s_min: 0.99
+    response_header_within_3s_min: 0.99
+    hard_post_body_ack_ms: 3000
+    hard_response_header_ms: 3000
+  EXTERNAL_REDIRECT:
+    local_processing_within_3s_min: 0.99
+    hard_local_processing_ms: 3000
+  OPERATIONAL:
+    hard_response_ms: 2000
+exceptions:
+  - route: "GET /actuator/health"
+    class: OPERATIONAL
+    justification: "运行健康端点，独立于业务 SLO 但仍需快速响应。"
+    owner_role: release_guard
+    contract_ref: "design.md#13-全量-api-inventory"
+    compliance: pending_runtime_inventory
+    review_by: "2026-12-31"
+  - route: "GET /actuator/health/liveness"
+    class: OPERATIONAL
+    justification: "进程存活端点不得等待外部依赖。"
+    owner_role: release_guard
+    contract_ref: "design.md#13-全量-api-inventory"
+    compliance: pending_runtime_inventory
+    review_by: "2026-12-31"
+  - route: "GET /actuator/health/readiness"
+    class: OPERATIONAL
+    justification: "接流量门禁，独立统计且需有界返回。"
+    owner_role: release_guard
+    contract_ref: "design.md#13-全量-api-inventory"
+    compliance: pending_runtime_inventory
+    review_by: "2026-12-31"
+  - route: "GET /agent/tasks/{taskId}/events"
+    class: STREAM_FIRST_EVENT
+    justification: "SSE 长连接按握手和首应用事件验收。"
+    owner_role: critical_worker
+    contract_ref: "design.md#51-聚义厅不可破坏合同"
+    compliance: pending
+    review_by: "2026-12-31"
+  - route: "GET /agent/scenes/{sceneId}/events"
+    class: STREAM_FIRST_EVENT
+    justification: "SSE 长连接按握手和首应用事件验收。"
+    owner_role: critical_worker
+    contract_ref: "design.md#51-聚义厅不可破坏合同"
+    compliance: pending
+    review_by: "2026-12-31"
+  - route: "POST /chat/stream"
+    class: STREAM_FIRST_EVENT
+    justification: "AI 流式响应按握手和首应用事件验收，完整生成单列。"
+    owner_role: critical_worker
+    contract_ref: "design.md#51-聚义厅不可破坏合同"
+    compliance: pending
+    review_by: "2026-12-31"
+  - route: "GET /chat/conversation/events"
+    class: STREAM_FIRST_EVENT
+    justification: "会话事件为 SSE 长连接。"
+    owner_role: critical_worker
+    contract_ref: "design.md#51-聚义厅不可破坏合同"
+    compliance: pending
+    review_by: "2026-12-31"
+  - route: "POST /job/execute/async"
+    class: ASYNC_ACK
+    justification: "现有异步提交候选；完成 operation v1 审计前不得通过。"
+    owner_role: critical_worker
+    contract_ref: "design.md#25-统一异步-operation-v1-合同"
+    compliance: pending_operation_v1
+    review_by: "2026-12-31"
+  - route: "GET /file/res/{uri:.+}/**"
+    class: TRANSFER_TTFB
+    justification: "文件下载按鉴权、响应头和 TTFB 验收。"
+    owner_role: balanced_worker
+    contract_ref: "design.md#12-接口等级"
+    compliance: pending
+    review_by: "2026-12-31"
+  - route: "GET /media/thumbnail"
+    class: TRANSFER_TTFB
+    justification: "缩略图二进制输出按响应头和 TTFB 验收。"
+    owner_role: balanced_worker
+    contract_ref: "design.md#12-接口等级"
+    compliance: pending
+    review_by: "2026-12-31"
+  - route: "POST /media/upload"
+    class: TRANSFER_TTFB
+    justification: "上传按请求体接收完成后的持久化 ACK 验收。"
+    owner_role: balanced_worker
+    contract_ref: "design.md#12-接口等级"
+    compliance: pending
+    review_by: "2026-12-31"
+pending_exception_candidates:
+  note: "PERF-01 必须展开为精确 method+route；本列表不生效，未展开时仍按 SYNC_STANDARD 并阻止 accepted。"
+  categories: [multipart_uploads, binary_downloads, oauth_redirects]
+rules:
+  unknown_route: fail
+  runtime_declared_surface_mismatch: fail
+  profile_difference_without_justification: fail
+  dynamic_route: fail_until_explicitly_classified
+  wildcard_exception: forbidden
+  pending_compliance: fail_acceptance
+  expired_review: fail_acceptance
+  raw_uri_metric_label: forbidden
+  sensitive_request_logging: forbidden

@@ -1,0 +1,187 @@
+schema_version: 12
+updated_at: "2026-10-28"
+scope: cyf_project_development_agents_only
+policy_source: user_requested_project_role_model_reassignment_20261028
+# Current routing only. Historical M2/M3 assignments are in the archive, never dispatch inputs.
+historical_snapshot: docs/implementation/archive/2026-10-23-agent-roles/MODEL_ROUTING.yaml
+
+execution_policy:
+  authority: AGENTS.md
+  task_mode: task_worktree_path_scoped_parallel_writers
+  default_subagent_policy: on_demand_only_with_delegation_authorization
+  max_active_source_writers: 3
+  max_parallel_read_only_support: 1
+  max_threads: 5
+  max_depth: 1
+  one_writer_per_worktree: true
+  writer_reviewer_separation: owner_self_check_no_independent_reviewer
+  independent_reviewer_enabled: false
+  control_plane_writer: main_orchestrator
+  runtime_ledger: "docs/implementation/TASKS.yaml#runtime_ledger_json"
+  orchestration_entrypoint: "python3 ops/orchestration/cyf_orchestrator.py"
+  gradle_lock: /tmp/cyf-gradle.lock
+  automatic_promotion_after_acceptance_or_self_check: true
+  per_task_user_confirmation_required: false
+  production_changes_require_explicit_task: true
+  active_progress_reporting: true
+  reporting_mode: task_terminal_or_exception_or_user_action
+  source_write_rule: >-
+    每项任务只有一个Owner，独立worktree和明确owned paths；原型设计修改也计入Writer容量。
+    架构/探索/验证按不写产品源码的辅助容量管理，test_runner仅可写获授权的临时fixture、输出和证据。
+    五个角色不是五步流水线；简单任务由原Owner完成，不为凑角色另开Agent。
+    docs/implementation与共享台账由主会话维护；冲突只协调，不抢占或改派活动任务。
+  failure_policy:
+    attribution_before_retry: true
+    consecutive_failure_limit: 2
+    consecutive_scope: same_root_cause_and_unchanged_input
+    on_limit: stop_blind_retry_and_report_evidence
+    state_changes_via: ops/orchestration/cyf_orchestrator.py
+  cross_thread_conflict_policy:
+    action: alert_only
+    command: "python3 ops/orchestration/cyf_orchestrator.py conflict-alert"
+    process_control_authority: exact_ownership_and_explicit_authorization
+    forbidden_operations: [foreign_process_signal, foreign_service_operation, foreign_lock_takeover, foreign_evidence_operation]
+  risk_tier_policy:
+    L0: {scope: read_only_or_documentation_or_static_check, execution: direct, review: none}
+    L1: {scope: reversible_config_without_runtime_side_effect, execution: backup_pin_write_readback, review: owner_self_check}
+    L2: {scope: ordinary_implementation_and_verification, execution: owner_self_check_then_component_verification, review: no_independent_reviewer}
+    L3:
+      scope: [identity, acl, transaction, concurrency, migration, production_data, exceptional_production_operation]
+      execution: owner_risk_self_check_with_exact_authorization_and_recovery
+      review: no_independent_reviewer
+
+model_selection_policy:
+  allowed_models: [gpt-6.1-sol, gpt-6.1-terra, gpt-6-luna]
+  architecture_model: gpt-6.1-sol
+  ux_design_model: gpt-6.1-terra
+  implementation_model: gpt-6.1-terra
+  verification_model: gpt-6.1-terra
+  exploration_model: gpt-6-luna
+  selection_basis: existing_project_allowed_models_and_task_responsibility_not_benchmark
+  automatic_legacy_model_fallback: false
+  unavailable_model_action: report_exact_error_no_silent_substitution
+  current_session_model_changed: false
+  runtime_validation: role_reassignment_configured_not_spawn_verified
+  scope_note: >-
+    2026-10-28按用户要求统一重新分配CYF项目角色模型，不改全局配置或当前主会话。
+    architect使用Sol high；ux_designer和developer使用Terra high；
+    test_runner使用Terra medium；explorer使用Luna medium。
+    这是按职责集中配置的选择，不是模型性能、成本或可用性的实测结论。
+    在途Agent保持当前模型和分工，不中断/重派；新配置需加载后核验实际调用，失败不静默降级。
+provider_health:
+  deepseek:
+    status: disabled_by_user
+    restore_policy: explicit_user_reenable_only
+
+coordinator:
+  id: main_orchestrator
+  registered_agent: false
+  responsibility: task_scope_source_pinning_ownership_control_plane_integration_and_user_communication
+  model: current_session_unchanged
+  rule: 主会话按需直接执行；不强制外派，不另设Reviewer或发布审批Agent。
+
+roles:
+  architect:
+    model: gpt-6.1-sol
+    reasoning_effort: high
+    writes_code: false
+    task_types: [architecture, cross_component_contract, state_machine, identity_design, transaction_design, migration_design, recovery_design]
+    deliverable: decisions_invariants_affected_contracts_and_acceptance_cases
+  ux_designer:
+    model: gpt-6.1-terra
+    reasoning_effort: high
+    writes_code: true
+    write_scope: assigned_existing_prototype_and_design_paths_only
+    task_types: [user_flow, information_architecture, interaction_design, visual_design, responsive_design, accessibility, prototype]
+    deliverable: interactive_prototype_visual_and_behavior_evidence_and_implementation_handoff
+  developer:
+    model: gpt-6.1-terra
+    reasoning_effort: high
+    writes_code: true
+    write_scope: assigned_task_worktree_and_paths
+    task_types: [web, api, runtime, integration, identity, acl, transaction, concurrency, migration, replay, recovery, focused_tests, bounded_fix]
+    deliverable: implementation_tests_owner_self_check_and_integration_evidence
+  test_runner:
+    model: gpt-6.1-terra
+    reasoning_effort: medium
+    writes_code: false
+    write_scope: assigned_temporary_fixtures_outputs_and_evidence_only
+    task_types: [verification, browser_regression, targeted_test, authorized_flow_test_build, evidence_validation]
+    deliverable: exact_candidate_pass_fail_untested_and_reproducible_findings
+  explorer:
+    model: gpt-6-luna
+    reasoning_effort: medium
+    writes_code: false
+    task_types: [repository_exploration, dependency_analysis, call_chain, conflict_analysis, narrow_lookup, acceptance_mapping, evidence_index]
+    deliverable: sourced_facts_unknowns_and_next_smallest_check
+
+routing:
+  - match: [architecture, cross_component_contract, state_machine_design, migration_design]
+    role: architect
+  - match: [user_flow, information_architecture, interaction_design, visual_design, prototype, responsive_design]
+    role: ux_designer
+  - match: [web, api, runtime, implementation, integration, high_risk_implementation, regression_test_code, documentation_edit]
+    role: developer
+  - match: [verification, browser_regression, targeted_test_execution, authorized_flow_test_build, evidence_validation]
+    role: test_runner
+  - match: [repository_exploration, dependency_analysis, narrow_lookup, acceptance_mapping, evidence_index]
+    role: explorer
+  - match: [task_coordination, shared_ledger_write, release_coordination]
+    role: main_orchestrator
+
+ux_policy:
+  authority: web/AGENTS.md
+  prototype_root: web/prototypes/juyiting
+  prototype_spec: web/prototypes/juyiting/specs/prototype-spec.md
+  prototype_before_product_ui: true
+  user_requested_prototype_confirmation: respect_before_product_implementation
+  principle: existing_page_first_same_task_same_list_progressive_disclosure_no_redundant_entry_or_large_region
+  checks: [visual_hierarchy, typography_spacing_alignment, existing_tokens, primary_action, responsive, low_height, keyboard_focus, escape_dismiss, focus_return, scroll, draft_preservation, relevant_error_and_unknown_states]
+  evidence_boundary: synthetic_prototype_is_not_live_product_or_installation
+  reviewer_required: false
+
+component_delivery_policy:
+  authority: docs/aliyun-flow-cicd-strategy.md
+  policy_date: "2026-10-22"
+  web: {pipeline_id: 4403172, heavy_tests_build_package: aliyun_flow}
+  api: {pipeline_id: 5260799, heavy_tests_build_package: aliyun_flow, gradle_entrypoint: ops/orchestration/cyf_orchestrator.py}
+  local: lightweight_checks_queries_coordination_and_post_deployment_verification
+  workload_basis: actual_resource_load_not_executable_name
+  local_production_build: forbidden
+  source_to_production_fallback: forbidden
+  develop_auto_deploy: false
+  versioned_release: exact_authorized_version_commit_tree_real_run_same_run_immutable_artifact
+  run_end: when_assigned_execution_finishes_no_external_wait
+  deployment_controls: [identity_acl, artifact_integrity, release_mutex, backups, recoverable_install]
+  online_health_and_business_acceptance: separately_recorded_after_run
+  runtime:
+    program_root: /home/isp/apps/cyf-agent-runtime-v1/app/
+    external_repo_rules: owner_explicitly_transmits_cyf_rules_and_fixed_interface_standard
+    authorization: separate_targeted_install_authorization_no_implicit_deployment
+
+verification_policy:
+  owner_self_check: required
+  separate_test_runner: optional_not_a_new_gate
+  scope: smallest_effective_feedback_then_affected_risk_based_regression
+  heavy_tests_build_package: existing_flow_pipelines
+  gradle_lock: /tmp/cyf-gradle.lock
+  gradle_parallelism: 1
+  build_gradle_read_before_operation: true
+  evidence_key: exact_git_tree_selector_fixture_and_relevant_dependency_inputs
+  evidence_reuse: only_verified_exact_match
+  uncommitted_lightweight_diagnostics: bind_actual_file_hashes_not_base_tree
+  no_arbitrary_resource_or_deadline_gate: true
+  performance_claims: measured_only_no_unverified_cycle_reduction_target
+  runtime_validation_boundary: static_config_checks_do_not_prove_model_calls_or_hot_reload
+
+role_transition:
+  legacy_registration_removed: true
+  runtime_aliases: none
+  active_task_owner_rewrite: false
+  historical_evidence_rewrite: false
+  running_agent_termination: false
+  new_work: use_only_current_roles_after_configuration_is_loaded
+  existing_work: at_natural_handoff_reread_rules_and_coordinate_new_scope_without_preemption
+  orchestrator_boundary: >-
+    既有编排器把profile作为非空来源字符串，不从本文件解析角色白名单；历史任务可继续读取，
+    不代表旧角色仍可spawn。新派发由当前注册配置限定；本轮不重写ledger或改编排器准入规则。

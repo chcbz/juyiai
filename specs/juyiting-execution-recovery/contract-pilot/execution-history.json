@@ -1,0 +1,251 @@
+{
+  "schemaVersion": 2,
+  "endpoint": {
+    "method": "GET",
+    "path": "/agent/personal-workspace/executions",
+    "cacheControl": "private, no-store"
+  },
+  "source": {
+    "apiCommit": "ce047c43e0f275d1ad427c484b8919213be36fa4",
+    "webCommit": "75766a3b78c2e552ef448e924a813ed2dfc7ecd4",
+    "note": "Corrected from consumer-only pagination example: limit=20 requires 20+1 real rows. Synthetic data; source commits are baselines, actual tested candidates recorded in evidence."
+  },
+  "cases": [
+    {
+      "id": "empty",
+      "request": {
+        "limit": 20
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "items": [],
+          "nextCursor": null
+        }
+      },
+      "consumerState": "empty"
+    },
+    {
+      "id": "first-page",
+      "request": {
+        "limit": 20
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "items": [
+            {
+              "executionId": "pwe_contract_21",
+              "targetAgentId": "agent-contract",
+              "state": "QUEUED",
+              "outputContentMimeType": "image/png",
+              "createdAt": 1790000000000
+            },
+            {
+              "executionId": "pwe_contract_20",
+              "targetAgentId": "agent-contract",
+              "state": "OUTPUT_COMMITTED",
+              "outputContentMimeType": "image/png",
+              "createdAt": 1789999999000
+            },
+            {
+              "executionId": "pwe_contract_19",
+              "targetAgentId": "agent-contract",
+              "state": "OUTPUT_COMMITTED",
+              "outputContentMimeType": "image/png",
+              "createdAt": 1789999998000
+            },
+            {
+              "executionId": "pwe_contract_18",
+              "targetAgentId": "agent-contract",
+              "state": "OUTPUT_COMMITTED",
+              "outputContentMimeType": "image/png",
+              "createdAt": 1789999997000
+            },
+            {
+              "executionId": "pwe_contract_17",
+              "targetAgentId": "agent-contract",
+              "state": "OUTPUT_COMMITTED",
+              "outputContentMimeType": "image/png",
+              "createdAt": 1789999996000
+            },
+            {
+              "executionId": "pwe_contract_16",
+              "targetAgentId": "agent-contract",
+              "state": "OUTPUT_COMMITTED",
+              "outputContentMimeType": "image/png",
+              "createdAt": 1789999995000
+            },
+            {
+              "executionId": "pwe_contract_15",
+              "targetAgentId": "agent-contract",
+              "state": "OUTPUT_COMMITTED",
+              "outputContentMimeType": "image/png",
+              "createdAt": 1789999994000
+            },
+            {
+              "executionId": "pwe_contract_14",
+              "targetAgentId": "agent-contract",
+              "state": "OUTPUT_COMMITTED",
+              "outputContentMimeType": "image/png",
+              "createdAt": 1789999993000
+            },
+            {
+              "executionId": "pwe_contract_13",
+              "targetAgentId": "agent-contract",
+              "state": "OUTPUT_COMMITTED",
+              "outputContentMimeType": "image/png",
+              "createdAt": 1789999992000
+            },
+            {
+              "executionId": "pwe_contract_12",
+              "targetAgentId": "agent-contract",
+              "state": "OUTPUT_COMMITTED",
+              "outputContentMimeType": "image/png",
+              "createdAt": 1789999991000
+            },
+            {
+              "executionId": "pwe_contract_11",
+              "targetAgentId": "agent-contract",
+              "state": "OUTPUT_COMMITTED",
+              "outputContentMimeType": "image/png",
+              "createdAt": 1789999990000
+            },
+            {
+              "executionId": "pwe_contract_10",
+              "targetAgentId": "agent-contract",
+              "state": "OUTPUT_COMMITTED",
+              "outputContentMimeType": "image/png",
+              "createdAt": 1789999989000
+            },
+            {
+              "executionId": "pwe_contract_09",
+              "targetAgentId": "agent-contract",
+              "state": "OUTPUT_COMMITTED",
+              "outputContentMimeType": "image/png",
+              "createdAt": 1789999988000
+            },
+            {
+              "executionId": "pwe_contract_08",
+              "targetAgentId": "agent-contract",
+              "state": "OUTPUT_COMMITTED",
+              "outputContentMimeType": "image/png",
+              "createdAt": 1789999987000
+            },
+            {
+              "executionId": "pwe_contract_07",
+              "targetAgentId": "agent-contract",
+              "state": "OUTPUT_COMMITTED",
+              "outputContentMimeType": "image/png",
+              "createdAt": 1789999986000
+            },
+            {
+              "executionId": "pwe_contract_06",
+              "targetAgentId": "agent-contract",
+              "state": "OUTPUT_COMMITTED",
+              "outputContentMimeType": "image/png",
+              "createdAt": 1789999985000
+            },
+            {
+              "executionId": "pwe_contract_05",
+              "targetAgentId": "agent-contract",
+              "state": "OUTPUT_COMMITTED",
+              "outputContentMimeType": "image/png",
+              "createdAt": 1789999984000
+            },
+            {
+              "executionId": "pwe_contract_04",
+              "targetAgentId": "agent-contract",
+              "state": "OUTPUT_COMMITTED",
+              "outputContentMimeType": "image/png",
+              "createdAt": 1789999983000
+            },
+            {
+              "executionId": "pwe_contract_03",
+              "targetAgentId": "agent-contract",
+              "state": "OUTPUT_COMMITTED",
+              "outputContentMimeType": "image/png",
+              "createdAt": 1789999982000
+            },
+            {
+              "executionId": "pwe_contract_02",
+              "targetAgentId": "agent-contract",
+              "state": "OUTPUT_COMMITTED",
+              "outputContentMimeType": "image/png",
+              "createdAt": 1789999981000
+            }
+          ],
+          "nextCursor": {
+            "createdAt": 1789999981000,
+            "executionId": "pwe_contract_02"
+          }
+        }
+      },
+      "consumerState": "ready"
+    },
+    {
+      "id": "last-page",
+      "request": {
+        "limit": 20,
+        "beforeCreatedAt": 1789999981000,
+        "beforeExecutionId": "pwe_contract_02"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "items": [
+            {
+              "executionId": "pwe_contract_01",
+              "targetAgentId": "agent-contract",
+              "state": "OUTPUT_COMMITTED",
+              "outputContentMimeType": "image/png",
+              "createdAt": 1789999980000
+            }
+          ],
+          "nextCursor": null
+        }
+      },
+      "consumerState": "ready"
+    },
+    {
+      "id": "unpaired-cursor",
+      "request": {
+        "limit": 20,
+        "beforeCreatedAt": 1790000000000
+      },
+      "response": {
+        "status": 400,
+        "body": {
+          "code": "BAD_REQUEST",
+          "message": "Invalid execution request"
+        }
+      },
+      "consumerState": "error"
+    },
+    {
+      "id": "unavailable",
+      "request": {
+        "limit": 20
+      },
+      "response": {
+        "status": 503,
+        "body": {
+          "code": "EXECUTION_UNAVAILABLE",
+          "message": "Execution is temporarily unavailable"
+        }
+      },
+      "consumerState": "error"
+    }
+  ],
+  "serverAssertions": [
+    "scope tenant/client/owner must be exact; a second owner cannot see the first owner's synthetic row",
+    "history and idempotency lookup never create or dispatch executions",
+    "successful summary contains only executionId,targetAgentId,state,outputContentMimeType,createdAt",
+    "paired cursor and limit validated; no credential, instruction, inputs or runtimeCommand in summary"
+  ],
+  "verification": {
+    "javaHttpDatabase": "NOT_RUN",
+    "formalFrontendFlow": "NOT_RUN",
+    "production": "NOT_RUN"
+  }
+}

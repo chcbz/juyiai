@@ -1,0 +1,213 @@
+{
+  "date": "2026-10-01",
+  "document": "schema3-per-intent-followup-owner-contract-final",
+  "exactPathAllowlist": {
+    "agentExisting": [
+      "agent/jia-agent-api/src/main/java/cn/jia/agent/service/AgentTaskExecutionGrantService.java",
+      "agent/jia-agent-api/src/main/java/cn/jia/agent/service/AgentTaskProviderCostConsentService.java",
+      "agent/jia-agent-api/src/main/java/cn/jia/agent/service/PersonalWorkspaceExecutionService.java",
+      "agent/jia-agent-core/src/main/java/cn/jia/agent/entity/AgentTaskProviderCostConsentEntity.java",
+      "agent/jia-agent-core/src/main/java/cn/jia/agent/entity/PersonalWorkspaceExecutionEntity.java",
+      "agent/jia-agent-mapper/src/main/java/cn/jia/agent/dao/AgentTaskProviderCostConsentDao.java",
+      "agent/jia-agent-mapper/src/main/java/cn/jia/agent/dao/PersonalWorkspaceExecutionDao.java",
+      "agent/jia-agent-mapper/src/main/java/cn/jia/agent/dao/impl/AgentTaskProviderCostConsentDaoImpl.java",
+      "agent/jia-agent-mapper/src/main/java/cn/jia/agent/dao/impl/PersonalWorkspaceExecutionDaoImpl.java",
+      "agent/jia-agent-mapper/src/main/java/cn/jia/agent/mapper/AgentTaskProviderCostConsentMapper.java",
+      "agent/jia-agent-mapper/src/main/java/cn/jia/agent/mapper/PersonalWorkspaceExecutionMapper.java",
+      "agent/jia-agent-service/src/main/java/cn/jia/agent/service/impl/AgentTaskExecutionGrantServiceImpl.java",
+      "agent/jia-agent-service/src/main/java/cn/jia/agent/service/impl/AgentTaskProviderCostConsentServiceImpl.java",
+      "agent/jia-agent-service/src/main/java/cn/jia/agent/service/impl/PersonalWorkspaceExecutionServiceImpl.java",
+      "agent/jia-agent-service/src/main/java/cn/jia/agent/api/PersonalWorkspaceConversationRuntimeController.java",
+      "agent/jia-agent-service/build.gradle"
+    ],
+    "agentNew": [
+      "agent/jia-agent-api/src/main/java/cn/jia/agent/service/ControlledImageFollowupAuthorityService.java",
+      "agent/jia-agent-core/src/main/java/cn/jia/agent/entity/ControlledImageFollowupAuthorityDTO.java",
+      "agent/jia-agent-core/src/main/java/cn/jia/agent/entity/ControlledImageIntentOperationGrantEntity.java",
+      "agent/jia-agent-core/src/main/java/cn/jia/agent/entity/ControlledImageExecutionSourceV3Entity.java",
+      "agent/jia-agent-mapper/src/main/java/cn/jia/agent/dao/ControlledImageIntentOperationGrantDao.java",
+      "agent/jia-agent-mapper/src/main/java/cn/jia/agent/dao/ControlledImageExecutionSourceV3Dao.java",
+      "agent/jia-agent-mapper/src/main/java/cn/jia/agent/dao/impl/ControlledImageIntentOperationGrantDaoImpl.java",
+      "agent/jia-agent-mapper/src/main/java/cn/jia/agent/dao/impl/ControlledImageExecutionSourceV3DaoImpl.java",
+      "agent/jia-agent-mapper/src/main/java/cn/jia/agent/mapper/ControlledImageIntentOperationGrantMapper.java",
+      "agent/jia-agent-mapper/src/main/java/cn/jia/agent/mapper/ControlledImageExecutionSourceV3Mapper.java",
+      "agent/jia-agent-mapper/src/main/resources/db/agent-controlled-image-followup-v3.sql",
+      "agent/jia-agent-service/src/main/java/cn/jia/agent/config/ControlledImageFollowupV3SchemaInitializer.java",
+      "agent/jia-agent-service/src/main/java/cn/jia/agent/service/impl/ControlledImageFollowupAuthorityServiceImpl.java"
+    ],
+    "agentTests": [
+      "agent/jia-agent-service/src/test/java/cn/jia/agent/service/impl/ControlledImageIntentOperationGrantServiceTest.java",
+      "agent/jia-agent-service/src/test/java/cn/jia/agent/service/impl/ControlledImageIntentOperationGrantSpringTransactionTest.java",
+      "agent/jia-agent-service/src/test/java/cn/jia/agent/service/impl/ControlledImageIntentOperationGrantMySqlTest.java",
+      "agent/jia-agent-service/src/test/java/cn/jia/agent/service/impl/PersonalWorkspaceControlledImageV3ExecutionTest.java",
+      "agent/jia-agent-service/src/test/java/cn/jia/agent/service/impl/PersonalWorkspaceControlledImageV3StartTest.java",
+      "agent/jia-agent-service/src/test/java/cn/jia/agent/config/ControlledImageFollowupV3SchemaInitializerTest.java",
+      "agent/jia-agent-service/src/test/java/cn/jia/agent/security/AgentRuntimeControlledImageV3SecurityIntegrationTest.java",
+      "agent/jia-agent-service/src/test/java/cn/jia/agent/service/impl/AgentTaskProviderCostConsentServiceImplTest.java",
+      "agent/jia-agent-service/src/test/java/cn/jia/agent/api/AgentTaskProviderCostConsentControllerTest.java",
+      "agent/jia-agent-service/src/test/java/cn/jia/agent/service/impl/ControlledImageGrantAuthorityTest.java",
+      "agent/jia-agent-service/src/test/java/cn/jia/agent/service/impl/ControlledImageConversationStartTest.java",
+      "agent/jia-agent-service/src/test/java/cn/jia/agent/service/impl/ControlledImageBridgeAtomicitySpringTest.java",
+      "agent/jia-agent-service/src/test/java/cn/jia/agent/service/impl/ControlledImageBridgeMySqlTest.java",
+      "agent/jia-agent-service/src/test/java/cn/jia/agent/security/AgentRuntimeSecurityIntegrationTest.java"
+    ],
+    "chatExisting": [
+      "chat/jia-chat-service/src/main/java/cn/jia/chat/api/ChatBountyInteractionController.java",
+      "chat/jia-chat-service/src/main/java/cn/jia/chat/service/ChatBountyInteractionAdmissionService.java",
+      "chat/jia-chat-service/src/main/java/cn/jia/chat/service/ChatBountyExecutionCoordinator.java",
+      "chat/jia-chat-service/src/main/java/cn/jia/chat/handler/AgentWebSocketHandler.java",
+      "chat/jia-chat-mapper/src/main/java/cn/jia/chat/archive/conversation/ChatConversationArchiveStore.java",
+      "chat/jia-chat-mapper/src/main/java/cn/jia/chat/archive/conversation/JdbcChatConversationArchiveStore.java",
+      "chat/jia-chat-mapper/src/main/java/cn/jia/chat/deliberation/ChatInteractionStepStore.java",
+      "chat/jia-chat-service/build.gradle"
+    ],
+    "chatNew": [
+      "chat/jia-chat-service/src/main/java/cn/jia/chat/api/ChatBountyInteractionV3Controller.java",
+      "chat/jia-chat-service/src/main/java/cn/jia/chat/api/ChatBountyInteractionV3Wire.java",
+      "chat/jia-chat-service/src/main/java/cn/jia/chat/service/ChatBountyInteractionV3PreviewService.java",
+      "chat/jia-chat-service/src/main/java/cn/jia/chat/service/ChatBountyInteractionV3AuthorityService.java",
+      "chat/jia-chat-service/src/main/java/cn/jia/chat/service/ChatConversationAssetSourceResolver.java"
+    ],
+    "chatTests": [
+      "chat/jia-chat-service/src/chatDeliberationTest/java/cn/jia/chat/api/ChatBountyInteractionV3ControllerTest.java",
+      "chat/jia-chat-service/src/chatDeliberationTest/java/cn/jia/chat/service/ChatBountyInteractionV3PreviewServiceTest.java",
+      "chat/jia-chat-service/src/chatDeliberationTest/java/cn/jia/chat/service/ChatBountyInteractionV3AuthorityServiceTest.java",
+      "chat/jia-chat-service/src/chatDeliberationTest/java/cn/jia/chat/service/ChatBountyInteractionV3AdmissionServiceTest.java",
+      "chat/jia-chat-service/src/chatDeliberationTest/java/cn/jia/chat/service/ChatConversationAssetSourceResolverTest.java",
+      "chat/jia-chat-service/src/chatDeliberationTest/java/cn/jia/chat/service/ChatBountyExecutionCoordinatorV3Test.java",
+      "chat/jia-chat-service/src/chatDeliberationTest/java/cn/jia/chat/service/ChatBountyExecutionCoordinatorV3SpringTransactionTest.java",
+      "chat/jia-chat-service/src/chatDeliberationTest/java/cn/jia/chat/handler/AgentWebSocketControlledImageV3ExecutionTest.java",
+      "chat/jia-chat-service/src/chatDeliberationTest/java/cn/jia/chat/handler/ControlledImageBountyExecutionV3DeclarationTest.java",
+      "chat/jia-chat-service/src/chatDeliberationTest/java/cn/jia/chat/service/ChatBountyInteractionAdmissionServiceTest.java",
+      "chat/jia-chat-service/src/chatDeliberationTest/java/cn/jia/chat/service/ChatBountyInteractionRequestStatusTest.java",
+      "chat/jia-chat-service/src/chatDeliberationTest/java/cn/jia/chat/service/ChatBountyExecutionCoordinatorTest.java",
+      "chat/jia-chat-service/src/chatDeliberationTest/java/cn/jia/chat/service/ChatBountyExecutionCoordinatorSpringTransactionTest.java",
+      "chat/jia-chat-service/src/chatDeliberationTest/java/cn/jia/chat/handler/AgentWebSocketControlledImageExecutionTest.java",
+      "chat/jia-chat-service/src/chatDeliberationTest/java/cn/jia/chat/handler/ControlledImageBountyExecutionDeclarationTest.java"
+    ],
+    "mainSourceBackedSecurityExtension": [
+      "agent/jia-agent-service/src/main/java/cn/jia/agent/security/AgentRuntimeAuthenticationFilter.java"
+    ]
+  },
+  "issueRequest": {
+    "acknowledgement": "UNPRICED_EXTERNAL_ACCOUNT_ONE_IMAGE_REQUEST_ATTEMPT",
+    "compareBeforeWrites": true,
+    "exactFields": [
+      "schemaVersion",
+      "interactionIdempotencyKey",
+      "intent",
+      "providerBinding",
+      "expectedPreview",
+      "acknowledgement"
+    ],
+    "expectedPreviewExactFields": [
+      "ownerPayloadSha256",
+      "instructionSha256",
+      "sourceSnapshotSha256",
+      "modelId",
+      "custody",
+      "operatorPolicyRevision"
+    ],
+    "providerBindingExactFields": [
+      "bindingId",
+      "bindingEpoch"
+    ],
+    "schemaVersion": 2
+  },
+  "mainDecisions": {
+    "acknowledgement": "UNPRICED_EXTERNAL_ACCOUNT_ONE_IMAGE_REQUEST_ATTEMPT",
+    "assetInput": {
+      "assetRefExactFields": [
+        "assetId",
+        "revision"
+      ],
+      "exactFields": [
+        "kind",
+        "assetRef"
+      ],
+      "kind": "CURRENT_CONVERSATION_ASSET"
+    },
+    "content": {
+      "isoControlAllowed": false,
+      "maxCodePoints": 4000,
+      "newBodySizeLimit": false,
+      "nonblank": true
+    },
+    "editContinuation": "required and must exactly equal selected asset producer requestId/stepId",
+    "endpointOwner": "CHAT",
+    "errorCodes": [
+      "BOUNTY_FOLLOWUP_V3_INVALID_REQUEST",
+      "BOUNTY_FOLLOWUP_V3_NOT_FOUND_OR_FORBIDDEN",
+      "BOUNTY_FOLLOWUP_V3_CONFLICT",
+      "BOUNTY_FOLLOWUP_V3_UNAVAILABLE"
+    ],
+    "generateContinuation": "null or exact compatible current owner/conversation-generation/task requestId/stepId",
+    "http": {
+      "authentication": 401,
+      "driftOrDifferentBody": 409,
+      "ownerSafeAbsent": 404,
+      "sourcePolicyStorageUnavailable": 503
+    },
+    "idempotencyKeyMaxCodePoints": 100,
+    "jsonEnvelope": "existing JsonResult; listed success fields are data",
+    "ordinaryIdMaxCodePoints": 100,
+    "runtimeV3DescriptorChanged": false,
+    "scopeIdMaxCodePoints": 50
+  },
+  "notPerformed": {
+    "applicationSourceWrite": true,
+    "database": true,
+    "deploy": true,
+    "gradle": true,
+    "provider": true,
+    "sddWrite": true
+  },
+  "previewDriftDecision": {
+    "bindingIdEpochSufficient": false,
+    "issueExpectedPreviewExactFields": [
+      "ownerPayloadSha256",
+      "instructionSha256",
+      "sourceSnapshotSha256",
+      "modelId",
+      "custody",
+      "operatorPolicyRevision"
+    ],
+    "mismatch": {
+      "code": "BOUNTY_FOLLOWUP_V3_CONFLICT",
+      "httpStatus": 409,
+      "writes": 0
+    },
+    "noExtraThreshold": true,
+    "reason": [
+      "native declaration parses modelId independently and does not require epoch change when modelId changes",
+      "custody and operatorPolicyRevision come from server operator policy rather than the binding snapshot",
+      "existing issue request digest omits modelId, custody, operatorPolicyRevision and source digest",
+      "source and ACL facts can drift independently of provider binding epoch"
+    ],
+    "semantics": "client echo only; server re-derives current facts and requires exact equality before writes"
+  },
+  "selectors": {
+    "compatibility": [
+      ":agent:jia-agent-service:mmdU1ProviderConsentCore",
+      ":agent:jia-agent-service:mmdControlledImageBridge",
+      ":chat:jia-chat-service:mmdU1ProviderCredentialBinding",
+      ":chat:jia-chat-service:mmdControlledImageBridge"
+    ],
+    "new": [
+      ":agent:jia-agent-service:mmdControlledImageFollowupV3",
+      ":chat:jia-chat-service:mmdControlledImageFollowupV3"
+    ]
+  },
+  "sourceBaseline": {
+    "commit": "8121e8d89ad0be13ddb79012b61955bac5ae8caa",
+    "tree": "e106bfa99b78c97ac2e6a765a7032a1db20dc9bf"
+  },
+  "status": "L0_FINAL_PRE_FREEZE_NOT_IMPLEMENTED",
+  "mainSecurityExtensionEvidence": {
+    "source_sha256": "bf6967106ac5e68bd768ebb2c64d69fb48ea9e9a95d6907259efda0e2ef420b9",
+    "source_line_start": 34,
+    "issue": "Current allowed() accepts only shared conversation inbox, inputs and provider-start-controlled-image; frozen v3 inbox/inputs-v3/provider-start-controlled-image-v3 paths otherwise 403 before controller.",
+    "allowed_change": "Add only three exact v3 method/path alternatives; preserve native auth, no Origin, no owner HTTP and no broad internal/agent wildcard.",
+    "required_test": "AgentRuntimeControlledImageV3SecurityIntegrationTest positive exact three paths and negative wrong method/extra path/encoded separators/owner endpoint/Origin/header ambiguity."
+  }
+}

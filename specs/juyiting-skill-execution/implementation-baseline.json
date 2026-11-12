@@ -1,0 +1,29 @@
+{
+  "api": {
+    "worktree": "/home/isp/wsps/worktrees/skill-execution-20261013/api",
+    "head": "0fe830d1ea39b89de89475ef2d1f21dfc7577da2",
+    "tree": "b365003e141101350af123185b2bf2ec0e80ec16",
+    "branch": "codex/skill-execution-se2-20261013"
+  },
+  "runtime": {
+    "worktree": "/home/isp/wsps/worktrees/skill-execution-20261013/runtime",
+    "head": "a39c0856b0d68ae931b592420e283255668eca45",
+    "tree": "92e440f29f95873ba0b346efdf9b6133bf76d122",
+    "branch": "codex/skill-execution-se2-20261013"
+  },
+  "web": {
+    "worktree": "/home/isp/wsps/cyf/web",
+    "head": "cb730681570688e0051b5cd79737a3c004817881",
+    "tree": "6e4620d9c55600f4f4376c4964c839d8cccdc9d0",
+    "branch": "develop"
+  },
+  "taskId": "JYT-SKILL-SE2-20261013",
+  "queriedAt": "2026-10-13T16:58:31.867674+08:00",
+  "production": "NOT_QUERIED",
+  "remoteDevelop": {
+    "api": "0fe830d1ea39b89de89475ef2d1f21dfc7577da2",
+    "runtime": "a39c0856b0d68ae931b592420e283255668eca45",
+    "web": "cb730681570688e0051b5cd79737a3c004817881"
+  },
+  "scope": "I01-I03 first implementation; no installation, DDL, paid calls or restart"
+}

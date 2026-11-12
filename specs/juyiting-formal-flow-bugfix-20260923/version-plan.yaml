@@ -1,0 +1,227 @@
+schema_version: 1
+feature: juyiting-formal-flow-bugfix-20260923
+version: '1.13.19'
+title: 聚义厅正式悬赏闭环修复
+release_type: bugfix_patch
+status: planned
+solution_status: solution_defined
+implementation_status: not_started
+functional_acceptance: blocked_upstream
+registered_date: '2026-09-23'
+timezone: Asia/Shanghai
+reservation_scope: workspace_plan_only
+release_branch_created: false
+application_versions_changed: false
+plan: docs/implementation/V1_13_19_FORMAL_FLOW_BUGFIX_PLAN_20260923.md
+scope:
+  issues: [BF-01, BF-02, BF-03, BF-04, BF-05, BF-06]
+  agent_count: 1
+  required_work_item_count: 1
+  primary_agent: jyt-jiafewnnv58ec2379c-wuyong
+  alternative_agent: jyt-jiafewnnv58ec2379c-linchong
+  output: application/pdf
+  excluded: [funding_settlement, multi_agent_orchestration, historical_bulk_backfill]
+version_check:
+  source: git_ls_remote_and_targeted_local_plan_artifact_inspection
+  api_release_1_13_19_refs: []
+  web_release_1_13_19_refs: []
+  occupied_previous_version: '1.13.18'
+  previous_web_commit: fc950fbdca9d2aaf0e68daaa3d38d354c3c495f7
+  previous_web_refs:
+    - release/1.13.18-hall-identity-hydration-local-20260923
+    - release/1.13.18-hall-identity-hydration-local-20260923-r2
+    - release/1.13.18-hall-identity-hydration-local-20260923-r3
+  recheck_before_freeze: true
+observed_installed_baseline:
+  api:
+    version: '1.13.17'
+    commit: 12c6884062d879bbe11344261f85d5cc3285bb94
+    tree: de8387d6b504b39e7b2f1564a37a667a70787586
+    artifact_sha256: 505c7e1f72fada21fb0f2136a71ed696a5e56e3a8065243bccd9df45bb98b9ce
+    record: /opt/cyf/service/api/release-records/api-deploy-20260923T054130Z-12c6884062d879bbe11344261f85d5cc3285bb94-de8387d6b504b39e7b2f1564a37a667a70787586-jyt-cors-patch-retry-local-20260923.json
+  web:
+    version: '1.13.16'
+    commit: 03c8d95fcfcfb76f0ed5a8ce6a0445370f4b409b
+    tree: ba28e4e4456c16b7f72c36d84bf15a17fbf5c386
+    artifact_sha256: c3821758cce30fd741addaf01164a7833738bc35c4f4d3cd161ca06d65fcad10
+    record: /home/isp/hosts/cyf/web/backups/release-records/web-deploy-20260923T034550Z-03c8d95fcfcfb76f0ed5a8ce6a0445370f4b409b-ba28e4e4456c16b7f72c36d84bf15a17fbf5c386-jyt-text-input-web-20260923.json
+candidate:
+  api_commit: null
+  api_tree: null
+  web_commit: null
+  web_tree: null
+  runtime_source: null
+  artifact_sha256: null
+release_policy:
+  planned_build_origin: local_user_authorized
+  actual_build_origin: not_built_this_round
+  flow_run: null
+  deployment_performed: false
+  gradle_entry: python3 ops/orchestration/cyf_orchestrator.py gradle
+  order: [api, runtime_if_changed_and_authorized, web]
+  preserve_changes: [api_1_13_17_cors, web_1_13_18_identity_hydration]
+  independent_reviewer: false
+acceptance:
+  viewport: '430x932'
+  method: mobile_portrait_touch_browser_emulation
+  real_device: false
+  same_formal_task_required: true
+  input_only_fresh_marker_required: true
+  formal_pdf_and_rework_required: true
+  historical_task_id: '395'
+  historical_evidence: deliverables/verification/juyiting-formal-flow-wuyong-20260923/manifest.json
+  post_fix_tests_run: false
+
+# Follow-up registration; the original 1.13.19 reservation above is historical.
+follow_up_bugfix:
+  version: '1.13.20'
+  registered_date: '2026-09-23'
+  status: deployed_business_acceptance_pending
+  issues: [BF-07, BF-08, BF-03-etag-visibility]
+  build_origin: local_user_authorized
+  build_host: existing_local_host_no_alternative_machine
+  verification_strategy: serial_gc_staged_compile_test_build_then_mobile_browser
+  production_data_repair: none
+  historical_failed_task: '396'
+  release_ref_created: true
+  release_exception_inherited: false
+  acceptance: pending_new_task_pdf_rework_accept_archive
+  current_candidates_and_evidence: integration.yaml
+
+followup_1_13_21:
+  version: '1.13.21'
+  kind: bugfix
+  issues: [BF-09]
+  scope: web_validated_snapshot_readiness_not_sse_liveness
+  api: reuse_deployed_release_1_13_20_no_restart
+  web_release_ref: release/1.13.21
+  frozen_1_13_20_unchanged: true
+  acceptance_task: '397'
+  status: deployed_bf09_ui_verified_full_flow_pending
+
+followup_1_13_22:
+  version: '1.13.22'
+  kind: bugfix
+  issues: [BF-10, BF-11, BF-12]
+  status: runtime_bf10_deployed_bf11_bf12_candidate_verification
+  build_host: existing_local_host
+  build_origin: local_user_authorized
+  runtime_commit: faf8d1dc257ce97d0ff9ee5bd942b2d87a7eac51
+  runtime_tree: 1c69bdc268946f61464a830826e216349d1f336a
+  runtime_feature_ref: codex/formal-flow-bf10-registration
+  runtime_tests: 110_pass_0_fail_0_skip_focused_only
+  frozen_release_ref_created: true_runtime_only
+  deployed: runtime_bf10_only
+  shared_runtime_process_control: explicitly_user_authorized_idle_takeover_completed
+  acceptance_task: '397'
+  acceptance: not_passed
+
+followup_runtime_1_13_23:
+  version: '1.13.23'
+  kind: bugfix
+  issues: [BF-12]
+  depends_on: api_1_13_22_native_exact_start_endpoint
+  order: [api_1_13_22, runtime_1_13_23, web_1_13_22]
+  status: artifact_prepared_not_deployed_api_dependency_pending
+  runtime_commit: a79709fe7f5f2e64f583f873f249ee0005d2ee92
+  tests: 163_pass_0_fail_0_skip
+  frozen_runtime_1_13_22_unchanged: true
+  test_agent: wuyong
+  acceptance_task: '397'
+  acceptance: not_passed
+
+release_preparation_20260924:
+  api_web_version: '1.13.22'
+  runtime_version: '1.13.23'
+  source_refs_frozen_and_remote_verified: true
+  tests_and_builds: pass_targeted_not_full_repository
+  artifacts_and_joint_verify: pass
+  deploy_dry_runs: pass
+  actual_deployment: not_performed
+  next: request_api_daytime_exception_then_same_task_mobile_acceptance
+
+followup_web_1_13_23:
+  version: "1.13.23"
+  kind: bugfix
+  issues: [BF-13]
+  status: targeted_tests_pass_build_pending
+  api: reuse_deployed_1_13_22
+  runtime: reuse_deployed_1_13_23
+  acceptance_task: "397"
+  acceptance: not_passed
+
+followup_config_1_13_24:
+  version: '1.13.24_config_only'
+  kind: bugfix_configuration
+  issues: [BF-14]
+  api: reuse_deployed_1_13_22_exact_binary
+  web: deployed_1_13_23
+  runtime: deployed_1_13_23
+  release_exception: explicitly_user_authorized
+  storage_tests: 16_pass_0_fail_0_error_0_skip
+  evidence: deliverables/releases/v1.13.24-bf14-storage-config-local-20260924/
+  acceptance_task: '397'
+  acceptance: not_passed
+
+followup_web_workbench_1_13_24:
+  version: '1.13.24'
+  kind: user_requested_design_integration
+  source: 8f47a1289bf501616ba234638192a5303d3155d7
+  previous_live: 244f944713e1195f2305816f20e1f7dcace192ec
+  merged_commit: cb73a255a7fec688ef91d53560c1d351cb8ed645
+  frozen_ref: release/1.13.24
+  tests: 265_pass_0_fail_0_skip_18_focused_files
+  production_build: pass
+  web_deployment: healthy
+  api: same_API22_BF14_config_recovered_after_kernel_oom
+  runtime: same_1_13_23
+  acceptance_task: '397'
+  new_execution: pwe_c1360e7d54b641b89aa68bc924e31a87
+  acceptance: not_passed_provider_running
+
+followup_api_web_1_13_25:
+  version: '1.13.25'
+  issues: [BF-19, BF-20, BF-21]
+  api: bd4842037a3d35deda9c89617c0da4546c2fa673
+  web: e005159948ca96038efe0e8189b64c7a25aeed38
+  deployment: healthy
+  actual_decision: changes_requested_HTTP_200
+  evidence: deliverables/releases/v1.13.25-formal-rework-local-20260924/
+
+followup_web_1_13_26:
+  version: '1.13.26'
+  issues: [BF-22]
+  web: 1bff9ca0cbd31123d3424c0fa5ee18abbce52f9e
+  tests: 26_pass_0_fail_0_skip
+  deployment: healthy
+  actual_rework_ui: reachable
+  actual_rework_post: HTTP_404_BF23
+  evidence: deliverables/releases/v1.13.26-output-contract-local-20260924/
+
+followup_api_1_13_27:
+  version: '1.13.27'
+  issues: [BF-23]
+  api: 391869b45e4621b63fc751e2a790a4087aea01d9
+  tests: 48_pass_0_fail_0_error_0_skip
+  build: pass
+  deployment: in_progress
+  web: unchanged_1_13_26
+  runtime: unchanged_1_13_23
+  acceptance_task: '397'
+  acceptance: not_passed
+  evidence: deliverables/releases/v1.13.27-rework-input-local-20260924/
+
+latest_delivered_pair_20260924:
+  api_version: '1.13.27'
+  web_version: '1.13.28'
+  runtime_version: '1.13.23'
+  status: released_main_flow_verified
+  user_requested_branch: codex/juyiting-lightweight-workbench
+  source_web_latest: e53b3c315a4541c3c8e8ef28eb9cf5608f776251
+  build_origin: local_user_authorized
+  flow_run: null
+  task_id: '397'
+  state: archived
+  user_acceptance: ready_for_user
+  remaining_followups: [BF15, BF16, BF17, BF18, BF24, BF25]
+  evidence: deliverables/releases/v1.13.28-workbench-latest-local-20260924/release-outcome.json

@@ -1,0 +1,135 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  cat <<'USAGE'
+Usage:
+  ./sddw status
+  ./sddw new <feature-id> [title]
+  ./sddw pin <feature-id>
+  ./sddw verify <feature-id>
+  ./sddw check-docs [feature-id | --all-docs | --catalog]
+
+Commands operate on root-repository SDD artifacts under specs/.
+check-docs: read-only current navigation; no checkout matching or acceptance claims.
+verify: strict template api_commit/web_commit versus checkout; not a general historical audit.
+USAGE
+}
+
+require_feature_id() {
+  local feature_id="$1"
+  if [[ ! "$feature_id" =~ ^[a-z0-9][a-z0-9-]*$ ]]; then
+    echo "feature-id must use lowercase letters, digits, and hyphens" >&2
+    exit 2
+  fi
+}
+
+require_feature_dir() {
+  local feature_id="$1"
+  require_feature_id "$feature_id"
+  local feature_dir="specs/$feature_id"
+  [[ -d "$feature_dir" ]] || { echo "Feature not found: $feature_dir" >&2; exit 2; }
+  printf '%s\n' "$feature_dir"
+}
+
+status() {
+  echo '== Root =='
+  git status --short --branch
+  echo
+  echo '== Submodules =='
+  git submodule status
+  echo
+  echo '== Implementation worktrees =='
+  for repo in api web; do
+    echo "-- $repo --"
+    git -C "$repo" status --short --branch
+  done
+}
+
+new_feature() {
+  local feature_id="$1"
+  local title="${2:-$feature_id}"
+  require_feature_id "$feature_id"
+  local feature_dir="specs/$feature_id"
+  [[ ! -e "$feature_dir" ]] || { echo "Feature already exists: $feature_dir" >&2; exit 2; }
+  cp -R specs/_template "$feature_dir"
+  python3 - "$feature_dir" "$feature_id" "$title" <<'PY'
+from pathlib import Path
+import sys
+feature_dir, feature_id, title = map(Path if False else str, sys.argv[1:])
+for path in Path(feature_dir).iterdir():
+    if path.is_file():
+        content = path.read_text()
+        content = content.replace('<Feature name>', title).replace('<feature-id>', feature_id)
+        path.write_text(content)
+PY
+  echo "Created $feature_dir"
+}
+
+pin_feature() {
+  local feature_dir
+  feature_dir=$(require_feature_dir "$1")
+  local manifest="$feature_dir/integration.yaml"
+  [[ -f "$manifest" ]] || { echo "Missing $manifest" >&2; exit 2; }
+  local api_sha web_sha root_sha
+  api_sha=$(git -C api rev-parse HEAD)
+  web_sha=$(git -C web rev-parse HEAD)
+  root_sha=$(git rev-parse HEAD)
+  python3 - "$manifest" "$api_sha" "$web_sha" "$root_sha" <<'PY'
+from pathlib import Path
+import re
+import sys
+path, api_sha, web_sha, root_sha = map(str, sys.argv[1:])
+text = Path(path).read_text()
+text = re.sub(r'^status: (draft|ready|implementing|integration-ready)$',
+              'status: integration-ready', text, flags=re.MULTILINE)
+text = re.sub(r'^  api_commit: .*$', '  api_commit: ' + api_sha, text, flags=re.MULTILINE)
+text = re.sub(r'^  web_commit: .*$', '  web_commit: ' + web_sha, text, flags=re.MULTILINE)
+text = re.sub(r'^  root_base_commit: .*$', '  root_base_commit: ' + root_sha, text, flags=re.MULTILINE)
+Path(path).write_text(text)
+PY
+  echo "Pinned api=$api_sha"
+  echo "Pinned web=$web_sha"
+  echo "Pinned root-base=$root_sha"
+}
+
+verify_feature() {
+  local feature_dir
+  feature_dir=$(require_feature_dir "$1")
+  local required=(spec.md design.md tasks.md acceptance.md integration.yaml)
+  local missing=0
+  for file in "${required[@]}"; do
+    if [[ ! -s "$feature_dir/$file" ]]; then
+      echo "Missing or empty: $feature_dir/$file" >&2
+      missing=1
+    fi
+  done
+  (( missing == 0 )) || exit 1
+  local manifest="$feature_dir/integration.yaml"
+  local expected_api expected_web actual_api actual_web
+  expected_api=$(awk '/^  api_commit:/{print $2}' "$manifest")
+  expected_web=$(awk '/^  web_commit:/{print $2}' "$manifest")
+  actual_api=$(git -C api rev-parse HEAD)
+  actual_web=$(git -C web rev-parse HEAD)
+  [[ "$expected_api" =~ ^[0-9a-f]{40}$ ]] || { echo 'integration.yaml api_commit is not pinned' >&2; exit 1; }
+  [[ "$expected_web" =~ ^[0-9a-f]{40}$ ]] || { echo 'integration.yaml web_commit is not pinned' >&2; exit 1; }
+  [[ "$expected_api" == "$actual_api" ]] || { echo "API mismatch: expected $expected_api, checked out $actual_api" >&2; exit 1; }
+  [[ "$expected_web" == "$actual_web" ]] || { echo "Web mismatch: expected $expected_web, checked out $actual_web" >&2; exit 1; }
+  echo "SDD template candidate pins matched (not tests/release acceptance): ${feature_dir#specs/}"
+  echo "api=$actual_api"
+  echo "web=$actual_web"
+}
+
+main() {
+  [[ $# -ge 1 ]] || { usage; exit 2; }
+  case "$1" in
+    status) [[ $# -eq 1 ]] || { usage; exit 2; }; status ;;
+    new) [[ $# -ge 2 && $# -le 3 ]] || { usage; exit 2; }; new_feature "$2" "${3:-$2}" ;;
+    pin) [[ $# -eq 2 ]] || { usage; exit 2; }; pin_feature "$2" ;;
+    verify) [[ $# -eq 2 ]] || { usage; exit 2; }; verify_feature "$2" ;;
+    check-docs) python3 -B "$(dirname "$0")/ops/orchestration/sdd_docs.py" "${@:2}" ;;
+    -h|--help|help) usage ;;
+    *) usage; exit 2 ;;
+  esac
+}
+main "$@"

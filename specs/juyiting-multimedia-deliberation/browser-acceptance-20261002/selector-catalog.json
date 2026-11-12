@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "status": "SOURCE_DERIVED_NOT_LIVE_VERIFIED",
+  "sourcePin": {"commit": "7aaca8916bc2cad2d053328af0780913fff64bca", "tree": "71c0536a8b3eeb9cbc7db9028b92ccfc05cd127c"},
+  "discovery": [
+    {"name": "Juyi Hall readiness", "candidates": [".hall-stage", "[aria-label='悬赏议事 v2 状态']", ".bounty-panel", ".bounty-discussion-panel"], "meaning": "Capture current DOM and mark BLOCKED if no source-derived route surface appears."},
+    {"name": "explicit assignment", "candidates": ["[data-portrait-action='tasks']", ".task-card", "button"], "textCandidates": ["点将", "点将册", "悬赏榜"], "meaning": "Operator supplies a live target selector after DOM discovery; exact target agent ID must be collected from real response."},
+    {"name": "deliberation state", "candidates": ["[aria-label='悬赏议事 v2 状态']"], "textCandidates": ["状态：", "类型："], "meaning": "Observe real state only; it does not prove execution alone."},
+    {"name": "image preview", "candidates": [".media-asset .image-button img", ".media-asset img", "[aria-label='放大查看图片']"], "meaning": "Require naturalWidth and naturalHeight greater than zero and decoded browser image; URL existence is insufficient."},
+    {"name": "download", "candidates": [".media-asset button"], "textCandidates": ["下载"], "meaning": "Browser download bytes, headers and UI-observed request are recorded; SHA-256 is computed over downloaded bytes."},
+    {"name": "text archive", "candidates": [".text-selection-archive", ".text-selection-archive textarea"], "textCandidates": ["保存文字片段", "保存选中文字到工作空间"], "meaning": "Selection and returned archive identity are collected from the actual session."},
+    {"name": "controlled edit consent", "candidates": [".bounty-followup-consent", "input[type='checkbox']"], "textCandidates": ["核对本次受控图像办理", "我明确确认本次单次受控图像请求"], "meaning": "Only a visible server-backed preview and real user consent can advance the edit; no synthetic event or API substitute."},
+    {"name": "finalization", "candidates": [".bounty-finalization", "button"], "textCandidates": ["验收", "验收通过", "正式成果"], "meaning": "Record selected output IDs and separate delivery/decision/task-completed facts."}
+  ]
+}

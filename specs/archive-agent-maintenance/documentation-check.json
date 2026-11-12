@@ -1,0 +1,382 @@
+{
+  "feature_id": "archive-agent-maintenance",
+  "kind": "documentation_static_self_check_only",
+  "command": "node /home/isp/wsps/cyf/specs/archive-agent-maintenance/validate-design.cjs",
+  "status": "passed",
+  "checks_count": 88,
+  "source_files_verified": 23,
+  "acceptance_cases": 84,
+  "acceptance_status": "not_run",
+  "local_links_checked": 32,
+  "json_examples_parsed": 5,
+  "application_tests_run": false,
+  "production_operations_run": false,
+  "release_evidence": false,
+  "checks": [
+    {
+      "name": "sdd_five_required_files_present",
+      "passed": true
+    },
+    {
+      "name": "yaml_parsed_and_feature_ready_D2",
+      "passed": true
+    },
+    {
+      "name": "no_release_or_integration_pins_claimed",
+      "passed": true
+    },
+    {
+      "name": "no_application_test_success_claimed",
+      "passed": true
+    },
+    {
+      "name": "D2_acceptance_and_handoff_consistent",
+      "passed": true
+    },
+    {
+      "name": "D2_removes_legacy_hall_projection_proposal",
+      "passed": true
+    },
+    {
+      "name": "D2_no_parallel_command_polling",
+      "passed": true
+    },
+    {
+      "name": "D2_shared_auth_transport_publication_boundaries",
+      "passed": true
+    },
+    {
+      "name": "handoff_present",
+      "passed": true
+    },
+    {
+      "name": "all_acceptance_cases_unexecuted",
+      "passed": true
+    },
+    {
+      "name": "unique_acceptance_case_ids",
+      "passed": true
+    },
+    {
+      "name": "user_stories_U1_to_U9_covered",
+      "passed": true
+    },
+    {
+      "name": "implementation_packages_M1_to_M10_covered",
+      "passed": true
+    },
+    {
+      "name": "machine_cases_match_human_matrix",
+      "passed": true
+    },
+    {
+      "name": "estimate_derived_from_work_packages",
+      "passed": true
+    },
+    {
+      "name": "source_audit_is_observation_not_release",
+      "passed": true
+    },
+    {
+      "name": "frozen_source:api:chat/jia-chat-mapper/src/main/resources/db/archive-schema.sql",
+      "passed": true
+    },
+    {
+      "name": "frozen_source:api:chat/jia-chat-service/src/main/java/cn/jia/chat/archive/config/ArchiveBootstrap.java",
+      "passed": true
+    },
+    {
+      "name": "frozen_source:api:chat/jia-chat-service/src/main/java/cn/jia/chat/archive/config/ArchiveSchemaCatalog.java",
+      "passed": true
+    },
+    {
+      "name": "frozen_source:api:chat/jia-chat-service/src/main/java/cn/jia/chat/archive/content/ArchiveManifestLoader.java",
+      "passed": true
+    },
+    {
+      "name": "frozen_source:api:chat/jia-chat-service/src/main/java/cn/jia/chat/archive/service/ArchiveReaderServiceImpl.java",
+      "passed": true
+    },
+    {
+      "name": "frozen_source:api:chat/jia-chat-service/src/main/java/cn/jia/chat/archive/service/ArchiveContentImporter.java",
+      "passed": true
+    },
+    {
+      "name": "frozen_source:api:chat/jia-chat-service/src/main/java/cn/jia/chat/archive/service/ArchiveTextSelectionValidator.java",
+      "passed": true
+    },
+    {
+      "name": "frozen_source:api:chat/jia-chat-mapper/src/main/java/cn/jia/chat/archive/store/JdbcArchivePersonalDataStore.java",
+      "passed": true
+    },
+    {
+      "name": "frozen_source:api:chat/jia-chat-service/src/main/java/cn/jia/chat/archive/http/ArchiveController.java",
+      "passed": true
+    },
+    {
+      "name": "frozen_source:api:chat/jia-chat-service/src/main/java/cn/jia/chat/config/ChatClientConfig.java",
+      "passed": true
+    },
+    {
+      "name": "frozen_source:api:chat/jia-chat-service/src/main/java/cn/jia/chat/tool/AgentTools.java",
+      "passed": true
+    },
+    {
+      "name": "frozen_source:api:agent/jia-agent-service/src/main/java/cn/jia/agent/security/AgentRuntimeAuthenticationFilter.java",
+      "passed": true
+    },
+    {
+      "name": "frozen_source:api:agent/jia-agent-service/src/main/java/cn/jia/agent/security/AgentRuntimeAuthentication.java",
+      "passed": true
+    },
+    {
+      "name": "frozen_source:api:agent/jia-agent-service/src/main/java/cn/jia/agent/skill/InstalledSkillEntitlementLookup.java",
+      "passed": true
+    },
+    {
+      "name": "frozen_source:api:agent/jia-agent-service/src/main/java/cn/jia/agent/service/impl/AgentCommandCanonicalCodec.java",
+      "passed": true
+    },
+    {
+      "name": "frozen_source:api:economy/jia-economy-service/src/main/java/cn/jia/economy/config/skillseed/PlatformSkillPackageCatalog.java",
+      "passed": true
+    },
+    {
+      "name": "frozen_source:web:src/components/juyiting/LibraryPanel.vue",
+      "passed": true
+    },
+    {
+      "name": "frozen_source:web:src/components/juyiting/archive/ArchiveReader.vue",
+      "passed": true
+    },
+    {
+      "name": "frozen_source:web:src/composables/juyiting/useArchiveReader.js",
+      "passed": true
+    },
+    {
+      "name": "frozen_source:web:tests/archive-reader.test.js",
+      "passed": true
+    },
+    {
+      "name": "frozen_source:client:conf/codex-ws-agent/agent-client.mjs",
+      "passed": true
+    },
+    {
+      "name": "frozen_source:client:conf/codex-ws-agent/skill-install-manager.mjs",
+      "passed": true
+    },
+    {
+      "name": "frozen_source:client:conf/codex-ws-agent/workspace-file-bridge.mjs",
+      "passed": true
+    },
+    {
+      "name": "no_trailing_whitespace:acceptance.md",
+      "passed": true
+    },
+    {
+      "name": "balanced_code_fences:acceptance.md",
+      "passed": true
+    },
+    {
+      "name": "local_link:acceptance.md:/home/isp/wsps/cyf/specs/archive-agent-maintenance/acceptance-cases.json",
+      "passed": true
+    },
+    {
+      "name": "local_link:acceptance.md:/home/isp/wsps/cyf/specs/archive-agent-maintenance/spec.md",
+      "passed": true
+    },
+    {
+      "name": "local_link:acceptance.md:/home/isp/wsps/cyf/specs/archive-agent-maintenance/design.md",
+      "passed": true
+    },
+    {
+      "name": "local_link:acceptance.md:/home/isp/wsps/cyf/specs/archive-agent-maintenance/documentation-check.json",
+      "passed": true
+    },
+    {
+      "name": "no_trailing_whitespace:design.md",
+      "passed": true
+    },
+    {
+      "name": "balanced_code_fences:design.md",
+      "passed": true
+    },
+    {
+      "name": "local_link:design.md:/home/isp/wsps/cyf/specs/archive-agent-maintenance/handoff.md",
+      "passed": true
+    },
+    {
+      "name": "local_link:design.md:/home/isp/wsps/cyf/specs/archive-agent-maintenance/impact-assessment.md",
+      "passed": true
+    },
+    {
+      "name": "local_link:design.md:/home/isp/wsps/cyf/specs/archive-agent-maintenance/source-baseline.md",
+      "passed": true
+    },
+    {
+      "name": "local_link:design.md:/home/isp/wsps/cyf/specs/archive-agent-maintenance/source-audit.json",
+      "passed": true
+    },
+    {
+      "name": "local_link:design.md:/home/isp/wsps/cyf/specs/archive-agent-maintenance/tasks.md",
+      "passed": true
+    },
+    {
+      "name": "local_link:design.md:/home/isp/wsps/cyf/specs/archive-agent-maintenance/acceptance.md",
+      "passed": true
+    },
+    {
+      "name": "no_trailing_whitespace:handoff.md",
+      "passed": true
+    },
+    {
+      "name": "balanced_code_fences:handoff.md",
+      "passed": true
+    },
+    {
+      "name": "local_link:handoff.md:/home/isp/wsps/cyf/specs/archive-agent-maintenance/spec.md",
+      "passed": true
+    },
+    {
+      "name": "local_link:handoff.md:/home/isp/wsps/cyf/specs/archive-agent-maintenance/design.md",
+      "passed": true
+    },
+    {
+      "name": "local_link:handoff.md:/home/isp/wsps/cyf/specs/archive-agent-maintenance/tasks.md",
+      "passed": true
+    },
+    {
+      "name": "local_link:handoff.md:/home/isp/wsps/cyf/specs/archive-agent-maintenance/acceptance.md",
+      "passed": true
+    },
+    {
+      "name": "local_link:handoff.md:/home/isp/wsps/cyf/specs/archive-agent-maintenance/integration.yaml",
+      "passed": true
+    },
+    {
+      "name": "local_link:handoff.md:/home/isp/wsps/cyf/specs/archive-agent-maintenance/impact-assessment.md",
+      "passed": true
+    },
+    {
+      "name": "no_trailing_whitespace:impact-assessment.md",
+      "passed": true
+    },
+    {
+      "name": "balanced_code_fences:impact-assessment.md",
+      "passed": true
+    },
+    {
+      "name": "local_link:impact-assessment.md:/home/isp/wsps/cyf/specs/archive-agent-maintenance/design.md",
+      "passed": true
+    },
+    {
+      "name": "local_link:impact-assessment.md:/home/isp/wsps/cyf/specs/archive-agent-maintenance/source-audit.json",
+      "passed": true
+    },
+    {
+      "name": "local_link:impact-assessment.md:/home/isp/wsps/cyf/specs/juyiting-unified-experience/agent-execution-plan.md",
+      "passed": true
+    },
+    {
+      "name": "local_link:impact-assessment.md:/home/isp/wsps/cyf/api/agent/jia-agent-service/src/main/java/cn/jia/agent/service/impl/HallReadServiceImpl.java",
+      "passed": true
+    },
+    {
+      "name": "local_link:impact-assessment.md:/home/isp/wsps/cyf/specs/juyiting-creative-delivery-mvp/workspace-redesign-20260927.md",
+      "passed": true
+    },
+    {
+      "name": "local_link:impact-assessment.md:/home/isp/wsps/cyf/specs/juyiting-creative-delivery-mvp/fast-deliberation-merge-assessment-20260927.md",
+      "passed": true
+    },
+    {
+      "name": "local_link:impact-assessment.md:/home/isp/wsps/cyf/specs/juyiting-task-collaboration/connectivity-detailed-design-20260922.md",
+      "passed": true
+    },
+    {
+      "name": "local_link:impact-assessment.md:/home/isp/wsps/cyf/specs/single-tenant-role-isolation/spec.md",
+      "passed": true
+    },
+    {
+      "name": "local_link:impact-assessment.md:/home/isp/wsps/cyf/specs/juyiting-agent-model-governance/design.md",
+      "passed": true
+    },
+    {
+      "name": "local_link:impact-assessment.md:/home/isp/wsps/chcbz/isp-install/conf/cyf-agent-runtime-v1/README.md",
+      "passed": true
+    },
+    {
+      "name": "local_link:impact-assessment.md:/home/isp/wsps/cyf/docs/implementation/TASKS.yaml",
+      "passed": true
+    },
+    {
+      "name": "no_trailing_whitespace:source-baseline.md",
+      "passed": true
+    },
+    {
+      "name": "balanced_code_fences:source-baseline.md",
+      "passed": true
+    },
+    {
+      "name": "local_link:source-baseline.md:/home/isp/wsps/cyf/specs/archive-agent-maintenance/source-audit.json",
+      "passed": true
+    },
+    {
+      "name": "no_trailing_whitespace:spec.md",
+      "passed": true
+    },
+    {
+      "name": "balanced_code_fences:spec.md",
+      "passed": true
+    },
+    {
+      "name": "local_link:spec.md:/home/isp/wsps/cyf/specs/archive-agent-maintenance/design.md",
+      "passed": true
+    },
+    {
+      "name": "local_link:spec.md:/home/isp/wsps/cyf/specs/archive-agent-maintenance/tasks.md",
+      "passed": true
+    },
+    {
+      "name": "local_link:spec.md:/home/isp/wsps/cyf/specs/archive-agent-maintenance/acceptance.md",
+      "passed": true
+    },
+    {
+      "name": "local_link:spec.md:/home/isp/wsps/cyf/specs/archive-agent-maintenance/source-baseline.md",
+      "passed": true
+    },
+    {
+      "name": "no_trailing_whitespace:tasks.md",
+      "passed": true
+    },
+    {
+      "name": "balanced_code_fences:tasks.md",
+      "passed": true
+    },
+    {
+      "name": "json_examples_parse",
+      "passed": true
+    },
+    {
+      "name": "index_contains_scoped_design_entry",
+      "passed": true
+    },
+    {
+      "name": "index_diff_whitespace_check",
+      "passed": true
+    }
+  ],
+  "document_sha256": {
+    "acceptance-cases.json": "ecc176e3e47de89f403bd82de96adcc133ec94050e42731472e380584ddb2d80",
+    "acceptance.md": "58180b5234d4d03ec9b1a683ee7827379401bda3bf036f779b89896150230f1d",
+    "design.md": "f6595b22d1bc037b117942406b9d925091371a7c31f800d3c12af7e01e68d17b",
+    "handoff.md": "5ef4eaf1f6a7b59287426cd9326769aded71000e5d916071a03b5fd8688d6849",
+    "impact-assessment.md": "b030b8d4b52d1845845777f6ffb9e2546747111ba13f26735610f03114440187",
+    "integration.yaml": "59a599ffbf66fe649f2ee6b0d498cb0be248bb040489e6cf4ba3cd7f406c98ba",
+    "source-audit.json": "81a5624d12c070558168f0ba42575c1e099a6a10f715c7f4260d5aae99178bf2",
+    "source-baseline.md": "72d07b07dbf2c8053d7db3d98a96bd10f19c12e55836b7922bbdda7982f8f44d",
+    "spec.md": "1cdeb41d421250a92e2d45342fc45045d51b35d87ec02b4eadb34f29f3d2aae6",
+    "tasks.md": "6ebc9376c3550e0565de1d393b6dcf9deb312d3d00c3d7ff32f444fd4a5f3d95",
+    "validate-design.cjs": "b6568e8438bdb5f60f97c2f73e017edfb93bae5c8a0c77f6afa418997f08d8df"
+  }
+}

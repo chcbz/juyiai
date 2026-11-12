@@ -1,0 +1,126 @@
+{
+  "asOf": "2026-10-21T18:01:27.089722+08:00",
+  "purpose": "D1 source analysis only; not tested candidates or deployment",
+  "repos": {
+    "root": {
+      "path": "/home/isp/wsps/cyf",
+      "branch": "develop",
+      "commit": "93f7e0afe81f3eb8d9e23e6a7555ea960c6010c2",
+      "tree": "3af85bb8815c6866010cea74be58224321b04369",
+      "trackedDirty": true,
+      "remoteDevelop": {
+        "query": "git ls-remote origin refs/heads/develop",
+        "queriedAt": "2026-10-21T17:48:38.531412+08:00",
+        "commit": "3dff3c703bb709a64e21ce8ef0c0d73f5433f942"
+      },
+      "testedCandidate": null,
+      "deployedVersion": null
+    },
+    "api": {
+      "path": "/home/isp/wsps/cyf/api",
+      "branch": "codex/juyiting-ui-workflow",
+      "commit": "21c32034b4b60cad497db5640966fdd7635d44b8",
+      "tree": "520aae2a32dc22188e74fa159a6cd0d10e02687d",
+      "trackedDirty": false,
+      "remoteDevelop": {
+        "query": "git ls-remote origin refs/heads/develop",
+        "queriedAt": "2026-10-21T17:48:38.846697+08:00",
+        "commit": "21c32034b4b60cad497db5640966fdd7635d44b8"
+      },
+      "testedCandidate": null,
+      "deployedVersion": null
+    },
+    "web": {
+      "path": "/home/isp/wsps/cyf/web",
+      "branch": "codex/juyiting-ui-workflow",
+      "commit": "19a322a4b3b51856f8c1235a73d3aac4d848b022",
+      "tree": "311bc4974f7c0e5a9028178630041282555782bf",
+      "trackedDirty": true,
+      "remoteDevelop": {
+        "query": "git ls-remote origin refs/heads/develop",
+        "queriedAt": "2026-10-21T17:48:39.141255+08:00",
+        "commit": "6c350fbaa81263aff90f23027fe2250a62f1df83"
+      },
+      "testedCandidate": null,
+      "deployedVersion": null
+    },
+    "runtime": {
+      "path": "/home/isp/wsps/chcbz/isp-install",
+      "branch": "codex/juyiting-ui-workflow",
+      "commit": "5e8742aac6b9261a8d6cc94f77da1175e8ae74e2",
+      "tree": "9448db77464f4a01cc07172880f21d332996cc3c",
+      "trackedDirty": false,
+      "remoteDevelop": {
+        "query": "git ls-remote origin refs/heads/develop",
+        "queriedAt": "2026-10-21T17:48:39.525568+08:00",
+        "commit": "7ec6ffe037c6474b784bd7d151ae9e0adf469acd"
+      },
+      "testedCandidate": null,
+      "deployedVersion": null
+    }
+  },
+  "sourceEvidence": [
+    {
+      "path": "/home/isp/wsps/cyf/api/docs/interface-standard.md",
+      "sha256": "7dc50a51b5c3faa2d5311dd0f749ed2000365c34febc3c3714ba2a945180548f"
+    },
+    {
+      "path": "/home/isp/wsps/cyf/api/agent/jia-agent-service/src/main/java/cn/jia/agent/service/impl/AgentServiceImpl.java",
+      "sha256": "bffa0f3c9fb928c2bf78768debe5dfee5b1817ab86b4e3ec53c6da798a0ab007"
+    },
+    {
+      "path": "/home/isp/wsps/cyf/api/agent/jia-agent-service/src/main/java/cn/jia/agent/service/impl/AgentTaskExecutionGrantServiceImpl.java",
+      "sha256": "ff6371656654aa31ffb7304d56dd6823ee8742ed0271255f727fb230d532f110"
+    },
+    {
+      "path": "/home/isp/wsps/cyf/api/agent/jia-agent-service/src/main/java/cn/jia/agent/service/impl/TaskSkillPolicyServiceImpl.java",
+      "sha256": "d67e173cd9be75a5ee055ae95b9a8da5f0eff5bc3dc5f254480c8f490d62f0d5"
+    },
+    {
+      "path": "/home/isp/wsps/cyf/api/agent/jia-agent-service/src/main/java/cn/jia/agent/service/impl/PersonalWorkspaceExecutionServiceImpl.java",
+      "sha256": "30658902d2c1a4d960b354d800b173a03375349ac3a9f26934ef7d4d989332d1"
+    },
+    {
+      "path": "/home/isp/wsps/cyf/api/agent/jia-agent-mapper/src/main/java/cn/jia/agent/mapper/PersonalWorkspaceExecutionMapper.java",
+      "sha256": "58acc76a19749c8fb5fa3eed411a4abbb18db7b0fb4c5f1b27413f959ea1c6b7"
+    },
+    {
+      "path": "/home/isp/wsps/cyf/api/chat/jia-chat-service/src/main/java/cn/jia/chat/service/ChatDeliberationOutboxRelay.java",
+      "sha256": "0499db07ab0920a751034306da2369b1abde7b9fd1009f72db211c9847b48c63"
+    },
+    {
+      "path": "/home/isp/wsps/cyf/api/chat/jia-chat-service/src/main/java/cn/jia/chat/handler/AgentWebSocketHandler.java",
+      "sha256": "90861c316ea782cdfe0d24044900a6303612f3d64ed87e8fd1cdc8fb2aae9a8e"
+    },
+    {
+      "path": "/home/isp/wsps/cyf/api/chat/jia-chat-service/src/main/java/cn/jia/chat/service/ChatSelectedOutputFinalizationService.java",
+      "sha256": "e9e9afea56e3841ba39004cdfc06f8048bceef05e40fcb6d99232fb66084214c"
+    },
+    {
+      "path": "/home/isp/wsps/cyf/web/src/composables/juyiting/useHallData.js",
+      "sha256": "86b1ec5026ac0952e34b99da2927b734ae271c13702ac0b29a89b85eabca2901"
+    },
+    {
+      "path": "/home/isp/wsps/chcbz/isp-install/conf/codex-ws-agent/agent-client.mjs",
+      "sha256": "486e465194a90ab38b466eea281fbf1605b1f8e79ee1ac9c09c2dd1e578923d0"
+    },
+    {
+      "path": "/home/isp/wsps/chcbz/isp-install/conf/codex-ws-agent/skill-executor.mjs",
+      "sha256": "2937a41241644c34a7edb5d8e10451a1e4e9301f9fa818cd9b60e7bcc8722151"
+    },
+    {
+      "path": "/home/isp/wsps/chcbz/isp-install/conf/codex-ws-agent/skill-conversation.mjs",
+      "sha256": "6bf5855ea7035da8c49e6ef0f749234fc2c3a397f5e3f260d157b99ebcfdf7fb"
+    },
+    {
+      "path": "/home/isp/wsps/chcbz/isp-install/conf/codex-ws-agent/skill-execution-store.mjs",
+      "sha256": "853b1d0a42c8ea0b339543974228f56826272fbac0a4b8fddc3e74536ed8d526"
+    },
+    {
+      "path": "/home/isp/wsps/chcbz/isp-install/conf/codex-ws-agent/skill-runners/image-provider.mjs",
+      "sha256": "827253f2657adf16d1e9ada104797c7aefb887ee7830e25b03e9c6689a217129"
+    }
+  ],
+  "onlineVersion": "NOT_QUERIED",
+  "formalTests": "NOT_RUN"
+}

@@ -1,0 +1,244 @@
+{
+  "purpose": "read_only_design_source_audit_not_release_or_test_evidence",
+  "remote_refs_fetched_for_this_audit": false,
+  "deployed_version_verified": false,
+  "repositories": {
+    "root": {
+      "path": "/home/isp/wsps/cyf",
+      "head": "02d66c044a379c5b602ee854b92a56bdb1a12496",
+      "head_tree": "6109a366fa513b95560fc6072d2b77912d05ba5d",
+      "tracked_changes_observed": true
+    },
+    "api": {
+      "path": "/home/isp/wsps/cyf/api",
+      "head": "3873dd6ab18992c70800658102d492c606216d63",
+      "head_tree": "23aa90383f125f14c5ce688ed51eb62c66a60073",
+      "observed_origin_develop": "e15e1a9d947e86e5f81a3288948087466a8a879c",
+      "observed_origin_develop_tree": "d72e0473ede839f9809b73705ccbc8a1af4fb500",
+      "tracked_changes_observed": false
+    },
+    "web": {
+      "path": "/home/isp/wsps/cyf/web",
+      "head": "c567e0593bd0334a4f6d47536e235fc1c3af7bb5",
+      "head_tree": "cf2745557e8c9a3152d9db744cc2917b965b76d2",
+      "observed_origin_develop": "9854173f7f409ca2f1c862eb153b0e3574ee58ff",
+      "observed_origin_develop_tree": "ae226fdb1c41d6239906784373a2a18416d209a1",
+      "tracked_changes_observed": true
+    },
+    "client": {
+      "path": "/home/isp/wsps/chcbz/isp-install",
+      "head": "40cd349637a409c1cd900e833642094272e445d9",
+      "head_tree": "d19813bec6cf44b229d510fdb5f29ed1877981d5",
+      "tracked_changes_observed": true
+    }
+  },
+  "files": [
+    {
+      "repository": "api",
+      "revision": "e15e1a9d947e86e5f81a3288948087466a8a879c",
+      "path": "chat/jia-chat-mapper/src/main/resources/db/archive-schema.sql",
+      "git_blob": "6dcfc1f47de38ba9ec8f310aa01094c827131a54",
+      "sha256": "07e1ea28dd45d5e0044ec0b835e827429c69bd80f22b7a9bd0a4b0968a1a2eee",
+      "bytes": 5521,
+      "workspace_sha256": "07e1ea28dd45d5e0044ec0b835e827429c69bd80f22b7a9bd0a4b0968a1a2eee"
+    },
+    {
+      "repository": "api",
+      "revision": "e15e1a9d947e86e5f81a3288948087466a8a879c",
+      "path": "chat/jia-chat-service/src/main/java/cn/jia/chat/archive/config/ArchiveBootstrap.java",
+      "git_blob": "2c9b362d0ed1e7f7d1d26c99777513d5f0acbfad",
+      "sha256": "71c30f569ddafcf27c86e3d02211ac9ee2633c9efcbd9ea929395e66e089d8b3",
+      "bytes": 2204,
+      "workspace_sha256": "71c30f569ddafcf27c86e3d02211ac9ee2633c9efcbd9ea929395e66e089d8b3"
+    },
+    {
+      "repository": "api",
+      "revision": "e15e1a9d947e86e5f81a3288948087466a8a879c",
+      "path": "chat/jia-chat-service/src/main/java/cn/jia/chat/archive/config/ArchiveSchemaCatalog.java",
+      "git_blob": "35b5ae5974948fc3f4dc2b776a93202383bc6d6f",
+      "sha256": "477429d272bb359aea2a3dec94f55a9b04979cf941906c3f2bf591996d53af0f",
+      "bytes": 17114,
+      "workspace_sha256": "477429d272bb359aea2a3dec94f55a9b04979cf941906c3f2bf591996d53af0f"
+    },
+    {
+      "repository": "api",
+      "revision": "e15e1a9d947e86e5f81a3288948087466a8a879c",
+      "path": "chat/jia-chat-service/src/main/java/cn/jia/chat/archive/content/ArchiveManifestLoader.java",
+      "git_blob": "e8370d317c44fbfd3d8fab6384163be98f68c3aa",
+      "sha256": "7a02c395d3441ca0ffb1d69068dd66d2b927c4cd202bc7956295fe29de083497",
+      "bytes": 16707,
+      "workspace_sha256": "7a02c395d3441ca0ffb1d69068dd66d2b927c4cd202bc7956295fe29de083497"
+    },
+    {
+      "repository": "api",
+      "revision": "e15e1a9d947e86e5f81a3288948087466a8a879c",
+      "path": "chat/jia-chat-service/src/main/java/cn/jia/chat/archive/service/ArchiveReaderServiceImpl.java",
+      "git_blob": "2d5a597c764d21c9b11c87445d8bdeec349a4a76",
+      "sha256": "9f9c8e2cc99d94a93cc78d0a453743d176a542a45b63c8c109650ca70c2bfcf2",
+      "bytes": 8693,
+      "workspace_sha256": "9f9c8e2cc99d94a93cc78d0a453743d176a542a45b63c8c109650ca70c2bfcf2"
+    },
+    {
+      "repository": "api",
+      "revision": "e15e1a9d947e86e5f81a3288948087466a8a879c",
+      "path": "chat/jia-chat-service/src/main/java/cn/jia/chat/archive/service/ArchiveContentImporter.java",
+      "git_blob": "15dc523631ed2812607d9e26c522459548c0235d",
+      "sha256": "a921d2ace18179baf460afdabd0efceb11790b4c55a4b58e208ba184700acd9f",
+      "bytes": 15105,
+      "workspace_sha256": "a921d2ace18179baf460afdabd0efceb11790b4c55a4b58e208ba184700acd9f"
+    },
+    {
+      "repository": "api",
+      "revision": "e15e1a9d947e86e5f81a3288948087466a8a879c",
+      "path": "chat/jia-chat-service/src/main/java/cn/jia/chat/archive/service/ArchiveTextSelectionValidator.java",
+      "git_blob": "45e095b341974c38217ed0481df9567ef500c529",
+      "sha256": "1bc5db5b9646dbd8cb33f84259d98620eec61866c3b5a9140bde76b498eb76bf",
+      "bytes": 6781,
+      "workspace_sha256": "1bc5db5b9646dbd8cb33f84259d98620eec61866c3b5a9140bde76b498eb76bf"
+    },
+    {
+      "repository": "api",
+      "revision": "e15e1a9d947e86e5f81a3288948087466a8a879c",
+      "path": "chat/jia-chat-mapper/src/main/java/cn/jia/chat/archive/store/JdbcArchivePersonalDataStore.java",
+      "git_blob": "9808cc30d8413cce909890742e82eca4ab67af87",
+      "sha256": "0a4904ea81dd03453e11d9d07ea96ea8caf257ca3af647cff26fe4bc5fe9a21b",
+      "bytes": 19543,
+      "workspace_sha256": "0a4904ea81dd03453e11d9d07ea96ea8caf257ca3af647cff26fe4bc5fe9a21b"
+    },
+    {
+      "repository": "api",
+      "revision": "e15e1a9d947e86e5f81a3288948087466a8a879c",
+      "path": "chat/jia-chat-service/src/main/java/cn/jia/chat/archive/http/ArchiveController.java",
+      "git_blob": "369b07eedf370c58cec17e4e37cf72db5ad44015",
+      "sha256": "7343fd6d18a1db5af2c57633dd3eba07844feccc40bda5394b308ce04a34a8ab",
+      "bytes": 7887,
+      "workspace_sha256": "7343fd6d18a1db5af2c57633dd3eba07844feccc40bda5394b308ce04a34a8ab"
+    },
+    {
+      "repository": "api",
+      "revision": "e15e1a9d947e86e5f81a3288948087466a8a879c",
+      "path": "chat/jia-chat-service/src/main/java/cn/jia/chat/config/ChatClientConfig.java",
+      "git_blob": "f40bc1a234cdffbbf9a69544dd7e843353889b2f",
+      "sha256": "83da69f7f9797ed999a2c53ba69988b88deb780dcdbe037f3741597abcd21ace",
+      "bytes": 6751,
+      "workspace_sha256": "83da69f7f9797ed999a2c53ba69988b88deb780dcdbe037f3741597abcd21ace"
+    },
+    {
+      "repository": "api",
+      "revision": "e15e1a9d947e86e5f81a3288948087466a8a879c",
+      "path": "chat/jia-chat-service/src/main/java/cn/jia/chat/tool/AgentTools.java",
+      "git_blob": "d0c72eaf6b3f8212b5d92d6cf6f266350232d60b",
+      "sha256": "c6cd8b0a86d57b94fd0a479768a5dd262871867ce57a5bd88cc0fe9bd4d4ac6b",
+      "bytes": 7672,
+      "workspace_sha256": "c6cd8b0a86d57b94fd0a479768a5dd262871867ce57a5bd88cc0fe9bd4d4ac6b"
+    },
+    {
+      "repository": "api",
+      "revision": "e15e1a9d947e86e5f81a3288948087466a8a879c",
+      "path": "agent/jia-agent-service/src/main/java/cn/jia/agent/security/AgentRuntimeAuthenticationFilter.java",
+      "git_blob": "2fc0ecddbb5efe7763c9c1b2f158e8356daae8d6",
+      "sha256": "03dc1b39627d29209a8068c9023e511b47272dd0a45df50b6bc354705baee5f8",
+      "bytes": 5176,
+      "workspace_sha256": "03dc1b39627d29209a8068c9023e511b47272dd0a45df50b6bc354705baee5f8"
+    },
+    {
+      "repository": "api",
+      "revision": "e15e1a9d947e86e5f81a3288948087466a8a879c",
+      "path": "agent/jia-agent-service/src/main/java/cn/jia/agent/security/AgentRuntimeAuthentication.java",
+      "git_blob": "5128e862cf240a7092059e6ffe5dbb50a96cbe67",
+      "sha256": "6e9c8a6d9c086c163b2b2f1c4a57460b6a3d97ea1405ab4bd8d553b71f8bdd77",
+      "bytes": 1159,
+      "workspace_sha256": "6e9c8a6d9c086c163b2b2f1c4a57460b6a3d97ea1405ab4bd8d553b71f8bdd77"
+    },
+    {
+      "repository": "api",
+      "revision": "e15e1a9d947e86e5f81a3288948087466a8a879c",
+      "path": "agent/jia-agent-service/src/main/java/cn/jia/agent/skill/InstalledSkillEntitlementLookup.java",
+      "git_blob": "23ba4738fdc2bffcb3d92ea8d332034a275714d7",
+      "sha256": "305bd4314bb97ec367cef8e23d14f1917a3c70999b938b5965a328f259d96a00",
+      "bytes": 4581,
+      "workspace_sha256": "305bd4314bb97ec367cef8e23d14f1917a3c70999b938b5965a328f259d96a00"
+    },
+    {
+      "repository": "api",
+      "revision": "e15e1a9d947e86e5f81a3288948087466a8a879c",
+      "path": "agent/jia-agent-service/src/main/java/cn/jia/agent/service/impl/AgentCommandCanonicalCodec.java",
+      "git_blob": "a8ac375fef5df13c3de43dd85aaae5520f336d96",
+      "sha256": "97215566361b7021c754a9c0bf193deecbe8ef82503b4d9c50050a955decbbae",
+      "bytes": 40735,
+      "workspace_sha256": "97215566361b7021c754a9c0bf193deecbe8ef82503b4d9c50050a955decbbae"
+    },
+    {
+      "repository": "api",
+      "revision": "e15e1a9d947e86e5f81a3288948087466a8a879c",
+      "path": "economy/jia-economy-service/src/main/java/cn/jia/economy/config/skillseed/PlatformSkillPackageCatalog.java",
+      "git_blob": "07c5d2fd52b15544464be9bbbfbdd7f302d846ce",
+      "sha256": "89908223aa07cc80e40e5f4e91e7d755d9bcdd07dfbe887756a1e5f5ed2036b3",
+      "bytes": 8449,
+      "workspace_sha256": "89908223aa07cc80e40e5f4e91e7d755d9bcdd07dfbe887756a1e5f5ed2036b3"
+    },
+    {
+      "repository": "web",
+      "revision": "9854173f7f409ca2f1c862eb153b0e3574ee58ff",
+      "path": "src/components/juyiting/LibraryPanel.vue",
+      "git_blob": "6d0c8c73b4618d06ea7629cb956224f5a1e94bf6",
+      "sha256": "a886eb895a3d8f99e24917690348afbb062b0439c19456579a8379ba7c3f2249",
+      "bytes": 9370,
+      "workspace_sha256": "68d9b91bdb7da3c29db916bae549c7b62ce758d76ef9101a76cf075b63412f5d"
+    },
+    {
+      "repository": "web",
+      "revision": "9854173f7f409ca2f1c862eb153b0e3574ee58ff",
+      "path": "src/components/juyiting/archive/ArchiveReader.vue",
+      "git_blob": "633ec9a918a7658b64a525f3aa4f6fa04e5f64fc",
+      "sha256": "2ff5da6b308537c7957e8818b44965d3fa2e516cc51878690eb44dec81decfb7",
+      "bytes": 44126,
+      "workspace_file_present": false
+    },
+    {
+      "repository": "web",
+      "revision": "9854173f7f409ca2f1c862eb153b0e3574ee58ff",
+      "path": "src/composables/juyiting/useArchiveReader.js",
+      "git_blob": "0e9b982970aba3ea2f3c993cb6535abb4a0096b4",
+      "sha256": "fa680b2991a0f83093ada597481d299c51622819352143f0095c88530fc8c1d9",
+      "bytes": 65446,
+      "workspace_file_present": false
+    },
+    {
+      "repository": "web",
+      "revision": "9854173f7f409ca2f1c862eb153b0e3574ee58ff",
+      "path": "tests/archive-reader.test.js",
+      "git_blob": "0fc5cb4c615f98393b19186e9be25e3e23e5c2dc",
+      "sha256": "c62f50fcdca45021d67c774044303f30143029490b77644276056420a11b1d58",
+      "bytes": 139996,
+      "workspace_file_present": false
+    },
+    {
+      "repository": "client",
+      "revision": "40cd349637a409c1cd900e833642094272e445d9",
+      "path": "conf/codex-ws-agent/agent-client.mjs",
+      "git_blob": "c03f7e85d21bc15a96b55654ce2500baccf29229",
+      "sha256": "60b60d28638b15e7031280cf088ebb9eca4c7f712e21bfbda47d9fcdc6e817cb",
+      "bytes": 209545,
+      "workspace_sha256": "0ff6fc9dbe2d70380362368927fbaba6f84169da70006a480e78fbd12cd5e6ca"
+    },
+    {
+      "repository": "client",
+      "revision": "40cd349637a409c1cd900e833642094272e445d9",
+      "path": "conf/codex-ws-agent/skill-install-manager.mjs",
+      "git_blob": "81c125bf2275320999cb3a8b8c81a9aab8e02c63",
+      "sha256": "d2999b16dfae0ec50a07a2eeff7f8641f6baece5994813189689b281eabe3965",
+      "bytes": 91978,
+      "workspace_sha256": "d2999b16dfae0ec50a07a2eeff7f8641f6baece5994813189689b281eabe3965"
+    },
+    {
+      "repository": "client",
+      "revision": "40cd349637a409c1cd900e833642094272e445d9",
+      "path": "conf/codex-ws-agent/workspace-file-bridge.mjs",
+      "git_blob": "cdda763372d2c9b2ebc9eefa8823a643224e004d",
+      "sha256": "8a41414ea35038163e09c96a7a5dbdeafb0e129418dc23ad6354942a73c26aeb",
+      "bytes": 33954,
+      "workspace_sha256": "8a41414ea35038163e09c96a7a5dbdeafb0e129418dc23ad6354942a73c26aeb"
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "task": "JYT-FLOW-BE-20261008",
+  "agent": "01a117a1-139e-76e1-85ab-3d3e19701fa0",
+  "commit": "595d205dbeeb1ea373cae0968765822c90f855ed",
+  "tree": "28faf4ed89e4628e5c4d80952035dc67da720dbb",
+  "coordinator_verified": [
+    "clean_worktree",
+    "commit_tree",
+    "six_changed_files",
+    "diff_check"
+  ],
+  "owner_reported_tests": {
+    "new": 23,
+    "total": 43,
+    "status": "NOT_RUN",
+    "selector": ":chat:jia-chat-service:chatDeliberation"
+  },
+  "compilation": "NOT_RUN",
+  "flow": "NOT_RUN",
+  "deployment": "NOT_RUN",
+  "task429_recovery": "NOT_RUN"
+}

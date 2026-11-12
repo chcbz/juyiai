@@ -1,0 +1,5 @@
+# 会话资产归档意图刷新恢复（2026-09-30）
+
+Web `codex/juyiting-multimedia-deliberation`：`89d4e99cd90f940d73f1834ca84813cd4a7f7c4b` / tree `ee4399f08b5e471e86bfacd2c0705feb2d85735d`。同一浏览器 tab 的会话、身份范围、assetId 与精确 revision 在发出 POST **之前**持久记录原 Idempotency-Key；服务端返回 operationId 后记录该 ID。刷新后只显示“未知，继续原保存”，需要通过相同身份的服务端 GET 核对才可显示已保存；未知 POST 结果重新提交时复用原键而不是重新生成。身份范围变更清除页面内状态，绝不以浏览器记录判定服务端保存成功。sessionStorage 不可用时仅保持本次页面内意图，不宣称跨刷新的 exactly-once。
+
+范围内本地测试：`node --import tsx ./node_modules/mocha/bin/mocha.js --no-config --require ./tests/setup.js --reporter dot tests/juyiting-conversation-archive.test.js tests/juyiting-multimedia-parts.test.js tests/juyiting-bounty-inline-results.test.js tests/juyiting-bounty-output-gallery.test.js tests/juyiting-bounty-output-catalog.test.js tests/juyiting-bounty-v2-binding.test.js tests/juyiting-multimedia-deliberation-ui.test.js`，**29/29 通过**；组件 script/template 编译、HallMessageParts/归档逻辑/归档测试文件 ESLint、`git diff --check` 通过。ChatPanel 全文件 ESLint 仍有 6 条原有格式错误（本次新增行已修），不记成通过。尚无真实后端 `archive-operations`、浏览器/跨 tab 测试、云端生产构建与部署，不能据此通知用户验收。

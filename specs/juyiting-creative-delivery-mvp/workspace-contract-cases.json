@@ -1,0 +1,258 @@
+{
+  "contract": "workspace-contract-v1.md",
+  "status": "design_cases_only_not_executed",
+  "cases": [
+    {
+      "id": "CW01",
+      "slice": "C1-A",
+      "name": "无悬赏上传",
+      "given": "已登录且未创建悬赏",
+      "when": "上传支持的普通文档",
+      "then": "创建本人 UPLOAD/v1，无伪 taskId；文件可查询和下载",
+      "status": "not_run"
+    },
+    {
+      "id": "CW02",
+      "slice": "C1-A",
+      "name": "外国文件不可见",
+      "given": "另一 owner 有文件",
+      "when": "猜测 ID 查询/下载/预览/改名",
+      "then": "返回与不存在相同的404，不泄露名称/hash/版本",
+      "status": "not_run"
+    },
+    {
+      "id": "CW03",
+      "slice": "C1-A",
+      "name": "上传重放",
+      "given": "同一上传已提交",
+      "when": "相同 key/请求再次提交",
+      "then": "复用回执与原 fileId/version，不新增条目",
+      "status": "not_run"
+    },
+    {
+      "id": "CW04",
+      "slice": "C1-A",
+      "name": "幂等键冲突",
+      "given": "相同 key 已绑定内容A",
+      "when": "携带内容B重试",
+      "then": "409 IDEMPOTENCY_CONFLICT；不覆盖原文件",
+      "status": "not_run"
+    },
+    {
+      "id": "CW05",
+      "slice": "C1-A",
+      "name": "元数据并发",
+      "given": "两端读取同一 ETag",
+      "when": "先后用旧 ETag 重命名",
+      "then": "先提交成功；后提交412；文件字节/hash/version不变",
+      "status": "not_run"
+    },
+    {
+      "id": "CW06",
+      "slice": "C1-A",
+      "name": "内容版本并发",
+      "given": "上传原件最新为v1",
+      "when": "两个请求都期望前版1追加",
+      "then": "只提交一个v2；另一个409，不覆盖已提交内容",
+      "status": "not_run"
+    },
+    {
+      "id": "CW07",
+      "slice": "C1-A",
+      "name": "管理格式与工具能力分离",
+      "given": "格式允许保存但未验证编辑工具",
+      "when": "上传并查看能力",
+      "then": "文件可管理；edit标UNVERIFIED/UNSUPPORTED，不伪报可编辑",
+      "status": "not_run"
+    },
+    {
+      "id": "CW08",
+      "slice": "C1-A",
+      "name": "上传断线恢复",
+      "given": "上传保存成功但客户端丢失响应",
+      "when": "查询operation并重放原请求",
+      "then": "取到原回执；不重复生成文件记录",
+      "status": "not_run"
+    },
+    {
+      "id": "CW09",
+      "slice": "C1-B",
+      "name": "双任务固定版本",
+      "given": "同一原件v1用于两个本人任务",
+      "when": "上传v2后查看和执行两任务",
+      "then": "仍引用v1；需显式选择才使用v2",
+      "status": "not_run"
+    },
+    {
+      "id": "CW10",
+      "slice": "C1-B",
+      "name": "关联不是授权",
+      "given": "文件仅与任务建立INPUT关系",
+      "when": "未发起执行的Agent请求读取",
+      "then": "拒绝；不把关系当作有效run grant",
+      "status": "not_run"
+    },
+    {
+      "id": "CW11",
+      "slice": "C1-B",
+      "name": "外国任务关联",
+      "given": "当前owner拥有文件但不拥有目标task",
+      "when": "建立file-link",
+      "then": "404；不泄露目标task，不建立关系",
+      "status": "not_run"
+    },
+    {
+      "id": "CW12",
+      "slice": "C1-B",
+      "name": "成果三个入口一致",
+      "given": "一个artifact已保存",
+      "when": "查看空间/任务页/对话成果卡",
+      "then": "三者引用同artifact/version，不复制内容或验收状态",
+      "status": "not_run"
+    },
+    {
+      "id": "CW13",
+      "slice": "C1-B",
+      "name": "原件与分支",
+      "given": "两个任务分别修改同一原件",
+      "when": "分别提交输出",
+      "then": "得到独立派生成果并追溯原件；互不覆盖",
+      "status": "not_run"
+    },
+    {
+      "id": "CW14",
+      "slice": "C1-A/B",
+      "name": "回收站影响变化",
+      "given": "用户读过usage后出现新授权",
+      "when": "按旧impactRevision移入回收站",
+      "then": "409 FILE_USAGE_CHANGED，无静默撤销或状态修改",
+      "status": "not_run"
+    },
+    {
+      "id": "CW15",
+      "slice": "C1-A/B",
+      "name": "回收站不等于撤销",
+      "given": "有已授权执行，用户确认影响",
+      "when": "使用当前ETag/impactRevision移入回收站",
+      "then": "保留已有快照；禁止新grant；owner可恢复/查看历史",
+      "status": "not_run"
+    },
+    {
+      "id": "CW16",
+      "slice": "C1-B",
+      "name": "取消关联保留执行快照",
+      "given": "已执行过任务且有输入来源",
+      "when": "移除选材关系/归档任务",
+      "then": "历史输入版本和已保存成果仍可追踪；不级联删文件",
+      "status": "not_run"
+    },
+    {
+      "id": "CW17",
+      "slice": "C1-B",
+      "name": "投影重放不抹管理状态",
+      "given": "成果被改名并移入回收站",
+      "when": "重复消费/重建artifact投影",
+      "then": "保留显示名和TRASHED状态，不新增副本或重验收",
+      "status": "not_run"
+    },
+    {
+      "id": "CW18",
+      "slice": "C1-C",
+      "name": "对话不重复派发",
+      "given": "用户从空间选文件开始对话处理",
+      "when": "客户端重放消息/执行请求",
+      "then": "一个持久执行；不再通过普通chat路径另跑一遍",
+      "status": "not_run"
+    },
+    {
+      "id": "CW19",
+      "slice": "C1-C",
+      "name": "无悬赏内部执行",
+      "given": "taskId=null，已选本人文件和Agent",
+      "when": "提交执行并查看悬赏榜/推荐/事件",
+      "then": "内部task可追踪但不会成为OPEN公开悬赏或泄露到他人视图",
+      "status": "not_run"
+    },
+    {
+      "id": "CW20",
+      "slice": "C1-C/D",
+      "name": "Agent仅限所选输入",
+      "given": "本空间有A/B，仅授权A",
+      "when": "runtime请求A后猜测B或其他run输入",
+      "then": "A可领取；B和其他run被拒绝，不提供全库列表",
+      "status": "not_run"
+    },
+    {
+      "id": "CW21",
+      "slice": "C1-D",
+      "name": "native路由边界",
+      "given": "有效runtime凭据",
+      "when": "调用个人目录、改名、回收站或非allowlist路由",
+      "then": "拒绝；不会回落到用户JWT或扩大为agent通配权限",
+      "status": "not_run"
+    },
+    {
+      "id": "CW22",
+      "slice": "C1-C/D",
+      "name": "撤销与旧runtime",
+      "given": "grant被撤销或runtime身份失效",
+      "when": "后续领取文件或提交输出",
+      "then": "拒绝；不承诺已下载文件瞬时消失或工具已经停止",
+      "status": "not_run"
+    },
+    {
+      "id": "CW23",
+      "slice": "C1-D",
+      "name": "可信输出提交",
+      "given": "有效run已产生合法输出",
+      "when": "持久化manifest并取得回执",
+      "then": "producer来自runtime，hash/源版本/lease核对，artifact只提交一次",
+      "status": "not_run"
+    },
+    {
+      "id": "CW24",
+      "slice": "C1-D",
+      "name": "上传成功但提交未知",
+      "given": "输出字节已暂存，DB回执丢失",
+      "when": "查询manifest后恢复提交",
+      "then": "不重新调用模型；未提交前不显示可领取/已验收",
+      "status": "not_run"
+    },
+    {
+      "id": "CW25",
+      "slice": "C1-D",
+      "name": "伪造producer或路径",
+      "given": "不属于本run的staging/文件/旧lease",
+      "when": "提交成果清单",
+      "then": "拒绝，不接受跨run对象或任意服务器路径/URL",
+      "status": "not_run"
+    },
+    {
+      "id": "CW26",
+      "slice": "C1-A/D",
+      "name": "预览失败不伪装成功",
+      "given": "文件已验证保存而渲染失败",
+      "when": "查看文件和预览",
+      "then": "允许下载原文件，preview=FAILED；不能宣称完整预览验收通过",
+      "status": "not_run"
+    },
+    {
+      "id": "CW27",
+      "slice": "C1-C/D",
+      "name": "固定修改源版本",
+      "given": "用户选A/v1而最新已为v2",
+      "when": "要求替换同成果版本并提交",
+      "then": "检查expectedPreviousVersion，冲突明确提示；不静默更新为v2或重新付费",
+      "status": "not_run"
+    },
+    {
+      "id": "CW28",
+      "slice": "C1-A/B",
+      "name": "身份切换清理",
+      "given": "页面显示ownerA文件",
+      "when": "退出或切换到ownerB",
+      "then": "取消A请求、释放预览URL/选择缓存，旧响应不能覆盖B列表",
+      "status": "not_run"
+    }
+  ]
+}

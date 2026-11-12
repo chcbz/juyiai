@@ -1,0 +1,164 @@
+{
+  "schema": "bounty-conversation-request-index-fixture-v1",
+  "contract": "bounty-conversation-request-index-contract-v1.md",
+  "sourcePins": {
+    "api": "42d6e7e4196cbde7e0a8fe5a41d3e909d954fc3d",
+    "web": "4f21fa4227bb8854f0bed41f926acd77084e5aad"
+  },
+  "implementationState": "NOT_IMPLEMENTED",
+  "actualProductExecution": "NOT_RUN",
+  "examplePage": {
+    "schemaVersion": 1,
+    "scope": {
+      "conversationId": "conversation_1",
+      "conversationGeneration": "1",
+      "taskId": "task_1"
+    },
+    "after": "0",
+    "through": "12",
+    "nextAfter": null,
+    "hasMore": false,
+    "entries": [
+      {
+        "ordinal": "12",
+        "request": {
+          "requestId": "request_1",
+          "requestRevision": "1",
+          "conversationId": "conversation_1",
+          "conversationGeneration": "1",
+          "userMessageId": "101",
+          "state": "COMPLETED",
+          "stateVersion": "2",
+          "turns": [],
+          "steps": [
+            {
+              "stepId": "step_1",
+              "stepNumber": "1",
+              "taskId": "task_1",
+              "assignmentRevision": "0",
+              "targetAgentId": "agent_1",
+              "kind": "EXECUTE",
+              "state": "COMPLETED",
+              "stateVersion": "2",
+              "executionIntentId": "intent_1",
+              "executionId": "execution_1",
+              "executionState": "OUTPUT_COMMITTED"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "cases": [
+    {
+      "id": "owner_valid_two_requests",
+      "expected": "owner sees initial and followup, different output_1 retain tuple",
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "no_storage_refresh",
+      "expected": "discover via index, not client stored IDs",
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "foreign_owner",
+      "expected": "404 owner-safe zero rows",
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "foreign_client",
+      "expected": "404 owner-safe zero rows",
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "foreign_tenant",
+      "expected": "404 owner-safe zero rows; no tenant0 fallback",
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "non_bounty_deleted",
+      "expected": "404 identical safe envelope",
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "generation_mismatch",
+      "expected": "409 no partial rows",
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "completed_task_revoked_grant",
+      "expected": "history readable with no ACTIVE grant lookup",
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "old_assignment",
+      "expected": "history retains old tuple; edit/finalization not authorized",
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "over_one_page",
+      "expected": "at least101 rows discovered to hasMore false",
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "late_commit_low_ordinal",
+      "expected": "first scan omission permitted; next from0 supplements, no destructive missing",
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "processing_ready_hint",
+      "expected": "ready triggers index/outputs read only, not synthetic asset",
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "mixed_row_step_scope",
+      "expected": "whole page no delivery; 503 corruption or409context",
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "link_unavailable",
+      "expected": "503 not empty steps",
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "database_unavailable",
+      "expected": "503 old verified Web items retained",
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "strict_decimal",
+      "expected": "400 leading zero/overflow/number query malformed",
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "query_body_rejected",
+      "expected": "400 duplicate unknown query ornonemptybody",
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "zero_empty_page",
+      "expected": "through0 empty/false/null valid",
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "unsafe_cursor",
+      "expected": "binding exactSQL keeps foreign data inaccessible",
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "late_response_fence",
+      "expected": "identity/task/target/assignment/generation changes no UI mutation/POST",
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "hash_mime_archive_finalize",
+      "expected": "existing integrity original-key and exact selected tuples retained",
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "zero_business_writes",
+      "expected": "all counts versions timestamps unchanged; Provider/START/bytes0",
+      "execution": "NOT_RUN"
+    }
+  ]
+}

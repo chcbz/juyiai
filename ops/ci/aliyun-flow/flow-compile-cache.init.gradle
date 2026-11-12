@@ -1,0 +1,26 @@
+/* Explicit Flow experiment only. Cache compilation, never tests or artifacts. */
+if (System.getenv('CYF_FLOW_GRADLE_ACTIVE') != '1' ||
+        System.getenv('CYF_FLOW_COMPILE_CACHE_OPT_IN') != '1') {
+    throw new GradleException('Explicit Flow compile-cache opt-in required')
+}
+gradle.beforeProject { project ->
+    project.tasks.configureEach { task ->
+        if (!(task instanceof org.gradle.api.tasks.compile.JavaCompile)) {
+            task.outputs.cacheIf { false }
+        }
+        if (task instanceof org.gradle.api.tasks.testing.Test ||
+                task.name == 'validateLayering' || task.name == 'bootJar') {
+            task.outputs.upToDateWhen { false }
+        }
+    }
+}
+
+// Only short-lived verification JVMs: never alter JavaCompile or the production JVM.
+// Explicit opt-in keeps performance/JIT benchmarks on their original VM profile.
+if (System.getenv('CYF_FLOW_SHORT_LIVED_TEST_JVM') == '1') {
+    gradle.beforeProject { project ->
+        project.tasks.withType(org.gradle.api.tasks.testing.Test).configureEach { task ->
+            task.jvmArgs '-XX:TieredStopAtLevel=1'
+        }
+    }
+}

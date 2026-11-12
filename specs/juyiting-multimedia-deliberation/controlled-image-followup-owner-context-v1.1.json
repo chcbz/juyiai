@@ -1,0 +1,57 @@
+{
+  "revision": "v1.1_current_context_addendum",
+  "state": "Main_frozen_source_owner_selfcheck_and_actual_tests_pending_NOT_RUN",
+  "base_immutable_contract_sha256": "7a6f91f783bf2dd9d5b5963b859ba0bc4482ef86b566898c3d1a376b4e1a8b17",
+  "endpoint": {
+    "method": "GET",
+    "path": "/chat/conversations/{conversationId}/interactions/context",
+    "owner": "CHAT",
+    "query": false,
+    "body": false,
+    "idempotency_key_required": false,
+    "envelope": "JsonResult",
+    "cache_control": "private, no-store"
+  },
+  "data": {
+    "schemaVersion": 1,
+    "string_ids": [
+      "conversationId",
+      "taskId",
+      "targetAgentId"
+    ],
+    "canonical_decimal_string_minima": {
+      "conversationGeneration": 1,
+      "taskVersion": 0,
+      "assignmentRevision": 0,
+      "baselineGrantVersion": 1,
+      "requirementRevision": 1
+    },
+    "additional_fields": false,
+    "domain_maxima": "unchanged corresponding v1/source domains; no new arbitrary numeric bound"
+  },
+  "errors": {
+    "400": "BOUNTY_FOLLOWUP_V3_INVALID_REQUEST",
+    "401": "existing authentication",
+    "404": "BOUNTY_FOLLOWUP_V3_NOT_FOUND_OR_FORBIDDEN",
+    "409": "BOUNTY_FOLLOWUP_V3_CONFLICT",
+    "503": "BOUNTY_FOLLOWUP_V3_UNAVAILABLE"
+  },
+  "authority": false,
+  "writes_or_provider_or_materialization": false,
+  "read_lock_order_if_used": [
+    "task_root",
+    "grant",
+    "binding",
+    "conversation"
+  ],
+  "base_allowlist": "controlled-image-followup-owner-contract-v1.json exact72 unchanged",
+  "NOT_RUN": [
+    "owner_scope",
+    "zero_version",
+    "strict_response_headers_and_MVC_mapping",
+    "current_facts_drift",
+    "zero_writes_and_provider_and_bytes",
+    "reassign_revoke_concurrency",
+    "Web_late_response_and_original_key_fences"
+  ]
+}

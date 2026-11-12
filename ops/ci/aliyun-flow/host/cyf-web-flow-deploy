@@ -1,0 +1,806 @@
+#!/usr/bin/python3
+"""Install verified same-run dist files, assets first and index.html last.
+
+The gzip tar is consumed once in stream order into a private staging directory.
+No source build, manual approval, or test reports enter the public web root.
+Old hashed assets remain available to already-open clients.
+"""
+import fcntl
+import hashlib
+import json
+import os
+from pathlib import Path, PurePosixPath
+import re
+import shutil
+import stat
+import sys
+import tarfile
+import tempfile
+import time
+import urllib.request
+
+ROOT = Path('/home/isp/state/cyf-web-flow')
+SITE = Path('/home/isp/hosts/cyf/web/kit')
+SITE_URL = 'https://kit.chaoyoufan.cn/'
+CHUNK_SIZE = 1024 * 1024
+ONLINE_VERIFY_POLL_DELAY_SECONDS = 2
+ONLINE_VERIFY_TIMEOUT_SECONDS = 30
+STABLE_VERSION = re.compile(r'^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$')
+
+
+def fail(message):
+    raise SystemExit('cyf-web-flow-deploy: ' + message)
+
+
+def safe_dir(path):
+    st = path.lstat()
+    if not stat.S_ISDIR(st.st_mode) or st.st_uid != 0 or st.st_mode & 0o022:
+        fail('unsafe directory ' + str(path))
+
+
+def atomic(path, data, mode):
+    fd, name = tempfile.mkstemp(prefix='.cyf-', dir=str(path.parent))
+    try:
+        with os.fdopen(fd, 'wb') as handle:
+            os.fchmod(handle.fileno(), mode)
+            handle.write(data)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(name, str(path))
+    finally:
+        if os.path.exists(name):
+            os.unlink(name)
+
+
+def atomic_file(path, source, mode):
+    """Copy a staged file to a same-directory temporary, then replace atomically."""
+    fd, name = tempfile.mkstemp(prefix='.cyf-', dir=str(path.parent))
+    try:
+        with source.open('rb') as src, os.fdopen(fd, 'wb') as dst:
+            os.fchmod(dst.fileno(), mode)
+            while True:
+                block = src.read(CHUNK_SIZE)
+                if not block:
+                    break
+                dst.write(block)
+            dst.flush()
+            os.fsync(dst.fileno())
+        os.replace(name, str(path))
+    finally:
+        if os.path.exists(name):
+            os.unlink(name)
+
+
+def file_digest(path):
+    digest = hashlib.sha256()
+    size = 0
+    with path.open('rb') as handle:
+        while True:
+            block = handle.read(CHUNK_SIZE)
+            if not block:
+                break
+            size += len(block)
+            digest.update(block)
+    return size, digest.hexdigest()
+
+
+def normalized_archive_name(member):
+    # GNU tar -C export . emits one real root-directory marker before ./release.json.
+    # Canonicalize only that exact zero-sized directory; it still participates in
+    # entry counting and duplicate detection as '.'.
+    if member.name in ('.', './'):
+        if not member.isdir() or member.size != 0:
+            fail('unsafe archive entry')
+        return '.'
+    name = member.name[2:] if member.name.startswith('./') else member.name
+    if member.isdir():
+        name = name.rstrip('/')
+    p = PurePosixPath(name)
+    if (not name or name == '.' or p.is_absolute() or '..' in p.parts or '\\' in name
+            or str(p) != name or not (member.isfile() or member.isdir())):
+        fail('unsafe archive entry')
+    return name
+
+
+def private_stage_target(staging, relative):
+    p = PurePosixPath(relative)
+    if not relative or p.is_absolute() or '..' in p.parts or str(p) != relative or '\\' in relative:
+        fail('unsafe archive entry')
+    parent = staging / 'dist'
+    try:
+        parent.mkdir(mode=0o700, exist_ok=True)
+        safe_dir(parent)
+        for part in p.parts[:-1]:
+            parent = parent / part
+            parent.mkdir(mode=0o700, exist_ok=True)
+            safe_dir(parent)
+    except OSError:
+        fail('unsafe archive entry')
+    return staging / 'dist' / relative
+
+
+def copy_archive_member(archive, member, target=None, keep=False):
+    digest = hashlib.sha256()
+    size = 0
+    chunks = [] if keep else None
+    extracted = archive.extractfile(member)
+    if extracted is None:
+        fail('invalid archive file entry')
+    output = None
+    try:
+        if target is not None:
+            try:
+                fd = os.open(str(target), os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+                output = os.fdopen(fd, 'wb')
+            except OSError:
+                fail('unsafe archive entry')
+        while True:
+            block = extracted.read(CHUNK_SIZE)
+            if not block:
+                break
+            size += len(block)
+            if size > member.size:
+                fail('archive member exceeds declared size')
+            digest.update(block)
+            if output is not None:
+                output.write(block)
+            if chunks is not None:
+                chunks.append(block)
+        if size != member.size:
+            fail('archive member size mismatch')
+        if output is not None:
+            output.flush()
+            os.fsync(output.fileno())
+    finally:
+        if output is not None:
+            output.close()
+        extracted.close()
+    return size, digest.hexdigest(), b''.join(chunks) if chunks is not None else None
+
+
+def scan_archive(fileobj, staging, local=False):
+    """Consume a gzip tar once without member catalogs or backward seeks."""
+    seen = set()
+    staged = {}
+    manifest_bytes = None
+    try:
+        with tarfile.open(fileobj=fileobj, mode='r|gz') as archive:
+            for member in archive:
+                name = normalized_archive_name(member)
+                if name in seen:
+                    fail('unsafe archive entry')
+                seen.add(name)
+                if member.size < 0:
+                    fail('unsafe archive entry')
+                if member.isdir():
+                    continue
+                if name == ('cyf-local-build.json' if local else 'release.json'):
+                    _, _, manifest_bytes = copy_archive_member(archive, member, keep=True)
+                elif local or name.startswith('dist/'):
+                    relative = name if local else name[len('dist/'):]
+                    target = private_stage_target(staging, relative)
+                    size, digest, _ = copy_archive_member(archive, member, target=target)
+                    staged[relative] = dict(path=target, size=size, sha256=digest)
+                else:
+                    # Reports and provenance stay private, but still consume and hash them streamingly.
+                    copy_archive_member(archive, member)
+    except (tarfile.TarError, EOFError, OSError):
+        fail('invalid or truncated package archive')
+    if manifest_bytes is None:
+        fail('missing release manifest')
+    return manifest_bytes, staged
+
+
+def unique_json_object(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError('duplicate JSON key')
+        result[key] = value
+    return result
+
+
+def validate_file_manifest(files, staged):
+    if not isinstance(files, list) or not files:
+        fail('invalid manifest files')
+    expected = {}
+    ordered = []
+    for item in files:
+        if not isinstance(item, dict):
+            fail('invalid manifest files')
+        name = item.get('path', '')
+        p = PurePosixPath(name) if isinstance(name, str) else PurePosixPath('')
+        size = item.get('size')
+        digest = item.get('sha256', '')
+        if (not isinstance(name, str) or not name or p.is_absolute() or '..' in p.parts
+                or str(p) != name or '\\' in name or name in expected
+                or isinstance(size, bool) or not isinstance(size, int) or size < 0
+                or not isinstance(digest, str) or not re.fullmatch('[0-9a-f]{64}', digest)):
+            fail('invalid manifest path, size, or digest')
+        expected[name] = dict(size=size, sha256=digest)
+        ordered.append(name)
+    if 'index.html' not in expected or set(expected) != set(staged):
+        fail('dist differs from manifest')
+    for name, item in expected.items():
+        actual = staged[name]
+        if actual['size'] != item['size'] or actual['sha256'] != item['sha256']:
+            fail('dist digest mismatch: ' + name)
+        st = actual['path'].lstat()
+        if not stat.S_ISREG(st.st_mode) or st.st_uid != 0 or st.st_nlink != 1:
+            fail('unsafe staged file')
+    return expected, ordered
+
+
+def validate_manifest(manifest_bytes, staged, pipeline, run, commit):
+    try:
+        manifest = json.loads(manifest_bytes.decode('utf-8'), object_pairs_hook=unique_json_object)
+    except (UnicodeDecodeError, ValueError):
+        fail('invalid release manifest')
+    if (not isinstance(manifest, dict) or isinstance(manifest.get('schema_version'), bool)
+            or manifest.get('schema_version') != 1
+            or manifest.get('pipeline_id') != pipeline or manifest.get('run_id') != run
+            or manifest.get('commit') != commit):
+        fail('manifest does not match this fixed Flow run')
+    expected, ordered = validate_file_manifest(manifest.get('files'), staged)
+    record = dict(schema_version=1, pipeline_id=pipeline, run_id=run, branch=manifest.get('branch'), commit=commit,
+                  files=[dict(path=name, size=expected[name]['size'], sha256=expected[name]['sha256'])
+                         for name in ordered])
+    package_version = stable_version(manifest.get('package_version'))
+    if package_version is not None:
+        record['package_version'] = '.'.join(str(part) for part in package_version)
+    return record, expected
+
+
+
+def validate_local_manifest(manifest_bytes, staged):
+    """Genuine local build identity; never synthesize pipeline/Run fields."""
+    try:
+        manifest = json.loads(manifest_bytes.decode('utf-8'), object_pairs_hook=unique_json_object)
+    except (UnicodeDecodeError, ValueError):
+        fail('invalid LOCAL manifest')
+    keys = {'format', 'buildId', 'source', 'version', 'files', 'scope', 'tests'}
+    if (type(manifest) is not dict or not keys <= set(manifest)
+            or not set(manifest) <= keys | {'dependencies'} or manifest['format'] != 'cyf-local-web-build-v2'):
+        fail('invalid LOCAL manifest schema')
+    source = manifest['source']
+    if (type(source) is not dict or set(source) != {'commit', 'tree'}
+            or any(type(source[k]) is not str or not re.fullmatch('[0-9a-f]{40}', source[k]) for k in source)
+            or type(manifest['buildId']) is not str or not re.fullmatch('[A-Za-z][A-Za-z0-9_.-]*', manifest['buildId'])
+            or stable_version(manifest['version']) is None or type(manifest['scope']) is not str or not manifest['scope']):
+        fail('invalid LOCAL source identity')
+    tests = manifest['tests']
+    if (type(tests) is not dict or set(tests) != {'reportSha256', 'selector', 'stats'}
+            or type(tests['reportSha256']) is not str or not re.fullmatch('[0-9a-f]{64}', tests['reportSha256'])
+            or type(tests['selector']) is not list or not tests['selector']
+            or any(type(v) is not str or not v for v in tests['selector'])):
+        fail('invalid LOCAL test evidence')
+    counts = tests['stats']
+    if (type(counts) is not dict or set(counts) != {'tests', 'passes', 'failures', 'pending'}
+            or any(type(v) is not int or v < 0 for v in counts.values())
+            or counts['failures'] != 0 or counts['passes'] == 0
+            or counts['tests'] != counts['passes'] + counts['pending']):
+        fail('LOCAL tests failed or did not execute')
+    if type(manifest['files']) is not dict:
+        fail('invalid LOCAL files')
+    files = []
+    for name, item in manifest['files'].items():
+        if type(item) is not dict or set(item) != {'size', 'sha256'}:
+            fail('invalid LOCAL files')
+        files.append(dict(path=name, **item))
+    expected, ordered = validate_file_manifest(files, staged)
+    identity = dict(source, version=manifest['version'], buildId=manifest['buildId'])
+    record = dict(schema_version=2, source_kind='LOCAL', source=identity, tests=tests,
+                  scope=manifest['scope'], files=[dict(path=n, **expected[n]) for n in ordered])
+    # Optional producer provenance is informational only: never an authorization,
+    # dependency installer input or source override. Package digest already binds it.
+    if 'dependencies' in manifest:
+        record['dependencies'] = manifest['dependencies']
+    return record, expected
+
+
+def stable_version(value):
+    if not isinstance(value, str):
+        return None
+    matched = STABLE_VERSION.fullmatch(value)
+    return tuple(int(part) for part in matched.groups()) if matched else None
+
+
+def validate_versioned_release(version, artifact_sha256):
+    """Explicit release identity, not a time window or compatibility gate."""
+    if (not isinstance(version, str) or not version or version != version.strip()
+            or any(ord(char) < 32 or ord(char) == 127 for char in version)):
+        fail('explicit release version is required')
+    if not isinstance(artifact_sha256, str) or not re.fullmatch('[0-9a-f]{64}', artifact_sha256):
+        fail('expected release artifact SHA-256 is required')
+    return version
+
+
+def target_lstat(path):
+    try:
+        return path.lstat()
+    except FileNotFoundError:
+        return None
+
+
+def validate_site_targets(expected):
+    """Validate every existing public path before the first public mutation."""
+    safe_dir(SITE)
+    for name in expected:
+        parent = SITE
+        missing_parent = False
+        for part in PurePosixPath(name).parts[:-1]:
+            parent = parent / part
+            st = target_lstat(parent)
+            if st is None:
+                missing_parent = True
+                continue
+            if missing_parent or not stat.S_ISDIR(st.st_mode) or st.st_uid != 0 or st.st_mode & 0o022:
+                fail('unsafe directory ' + str(parent))
+        target = SITE / name
+        st = target_lstat(target)
+        if st is not None and not stat.S_ISREG(st.st_mode):
+            fail('unsafe site target')
+
+
+def ensure_public_parent(name):
+    parent = SITE
+    for part in PurePosixPath(name).parts[:-1]:
+        parent = parent / part
+        try:
+            parent.mkdir(mode=0o755, exist_ok=True)
+        except OSError:
+            fail('unsafe directory ' + str(parent))
+        safe_dir(parent)
+    return parent
+
+
+def publish_staged(staged, expected):
+    for name in sorted(expected, key=lambda value: (value == 'index.html', value)):
+        target = SITE / name
+        ensure_public_parent(name)
+        st = target_lstat(target)
+        if st is not None and not stat.S_ISREG(st.st_mode):
+            fail('unsafe site target')
+        atomic_file(target, staged[name]['path'], 0o644)
+
+
+def verify_installed(expected):
+    for name, item in expected.items():
+        target = SITE / name
+        st = target_lstat(target)
+        if st is None or not stat.S_ISREG(st.st_mode) or stat.S_ISLNK(st.st_mode):
+            fail('installed file mismatch')
+        size, digest = file_digest(target)
+        if size != item['size'] or digest != item['sha256']:
+            fail('installed file mismatch')
+
+
+def prior_index_digest(record_path):
+    """Return a valid previous index digest only when the existing record has one.
+
+    This is diagnostic classification only: current same-run/source/hash validation
+    remains the condition for online verification.
+    """
+    try:
+        record = json.loads(record_path.read_text())
+        files = record.get('files')
+        if not isinstance(files, list):
+            return None
+        for item in files:
+            if (isinstance(item, dict) and item.get('path') == 'index.html'
+                    and isinstance(item.get('sha256'), str)
+                    and re.fullmatch('[0-9a-f]{64}', item['sha256'])):
+                return item['sha256']
+    except (OSError, ValueError, AttributeError):
+        return None
+    return None
+
+
+def online_verification_log(attempt, pipeline, run, commit, status, size, expected, actual, match,
+                            error_type=None, response_kind=None):
+    identity = pipeline + '/' + run + '/' + commit
+    event = dict(attempt=attempt, pipeline_id=pipeline, run_id=run, commit=commit,
+                 request_identity=identity, user_agent=('cyf-web-flow-deploy/stream-v1 pipeline/' + pipeline
+                                                        + ' run/' + run + ' commit/' + commit),
+                 cache_control='no-cache, no-store, max-age=0', accept_encoding='identity',
+                 status=status, length=size, expected_sha256=expected,
+                 actual_sha256=actual, match=match)
+    if error_type is not None:
+        event['error_type'] = error_type
+    if response_kind is not None:
+        event['response_kind'] = response_kind
+    print('CYF_WEB_FLOW_ONLINE_VERIFY ' + json.dumps(event, sort_keys=True), file=sys.stderr, flush=True)
+
+
+def verify_online_index(pipeline, run, commit, expected, previous_index_sha256=None):
+    """Wait for the exact installed index through the public HTTPS endpoint.
+
+    Nginx can retain the old index while its configured file-cache entry is still
+    valid.  A bounded request prevents an oversized response from being accepted,
+    but there is intentionally no elapsed-time or attempt-count failure gate: the
+    outer Flow controls cancellation while this deploy remains pending online proof.
+    """
+    item = expected['index.html']
+    attempt = 0
+    while True:
+        attempt += 1
+        status = None
+        size = 0
+        actual = None
+        match = False
+        error_type = None
+        digest = hashlib.sha256()
+        try:
+            url = (SITE_URL + '?flow_pipeline=' + pipeline + '&flow_run=' + run
+                   + '&flow_commit=' + commit + '&flow_verify_attempt=' + str(attempt))
+            request = urllib.request.Request(url, headers={
+                'Accept-Encoding': 'identity',
+                'Cache-Control': 'no-cache, no-store, max-age=0',
+                'Pragma': 'no-cache',
+                'User-Agent': ('cyf-web-flow-deploy/stream-v1 pipeline/' + pipeline
+                               + ' run/' + run + ' commit/' + commit),
+                'X-CYF-Flow-Identity': pipeline + '/' + run + '/' + commit,
+            })
+            with urllib.request.urlopen(request, timeout=ONLINE_VERIFY_TIMEOUT_SECONDS) as response:
+                status = getattr(response, 'status', None)
+                if status is None and hasattr(response, 'getcode'):
+                    status = response.getcode()
+                # urllib raises HTTPError for non-2xx responses.  Keep the
+                # explicit status check when supplied, while accepting the
+                # successful-response contract of small compatible streams.
+                if status is None:
+                    status = 200
+                while True:
+                    block = response.read(min(CHUNK_SIZE, item['size'] - size + 1))
+                    if not block:
+                        break
+                    size += len(block)
+                    digest.update(block)
+                    if size > item['size']:
+                        break
+            actual = digest.hexdigest()
+            match = status == 200 and size == item['size'] and actual == item['sha256']
+        except Exception as ex:
+            error_type = type(ex).__name__
+            status = getattr(ex, 'code', status)
+        actual = digest.hexdigest()
+        response_kind = None
+        if not match:
+            if error_type is not None:
+                response_kind = 'request_error'
+            elif previous_index_sha256 is not None and actual == previous_index_sha256:
+                response_kind = 'known_prior_index'
+            else:
+                response_kind = 'unexpected_response'
+        online_verification_log(attempt, pipeline, run, commit, status, size,
+                                item['sha256'], actual, match, error_type, response_kind)
+        if match:
+            return
+        # Do not catch KeyboardInterrupt/SystemExit: the owning Flow cancels this
+        # pending verifier rather than an arbitrary local wait-age gate declaring it failed.
+        time.sleep(ONLINE_VERIFY_POLL_DELAY_SECONDS)
+
+
+def verified_package_handle(package, before):
+    try:
+        fd = os.open(str(package), os.O_RDONLY | os.O_NOFOLLOW)
+    except OSError:
+        fail('unsafe package')
+    try:
+        current = os.fstat(fd)
+        if (not stat.S_ISREG(current.st_mode) or current.st_uid != 0 or current.st_nlink != 1
+                or not 0 < current.st_size
+                or (current.st_dev, current.st_ino, current.st_size) !=
+                (before.st_dev, before.st_ino, before.st_size)):
+            fail('unsafe package')
+        return os.fdopen(fd, 'rb')
+    except BaseException:
+        os.close(fd)
+        raise
+
+
+def installed_run(record):
+    st = target_lstat(record)
+    if st is None:
+        return 0
+    if not stat.S_ISREG(st.st_mode) or st.st_uid != 0 or st.st_nlink != 1:
+        fail('unsafe deployment record')
+    try:
+        value = json.loads(record.read_text())
+        run = value.get('run_id', '0')
+        if not isinstance(run, str) or not re.fullmatch('[0-9]+', run):
+            fail('unsafe deployment record')
+        return int(run)
+    except (OSError, ValueError, AttributeError):
+        fail('unsafe deployment record')
+
+
+def deploy(pipeline, run, commit, release_version, artifact_sha256):
+    validate_versioned_release(release_version, artifact_sha256)
+    if (os.geteuid() != 0 or pipeline != '4403172' or not re.fullmatch('[1-9][0-9]*', run)
+            or not re.fullmatch('[0-9a-f]{40,64}', commit)):
+        fail('invalid execution identity')
+    safe_dir(ROOT)
+    safe_dir(SITE)
+    package = ROOT / 'downloads' / run / 'package.tgz'
+    safe_dir(package.parent.parent)
+    safe_dir(package.parent)
+    st = package.lstat()
+    if not stat.S_ISREG(st.st_mode) or st.st_uid != 0 or st.st_nlink != 1 or not 0 < st.st_size:
+        fail('unsafe package')
+    lock = os.open(str(ROOT / 'deploy.lock'), os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
+    staging = None
+    try:
+        # Preserve release mutual exclusion, but wait for the active Flow-owned
+        # installer instead of converting normal serialization into a fixed failure gate.
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        record_path = ROOT / 'record.json'
+        if installed_run(record_path) > int(run):
+            fail('refusing deployment older than the installed run')
+        previous_index_sha256 = prior_index_digest(record_path)
+        staging = Path(tempfile.mkdtemp(prefix='.cyf-web-stage-', dir=str(ROOT)))
+        os.chmod(str(staging), 0o700)
+        safe_dir(staging)
+        with verified_package_handle(package, st) as package_handle:
+            digest = hashlib.sha256()
+            for block in iter(lambda: package_handle.read(CHUNK_SIZE), b''):
+                digest.update(block)
+            if digest.hexdigest() != artifact_sha256:
+                fail('release artifact digest mismatch')
+            package_handle.seek(0)
+            manifest_bytes, staged = scan_archive(package_handle, staging)
+        record, expected = validate_manifest(manifest_bytes, staged, pipeline, run, commit)
+        manifest = json.loads(manifest_bytes.decode('utf-8'), object_pairs_hook=unique_json_object)
+        if manifest.get('package_version') != release_version:
+            fail('release version differs from artifact package_version')
+        record.update(release_version=release_version, artifact_sha256=artifact_sha256)
+        validate_site_targets(expected)
+        # Transaction boundary: archive identity, coverage, sizes and hashes are all valid here.
+        publish_staged(staged, expected)
+        verify_installed(expected)
+        record['status'] = 'installed'
+        record['phase'] = 'installed'
+        atomic(record_path, (json.dumps(record, sort_keys=True) + '\n').encode(), 0o600)
+        verify_online_index(pipeline, run, commit, expected, previous_index_sha256)
+        record['status'] = 'online_verified'
+        record['phase'] = 'online_verified'
+        atomic(record_path, (json.dumps(record, sort_keys=True) + '\n').encode(), 0o600)
+        print('CYF_WEB_FLOW_INSTALL=PASS ' + json.dumps(
+            dict(run_id=run, commit=commit, files=len(expected)), sort_keys=True))
+    finally:
+        try:
+            if staging is not None:
+                shutil.rmtree(str(staging))
+        finally:
+            os.close(lock)
+
+
+# BEGIN NATIVE_LOCAL_WEB_TRANSACTION
+# Explicit LOCAL source on the same site/lock/publication primitives as Flow.
+def local_json_bytes(value):
+    return (json.dumps(value, sort_keys=True, separators=(',', ':')) + '\n').encode()
+
+
+def local_sync_dir(path):
+    fd = os.open(str(path), os.O_RDONLY | os.O_DIRECTORY)
+    try:
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+
+
+def local_save(path, value):
+    atomic(path, local_json_bytes(value), 0o600)
+    local_sync_dir(path.parent)
+
+
+def local_private(path):
+    path = Path(path)
+    if not path.is_absolute() or path.resolve() != path:
+        fail('unsafe LOCAL physical path')
+    for parent in path.parents:
+        st = parent.lstat()
+        if (not stat.S_ISDIR(st.st_mode) or st.st_uid != 0
+                or st.st_mode & 0o022 and not st.st_mode & stat.S_ISVTX):
+            fail('unsafe LOCAL parent')
+    st = path.lstat()
+    if (not stat.S_ISREG(st.st_mode) or st.st_uid != 0 or st.st_nlink != 1
+            or stat.S_IMODE(st.st_mode) != 0o600):
+        fail('unsafe LOCAL private file')
+    return st
+
+
+def local_descriptor(path):
+    local_private(path)
+    try:
+        value = json.loads(Path(path).read_text(), object_pairs_hook=unique_json_object)
+    except (OSError, ValueError):
+        fail('invalid LOCAL descriptor')
+    keys = {'schema_version', 'source_kind', 'source', 'package',
+            'previousIndexSha256', 'previousRecordSha256'}
+    if (type(value) is not dict or set(value) != keys or type(value['schema_version']) is not int
+            or value['schema_version'] != 1 or value['source_kind'] != 'LOCAL'):
+        fail('invalid LOCAL descriptor schema')
+    source = value['source']
+    if (type(source) is not dict or set(source) != {'commit', 'tree', 'version', 'buildId'}
+            or any(type(source[k]) is not str or not re.fullmatch('[0-9a-f]{40}', source[k]) for k in ('commit', 'tree'))
+            or stable_version(source['version']) is None
+            or type(source['buildId']) is not str or not re.fullmatch('[A-Za-z][A-Za-z0-9_.-]*', source['buildId'])):
+        fail('invalid LOCAL descriptor identity')
+    package = value['package']
+    if (type(package) is not dict or set(package) != {'path', 'sha256', 'size'}
+            or type(package['path']) is not str or type(package['size']) is not int or package['size'] <= 0):
+        fail('invalid LOCAL package reference')
+    for digest in [package['sha256'], value['previousIndexSha256'], value['previousRecordSha256']]:
+        if type(digest) is not str or not re.fullmatch('[0-9a-f]{64}', digest):
+            fail('invalid LOCAL descriptor digest')
+    return value
+
+
+def local_online(source, expected, deadline):
+    # Verify every published JS/CSS (including lazy chunks), not just HTTP 200.
+    from urllib.parse import quote
+    names = ['index.html'] + sorted(n for n in expected if n != 'index.html' and n.endswith(('.js', '.css')))
+    for name in names:
+        item = expected[name]
+        while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                fail('LOCAL online verification exhausted release budget')
+            try:
+                request = urllib.request.Request(SITE_URL + quote(name, safe='/')
+                    + '?local_build=' + source['buildId'] + '&local_commit=' + source['commit'],
+                    headers={'Accept-Encoding': 'identity', 'Cache-Control': 'no-cache, no-store, max-age=0',
+                             'User-Agent': 'cyf-web-local-deploy/' + source['buildId']})
+                with urllib.request.urlopen(request, timeout=min(ONLINE_VERIFY_TIMEOUT_SECONDS, remaining)) as response:
+                    data = response.read(item['size'] + 1)
+                    status = getattr(response, 'status', 200)
+                if status == 200 and len(data) == item['size'] and hashlib.sha256(data).hexdigest() == item['sha256']:
+                    break
+            except Exception:
+                pass  # The owning LOCAL budget bounds retries, not an application request deadline.
+            time.sleep(min(ONLINE_VERIFY_POLL_DELAY_SECONDS, max(0, deadline - time.monotonic())))
+    return len(names)
+
+
+def local_restore(backup, descriptor, expected, binding):
+    """Restore only this binding's changed files; entry is restored last."""
+    local_private(backup / 'before.json')
+    snapshot = json.loads((backup / 'before.json').read_text(), object_pairs_hook=unique_json_object)
+    if (set(snapshot) != {'binding', 'changed'} or snapshot['binding'] != binding
+            or type(snapshot['changed']) is not dict or not set(snapshot['changed']) <= set(expected)):
+        fail('invalid LOCAL rollback snapshot')
+    validate_site_targets(expected)
+    for name, old in snapshot['changed'].items():
+        if old is not None:
+            local_private(backup / 'files' / name)
+            if type(old) is not dict or set(old) != {'size', 'sha256'} or file_digest(backup / 'files' / name) != (old['size'], old['sha256']):
+                fail('LOCAL rollback bytes changed')
+    local_private(backup / 'record-before.json')
+    old_record = (backup / 'record-before.json').read_bytes()
+    if hashlib.sha256(old_record).hexdigest() != descriptor['previousRecordSha256']:
+        fail('LOCAL previous record changed')
+    for name in sorted(snapshot['changed'], key=lambda n: (n == 'index.html', n)):
+        old = snapshot['changed'][name]
+        target = SITE / name
+        if old is None:
+            if target.exists():
+                if file_digest(target) != (expected[name]['size'], expected[name]['sha256']):
+                    fail('refusing removal of unrelated rollback target')
+                target.unlink()
+                local_sync_dir(target.parent)
+        else:
+            ensure_public_parent(name)
+            atomic_file(target, backup / 'files' / name, 0o644)
+            local_sync_dir(target.parent)
+    atomic(ROOT / 'record.json', old_record, 0o600)
+    local_sync_dir(ROOT)
+
+
+def deploy_local(descriptor_path, budget_seconds=600):
+    if os.geteuid() != 0:
+        fail('LOCAL installation requires root')
+    started = time.monotonic()
+    descriptor = local_descriptor(Path(descriptor_path))
+    binding = hashlib.sha256(local_json_bytes(descriptor)).hexdigest()
+    package = Path(descriptor['package']['path'])
+    before = local_private(package)
+    safe_dir(ROOT)
+    safe_dir(SITE)
+    lock = os.open(str(ROOT / 'deploy.lock'), os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600)
+    staging = None
+    try:
+        st = os.fstat(lock)
+        if not stat.S_ISREG(st.st_mode) or st.st_uid != 0 or st.st_nlink != 1 or stat.S_IMODE(st.st_mode) != 0o600:
+            fail('unsafe LOCAL deployment lock')
+        # No preemption: the caller's full wall clock includes lock waiting.
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        staging = Path(tempfile.mkdtemp(prefix='.cyf-web-stage-', dir=str(ROOT)))
+        with verified_package_handle(package, before) as handle:
+            digest = hashlib.sha256()
+            for block in iter(lambda: handle.read(CHUNK_SIZE), b''):
+                digest.update(block)
+            if before.st_size != descriptor['package']['size'] or digest.hexdigest() != descriptor['package']['sha256']:
+                fail('LOCAL package digest mismatch')
+            handle.seek(0)
+            manifest, staged = scan_archive(handle, staging, local=True)
+        record, expected = validate_local_manifest(manifest, staged)
+        if record['source'] != descriptor['source']:
+            fail('LOCAL descriptor and manifest source differ')
+        validate_site_targets(expected)
+        record_path = ROOT / 'record.json'
+        local_private(record_path)
+        previous_bytes = record_path.read_bytes()
+        previous = json.loads(previous_bytes, object_pairs_hook=unique_json_object)
+        backups = ROOT / 'backups'
+        backups.mkdir(mode=0o700, exist_ok=True)
+        safe_dir(backups)
+        backup = backups / binding
+        backup.mkdir(mode=0o700, exist_ok=True)
+        safe_dir(backup)
+        if previous.get('binding_sha256') == binding and previous.get('source_kind') == 'LOCAL':
+            if previous.get('status') == 'online_verified':
+                verify_installed(expected)
+                local_online(record['source'], expected, started + budget_seconds)
+                return previous
+            # Interrupted publication is rolled back before any new attempt.
+            local_restore(backup, descriptor, expected, binding)
+            previous_bytes = record_path.read_bytes()
+        elif previous.get('status') not in ('installed', 'online_verified'):
+            fail('another Web transaction is unfinished')
+        if (hashlib.sha256(previous_bytes).hexdigest() != descriptor['previousRecordSha256']
+                or file_digest(SITE / 'index.html')[1] != descriptor['previousIndexSha256']):
+            fail('LOCAL previous release changed')
+        changed = {}
+        for name, item in expected.items():
+            target = SITE / name
+            if target.exists() and file_digest(target) == (item['size'], item['sha256']):
+                continue
+            if target.exists():
+                size, digest = file_digest(target)
+                destination = backup / 'files' / name
+                destination.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+                atomic_file(destination, target, 0o600)
+                local_sync_dir(destination.parent)
+                changed[name] = dict(size=size, sha256=digest)
+            else:
+                changed[name] = None
+        atomic(backup / 'record-before.json', previous_bytes, 0o600)
+        local_save(backup / 'before.json', dict(binding=binding, changed=changed))
+        local_save(backup / 'descriptor.json', descriptor)
+        record.update(binding_sha256=binding, artifact_sha256=descriptor['package']['sha256'],
+                      package=descriptor['package'], backup=str(backup), status='publishing', phase='publishing')
+        local_save(record_path, record)
+        try:
+            # Original publication primitive, assets first and index last. Skip
+            # only byte-identical installed files; all installed hashes rechecked.
+            publish_staged({n: staged[n] for n in changed}, {n: expected[n] for n in changed})
+            verify_installed(expected)
+            record.update(status='installed', phase='installed')
+            local_save(record_path, record)
+            count = local_online(record['source'], expected, started + budget_seconds)
+            record.update(status='online_verified', phase='online_verified', onlineVerifiedFiles=count,
+                          wallSeconds=round(time.monotonic() - started, 3))
+            local_save(record_path, record)
+        except BaseException:
+            local_restore(backup, descriptor, expected, binding)
+            raise
+        print('CYF_WEB_LOCAL_INSTALL=PASS ' + json.dumps(dict(source=record['source'], files=len(expected),
+              changedFiles=len(changed), onlineVerifiedFiles=count, wallSeconds=record['wallSeconds']), sort_keys=True))
+        return record
+    finally:
+        if staging is not None:
+            shutil.rmtree(str(staging))
+        os.close(lock)
+# END NATIVE_LOCAL_WEB_TRANSACTION
+
+
+if __name__ == '__main__':
+    if sys.argv[1:2] == ['--source-local']:
+        if len(sys.argv) != 3:
+            fail('expected --source-local descriptor.json')
+        deploy_local(sys.argv[2])
+        raise SystemExit(0)
+    if len(sys.argv) != 6:
+        fail('expected pipeline run commit version artifact_sha256')
+    deploy(*sys.argv[1:])

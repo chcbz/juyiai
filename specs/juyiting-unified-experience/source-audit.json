@@ -1,0 +1,524 @@
+{
+  "date": "2026-09-21",
+  "method": "read-only exact release git blobs + existing same-task evidence; no live re-test",
+  "warning": "Root web/api checkouts differ and have unrelated changes. Blob records, not root working files, are design baseline. Runtime files are current source snapshots, not deployed-byte proof.",
+  "frozenSources": [
+    {
+      "repository": "/home/isp/wsps/cyf/web",
+      "commit": "76c16ab68de605689201d491f25bee68eae0f0ac",
+      "path": "src/components/world/JuyiHall.vue",
+      "sha256": "f09c008858b29287b5352562cd0936738755db99d4c1ef5c0f694f6e58b1629b",
+      "selectedEvidence": [
+        {
+          "line": 31,
+          "text": "@open-workspace=\"openBabaoBox\""
+        },
+        {
+          "line": 87,
+          "text": "@open-workspace=\"openBabaoBox\""
+        },
+        {
+          "line": 233,
+          "text": "@open-workspace=\"openBabaoBox\""
+        },
+        {
+          "line": 261,
+          "text": "<PersonalWorkspace"
+        },
+        {
+          "line": 314,
+          "text": "@open-workspace=\"openBabaoBox\""
+        },
+        {
+          "line": 354,
+          "text": "@open-workspace=\"openBabaoBox\""
+        },
+        {
+          "line": 394,
+          "text": "@open-workspace=\"openBabaoBox\""
+        },
+        {
+          "line": 439,
+          "text": "import { useHallExperienceMode } from '@/composables/juyiting/useHallExperienceMode'"
+        },
+        {
+          "line": 465,
+          "text": "import PersonalWorkspace from '@/components/workspace/PersonalWorkspace.vue'"
+        },
+        {
+          "line": 541,
+          "text": "} = useHallExperienceMode()"
+        },
+        {
+          "line": 1041,
+          "text": "openBabaoBox()"
+        },
+        {
+          "line": 1093,
+          "text": "const openBabaoBox = () => {"
+        }
+      ]
+    },
+    {
+      "repository": "/home/isp/wsps/cyf/web",
+      "commit": "76c16ab68de605689201d491f25bee68eae0f0ac",
+      "path": "src/composables/juyiting/useHallExperienceMode.js",
+      "sha256": "2e3c3c8f5dd07719879210a7e8675d9b3079c21e08db7c2b91c491e6417ac871",
+      "selectedEvidence": [
+        {
+          "line": 8,
+          "text": "const REQUEST_TIMEOUT_MS = 3000"
+        },
+        {
+          "line": 64,
+          "text": "let visualViewport = null"
+        },
+        {
+          "line": 75,
+          "text": "const width = Number(visualViewport?.width) || Number(window?.innerWidth) || 0"
+        },
+        {
+          "line": 76,
+          "text": "const height = Number(visualViewport?.height) || Number(window?.innerHeight) || 0"
+        },
+        {
+          "line": 259,
+          "text": "const requestLandscape = async () => {"
+        },
+        {
+          "line": 327,
+          "text": "}, REQUEST_TIMEOUT_MS)"
+        },
+        {
+          "line": 336,
+          "text": "const requestPortrait = async () => {"
+        },
+        {
+          "line": 391,
+          "text": "visualViewport = window.visualViewport || null"
+        },
+        {
+          "line": 408,
+          "text": "visualViewport?.addEventListener?.('resize', handleViewportResize)"
+        },
+        {
+          "line": 423,
+          "text": "visualViewport?.removeEventListener?.('resize', handleViewportResize)"
+        },
+        {
+          "line": 428,
+          "text": "visualViewport = null"
+        },
+        {
+          "line": 440,
+          "text": "requestLandscape,"
+        },
+        {
+          "line": 441,
+          "text": "requestPortrait"
+        }
+      ]
+    },
+    {
+      "repository": "/home/isp/wsps/cyf/web",
+      "commit": "76c16ab68de605689201d491f25bee68eae0f0ac",
+      "path": "src/composables/juyiting/miniProgramOrientation.js",
+      "sha256": "f0475b131cb4db30dace7045cb797825cad28edf11bcbb90dbc9c9765f10183e",
+      "selectedEvidence": [
+        {
+          "line": 1,
+          "text": "export const MINI_PROGRAM_ORIENTATION_ROUTES = Object.freeze({"
+        },
+        {
+          "line": 77,
+          "text": "export const enterNativeLandscape = async (options = {}) => {"
+        },
+        {
+          "line": 82,
+          "text": "url: MINI_PROGRAM_ORIENTATION_ROUTES.landscape,"
+        },
+        {
+          "line": 83,
+          "text": "fail: () => bridge.redirectTo?.({ url: MINI_PROGRAM_ORIENTATION_ROUTES.landscapeFallback })"
+        },
+        {
+          "line": 97,
+          "text": "fail: () => bridge.redirectTo?.({ url: MINI_PROGRAM_ORIENTATION_ROUTES.portraitFallback })"
+        }
+      ]
+    },
+    {
+      "repository": "/home/isp/wsps/cyf/web",
+      "commit": "76c16ab68de605689201d491f25bee68eae0f0ac",
+      "path": "src/composables/juyiting/useHallPanels.js",
+      "sha256": "a0b28e601aac04c142f01a7e96b7d89d386b1ceed30d5eea0ad2425d79f2b640",
+      "selectedEvidence": [
+        {
+          "line": 5,
+          "text": "return experienceMode === 'landscape-map' ? 'right-drawer' : 'bottom-drawer'"
+        },
+        {
+          "line": 107,
+          "text": "export const trapPanelFocus = (event, panel) => {"
+        }
+      ]
+    },
+    {
+      "repository": "/home/isp/wsps/cyf/web",
+      "commit": "76c16ab68de605689201d491f25bee68eae0f0ac",
+      "path": "src/components/workspace/PersonalWorkspace.vue",
+      "sha256": "140a8157a877db545ae0b9208fce4e092083050de36ae6e0e826f75ed771c3f8",
+      "selectedEvidence": [
+        {
+          "line": 2,
+          "text": "<main class=\"personal-workspace\" :class=\"{ 'is-hall-treasure': embedded, 'is-progress-view': activeModal === 'delivery' && showDeliveryProgress }\">"
+        },
+        {
+          "line": 139,
+          "text": "const { embedded } = defineProps({ embedded: { type: Boolean, default: false } })"
+        }
+      ]
+    },
+    {
+      "repository": "/home/isp/wsps/cyf/web",
+      "commit": "76c16ab68de605689201d491f25bee68eae0f0ac",
+      "path": "src/composables/usePersonalWorkspaceExecution.js",
+      "sha256": "802bb63da36ae7f8668d57e0f629c71b21ea913bc6094c042a35bf0c4645bf33",
+      "selectedEvidence": [
+        {
+          "line": 8,
+          "text": "export const PERSONAL_WORKSPACE_EXECUTION_MIME_TYPES = Object.freeze(["
+        },
+        {
+          "line": 14,
+          "text": "const EXECUTION_MIME_TYPES = new Set(PERSONAL_WORKSPACE_EXECUTION_MIME_TYPES)"
+        },
+        {
+          "line": 216,
+          "text": "const reconcile = async ({ quiet = false } = {}) => {"
+        },
+        {
+          "line": 221,
+          "text": "const value = await request({ url: '/personal-workspace/executions/request', method: 'GET', headers: { 'Idempotency-Key': pendingIntent.idempotencyKey } }, snapshot)"
+        },
+        {
+          "line": 251,
+          "text": "const value = await request({ url: '/personal-workspace/executions', method: 'POST', data: { conversationId, targetAgentId: agent.agentId, taskId, instruction: instruction.trim(), outputContentMimeType, inputs: selections }, headers: { 'Idempotency-K"
+        },
+        {
+          "line": 260,
+          "text": "return reconcile({ quiet: true })"
+        },
+        {
+          "line": 299,
+          "text": "const recover = async () => { await reconcile({ quiet: true }); return loadHistory({ adopt: !unresolvedIntent.value }) }"
+        },
+        {
+          "line": 301,
+          "text": "const refreshExecution = () => unresolvedIntent.value ? reconcile() : receipt.value?.executionId ? startPolling(receipt.value.executionId) : reconcile()"
+        },
+        {
+          "line": 306,
+          "text": "try { const result = applyExecution(await request({ url: `/personal-workspace/executions/${encodeURIComponent(current.executionId)}/revoke-inputs`, method: 'POST', data: { expectedGrantRevision: current.grantRevision }, headers: { 'Idempotency-Key': "
+        }
+      ]
+    },
+    {
+      "repository": "/home/isp/wsps/cyf/api",
+      "commit": "bbf5b739c1bb14c69fde60ba7eb3be41be2377cf",
+      "path": "agent/jia-agent-service/src/main/java/cn/jia/agent/api/PersonalWorkspaceExecutionController.java",
+      "sha256": "df00911570712b565594dc2c68002d810e6ca55e7eb900dc898e62cfcba5a809",
+      "selectedEvidence": [
+        {
+          "line": 36,
+          "text": "@GetMapping(value = \"/executions/capabilities\", produces = MediaType.APPLICATION_JSON_VALUE)"
+        },
+        {
+          "line": 38,
+          "text": "scope(authentication);"
+        },
+        {
+          "line": 42,
+          "text": "@PostMapping(value = \"/executions\", consumes = MediaType.APPLICATION_JSON_VALUE,"
+        },
+        {
+          "line": 48,
+          "text": "PersonalWorkspaceExecutionService.ExecutionView view = service.create(scope(authentication),"
+        },
+        {
+          "line": 56,
+          "text": "@GetMapping(value = \"/executions\", produces = MediaType.APPLICATION_JSON_VALUE)"
+        },
+        {
+          "line": 65,
+          "text": "return ok(service.list(scope(authentication), historyLimit(limit),"
+        },
+        {
+          "line": 69,
+          "text": "@GetMapping(value = \"/executions/request\", produces = MediaType.APPLICATION_JSON_VALUE)"
+        },
+        {
+          "line": 74,
+          "text": "return ok(service.getByIdempotencyKey(scope(authentication), key));"
+        },
+        {
+          "line": 77,
+          "text": "@GetMapping(value = \"/executions/{executionId}\", produces = MediaType.APPLICATION_JSON_VALUE)"
+        },
+        {
+          "line": 80,
+          "text": "return ok(service.get(scope(authentication), executionId));"
+        },
+        {
+          "line": 83,
+          "text": "@PostMapping(value = \"/executions/{executionId}/revoke-inputs\", consumes = MediaType.APPLICATION_JSON_VALUE,"
+        },
+        {
+          "line": 89,
+          "text": "return ok(service.revokeInputs(scope(authentication), executionId, decimal(request.expectedGrantRevision()), key));"
+        },
+        {
+          "line": 110,
+          "text": "private static PersonalWorkspaceExecutionService.OwnerScope scope(Authentication authentication) {"
+        }
+      ]
+    },
+    {
+      "repository": "/home/isp/wsps/cyf/api",
+      "commit": "bbf5b739c1bb14c69fde60ba7eb3be41be2377cf",
+      "path": "agent/jia-agent-api/src/main/java/cn/jia/agent/service/PersonalWorkspaceExecutionService.java",
+      "sha256": "8d636aa44b25577072d1536476b7470206605966e7031581cdd4be925efbd4fe",
+      "selectedEvidence": [
+        {
+          "line": 7,
+          "text": "ExecutionView create(OwnerScope scope, CreateCommand command, String idempotencyKey);"
+        },
+        {
+          "line": 15,
+          "text": "ExecutionHistoryView list(OwnerScope scope, int limit, Long beforeCreatedAt,"
+        },
+        {
+          "line": 18,
+          "text": "ExecutionView getByIdempotencyKey(OwnerScope scope, String idempotencyKey);"
+        },
+        {
+          "line": 19,
+          "text": "ExecutionView get(OwnerScope scope, String executionId);"
+        },
+        {
+          "line": 20,
+          "text": "ExecutionView revokeInputs(OwnerScope scope, String executionId, long expectedGrantRevision,"
+        },
+        {
+          "line": 31,
+          "text": "ExecutionView fail(RuntimeScope scope, String taskId, String runId, String code);"
+        },
+        {
+          "line": 39,
+          "text": "SourceOutputRef sourceOutputRef) {"
+        },
+        {
+          "line": 46,
+          "text": "record SourceOutputRef(String formalDeliveryId, long decisionVersion, String outputId,"
+        },
+        {
+          "line": 51,
+          "text": "record ExecutionHistoryView(List<ExecutionSummary> items, ExecutionCursor nextCursor) {"
+        },
+        {
+          "line": 52,
+          "text": "public ExecutionHistoryView {"
+        },
+        {
+          "line": 69,
+          "text": "record ExecutionView(String executionId, String taskId, String runId, String conversationId,"
+        },
+        {
+          "line": 74,
+          "text": "public ExecutionView(String executionId, String taskId, String runId, String conversationId,"
+        }
+      ]
+    },
+    {
+      "repository": "/home/isp/wsps/cyf/api",
+      "commit": "bbf5b739c1bb14c69fde60ba7eb3be41be2377cf",
+      "path": "agent/jia-agent-service/src/main/java/cn/jia/agent/service/impl/PersonalWorkspaceExecutionServiceImpl.java",
+      "sha256": "411759dbe7d219a2c3a7e0b4781eb0c3f2fd8a0ce52266800c69cdec8723b40c",
+      "selectedEvidence": [
+        {
+          "line": 136,
+          "text": "@Transactional(rollbackFor = Exception.class)"
+        },
+        {
+          "line": 139,
+          "text": "String requestHash = valid.sourceOutputRef() == null"
+        },
+        {
+          "line": 148,
+          "text": "if (!same(prior.getRequestHash(), requestHash)) throw failure(Reason.IDEMPOTENCY_CONFLICT);"
+        },
+        {
+          "line": 154,
+          "text": "taskLease = valid.taskId() == null ? null : beginTaskExecution(scope, valid);"
+        },
+        {
+          "line": 161,
+          "text": "if (replay != null && same(replay.getRequestHash(), requestHash)) return view(scope, replay);"
+        },
+        {
+          "line": 169,
+          "text": "PersonalWorkspaceFileEntity file = workspace.lockFile(scope.tenantId(), scope.clientId(),"
+        },
+        {
+          "line": 206,
+          "text": ".setIdempotencyKey(idempotencyKey).setRequestHash(requestHash)"
+        },
+        {
+          "line": 214,
+          "text": "if (replay == null || !same(replay.getRequestHash(), requestHash)) throw failure(Reason.IDEMPOTENCY_CONFLICT);"
+        },
+        {
+          "line": 235,
+          "text": "@Transactional(readOnly = true)"
+        },
+        {
+          "line": 244,
+          "text": "@Transactional(readOnly = true, rollbackFor = Exception.class)"
+        },
+        {
+          "line": 283,
+          "text": "@Transactional(readOnly = true, rollbackFor = Exception.class)"
+        },
+        {
+          "line": 296,
+          "text": "@Transactional(readOnly = true, rollbackFor = Exception.class)"
+        },
+        {
+          "line": 305,
+          "text": "@Transactional(rollbackFor = Exception.class)"
+        },
+        {
+          "line": 310,
+          "text": "String requestHash = hash(\"REVOKE\", executionId, Long.toString(expectedGrantRevision));"
+        }
+      ]
+    },
+    {
+      "repository": "/home/isp/wsps/cyf/api",
+      "commit": "bbf5b739c1bb14c69fde60ba7eb3be41be2377cf",
+      "path": "agent/jia-agent-service/src/main/java/cn/jia/agent/api/PersonalWorkspaceController.java",
+      "sha256": "6b06c6e05307a4775f6a30e7d11a24c83ab696328e74712b355f3fc066828cf1",
+      "selectedEvidence": [
+        {
+          "line": 51,
+          "text": "@GetMapping(value = \"/files\", produces = MediaType.APPLICATION_JSON_VALUE)"
+        },
+        {
+          "line": 58,
+          "text": "@PostMapping(value = \"/files\", consumes = MediaType.MULTIPART_FORM_DATA_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)"
+        },
+        {
+          "line": 65,
+          "text": "@GetMapping(value = \"/files/{fileId}\", produces = MediaType.APPLICATION_JSON_VALUE)"
+        },
+        {
+          "line": 70,
+          "text": "@PatchMapping(value = \"/files/{fileId}\", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)"
+        },
+        {
+          "line": 77,
+          "text": "@GetMapping(value = \"/files/{fileId}/versions\", produces = MediaType.APPLICATION_JSON_VALUE)"
+        },
+        {
+          "line": 81,
+          "text": "@PostMapping(value = \"/files/{fileId}/versions\", consumes = MediaType.MULTIPART_FORM_DATA_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)"
+        },
+        {
+          "line": 90,
+          "text": "@GetMapping(\"/files/{fileId}/versions/{version}/content\")"
+        },
+        {
+          "line": 94,
+          "text": "@GetMapping(value = \"/files/{fileId}/versions/{version}/preview\", produces = MediaType.APPLICATION_JSON_VALUE)"
+        },
+        {
+          "line": 104,
+          "text": "@GetMapping(\"/files/{fileId}/versions/{version}/preview/parts/{partId}\")"
+        },
+        {
+          "line": 109,
+          "text": "@GetMapping(value = \"/files/{fileId}/usage\", produces = MediaType.APPLICATION_JSON_VALUE)"
+        },
+        {
+          "line": 113,
+          "text": "@PostMapping(value = \"/files/{fileId}/trash\", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)"
+        },
+        {
+          "line": 120,
+          "text": "@PostMapping(value = \"/files/{fileId}/restore\", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)"
+        }
+      ]
+    },
+    {
+      "repository": "/home/isp/wsps/cyf/api",
+      "commit": "bbf5b739c1bb14c69fde60ba7eb3be41be2377cf",
+      "path": "agent/jia-agent-service/src/main/java/cn/jia/agent/api/AgentTaskFormalDeliveryController.java",
+      "sha256": "6c2726c99c98f272e715a33b6fed4b46ffcabcfe9cc243b85669fa069ed79bdf",
+      "selectedEvidence": [
+        {
+          "line": 92,
+          "text": "@GetMapping(value = \"/{taskId}/formal-deliveries\", produces = MediaType.APPLICATION_JSON_VALUE)"
+        },
+        {
+          "line": 113,
+          "text": "@PostMapping(value = \"/{taskId}/formal-deliveries\", consumes = MediaType.APPLICATION_JSON_VALUE,"
+        },
+        {
+          "line": 129,
+          "text": "@PostMapping(value = \"/{taskId}/formal-deliveries/{deliveryId}/decision\","
+        },
+        {
+          "line": 146,
+          "text": "@PostMapping(value = \"/{taskId}/formal-deliveries/{deliveryId}/rework-executions\","
+        }
+      ]
+    }
+  ],
+  "localEvidence": [
+    {
+      "path": "/home/isp/wsps/cyf/deliverables/design/juyiting-ux-test-20260921/实测报告与业务优化方案.md",
+      "bytes": 45528,
+      "sha256": "9dcb1a89a835eaca58ecd882f5451279b84f59734cac97b057bd8f333b73cea3"
+    },
+    {
+      "path": "/home/isp/wsps/cyf/deliverables/verification/juyiting-execution-recovery-20260921/final-online-verification.json",
+      "bytes": 1660,
+      "sha256": "666a1c0f469f8c0c326b283b8f8ae2b6b731d442c9f50df46f1cdd1abd4ef2db"
+    },
+    {
+      "path": "/home/isp/wsps/cyf/deliverables/design/juyiting-full-demo-20260921/juyiting-complete-demo.html",
+      "bytes": 4025466,
+      "sha256": "95b55ce93ba9d7854b6983a82295be1dd442b5266da6320bcb97d1aa2b9b8e39"
+    },
+    {
+      "path": "/home/isp/wsps/cyf/deliverables/design/juyiting-full-demo-20260921/verification/check-result.json",
+      "bytes": 6270,
+      "sha256": "def5cb4241bbf86da8fb4a82e4703ec2978d042cb2354f9204116c8a1fa41663"
+    },
+    {
+      "path": "/home/isp/wsps/cyf/deliverables/design/juyiting-full-demo-20260921/verification/standalone-result.json",
+      "bytes": 6277,
+      "sha256": "33b3900024a9ee733dcebbc7f1dfd3c48d77f27dcc1e2f48ad54cdb3766dd745"
+    },
+    {
+      "path": "/home/isp/wsps/chcbz/isp-install/conf/codex-ws-agent/workspace-file-bridge.mjs",
+      "bytes": 33954,
+      "sha256": "8a41414ea35038163e09c96a7a5dbdeafb0e129418dc23ad6354942a73c26aeb"
+    },
+    {
+      "path": "/home/isp/wsps/chcbz/isp-install/conf/codex-ws-agent/agent-client.mjs",
+      "bytes": 205028,
+      "sha256": "2c481210ff317ff80b670d42e6781e9ded7879a4e60da97e58a437ee8f3dcd16"
+    }
+  ]
+}

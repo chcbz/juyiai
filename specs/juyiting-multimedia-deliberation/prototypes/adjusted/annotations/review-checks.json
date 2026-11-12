@@ -1,0 +1,729 @@
+{
+  "kind": "read-only-prototype-annotations",
+  "screens": 24,
+  "views": 72,
+  "results": [
+    {
+      "id": "request",
+      "device": "desktop",
+      "width": 1440,
+      "scrollWidth": 1425,
+      "imageReady": true,
+      "marks": 2,
+      "notes": 2,
+      "contained": true
+    },
+    {
+      "id": "tasks",
+      "device": "desktop",
+      "width": 1440,
+      "scrollWidth": 1425,
+      "imageReady": true,
+      "marks": 1,
+      "notes": 1,
+      "contained": true
+    },
+    {
+      "id": "create",
+      "device": "desktop",
+      "width": 1440,
+      "scrollWidth": 1425,
+      "imageReady": true,
+      "marks": 1,
+      "notes": 1,
+      "contained": true
+    },
+    {
+      "id": "materials",
+      "device": "desktop",
+      "width": 1440,
+      "scrollWidth": 1425,
+      "imageReady": true,
+      "marks": 2,
+      "notes": 2,
+      "contained": true
+    },
+    {
+      "id": "agents",
+      "device": "desktop",
+      "width": 1440,
+      "scrollWidth": 1425,
+      "imageReady": true,
+      "marks": 1,
+      "notes": 1,
+      "contained": true
+    },
+    {
+      "id": "private",
+      "device": "desktop",
+      "width": 1440,
+      "scrollWidth": 1425,
+      "imageReady": true,
+      "marks": 2,
+      "notes": 2,
+      "contained": true
+    },
+    {
+      "id": "chat-start",
+      "device": "desktop",
+      "width": 1440,
+      "scrollWidth": 1425,
+      "imageReady": true,
+      "marks": 2,
+      "notes": 2,
+      "contained": true
+    },
+    {
+      "id": "chat-result",
+      "device": "desktop",
+      "width": 1440,
+      "scrollWidth": 1425,
+      "imageReady": true,
+      "marks": 4,
+      "notes": 4,
+      "contained": true
+    },
+    {
+      "id": "chat-media",
+      "device": "desktop",
+      "width": 1440,
+      "scrollWidth": 1425,
+      "imageReady": true,
+      "marks": 2,
+      "notes": 2,
+      "contained": true
+    },
+    {
+      "id": "workspace",
+      "device": "desktop",
+      "width": 1440,
+      "scrollWidth": 1425,
+      "imageReady": true,
+      "marks": 1,
+      "notes": 1,
+      "contained": true
+    },
+    {
+      "id": "detail",
+      "device": "desktop",
+      "width": 1440,
+      "scrollWidth": 1425,
+      "imageReady": true,
+      "marks": 3,
+      "notes": 3,
+      "contained": true
+    },
+    {
+      "id": "accept",
+      "device": "desktop",
+      "width": 1440,
+      "scrollWidth": 1425,
+      "imageReady": true,
+      "marks": 2,
+      "notes": 2,
+      "contained": true
+    },
+    {
+      "id": "request",
+      "device": "mobile",
+      "width": 1440,
+      "scrollWidth": 1425,
+      "imageReady": true,
+      "marks": 2,
+      "notes": 2,
+      "contained": true
+    },
+    {
+      "id": "tasks",
+      "device": "mobile",
+      "width": 1440,
+      "scrollWidth": 1425,
+      "imageReady": true,
+      "marks": 1,
+      "notes": 1,
+      "contained": true
+    },
+    {
+      "id": "create",
+      "device": "mobile",
+      "width": 1440,
+      "scrollWidth": 1425,
+      "imageReady": true,
+      "marks": 1,
+      "notes": 1,
+      "contained": true
+    },
+    {
+      "id": "materials",
+      "device": "mobile",
+      "width": 1440,
+      "scrollWidth": 1425,
+      "imageReady": true,
+      "marks": 2,
+      "notes": 2,
+      "contained": true
+    },
+    {
+      "id": "agents",
+      "device": "mobile",
+      "width": 1440,
+      "scrollWidth": 1425,
+      "imageReady": true,
+      "marks": 1,
+      "notes": 1,
+      "contained": true
+    },
+    {
+      "id": "private",
+      "device": "mobile",
+      "width": 1440,
+      "scrollWidth": 1425,
+      "imageReady": true,
+      "marks": 2,
+      "notes": 2,
+      "contained": true
+    },
+    {
+      "id": "chat-start",
+      "device": "mobile",
+      "width": 1440,
+      "scrollWidth": 1425,
+      "imageReady": true,
+      "marks": 2,
+      "notes": 2,
+      "contained": true
+    },
+    {
+      "id": "chat-result",
+      "device": "mobile",
+      "width": 1440,
+      "scrollWidth": 1425,
+      "imageReady": true,
+      "marks": 4,
+      "notes": 4,
+      "contained": true
+    },
+    {
+      "id": "chat-media",
+      "device": "mobile",
+      "width": 1440,
+      "scrollWidth": 1425,
+      "imageReady": true,
+      "marks": 2,
+      "notes": 2,
+      "contained": true
+    },
+    {
+      "id": "workspace",
+      "device": "mobile",
+      "width": 1440,
+      "scrollWidth": 1425,
+      "imageReady": true,
+      "marks": 1,
+      "notes": 1,
+      "contained": true
+    },
+    {
+      "id": "detail",
+      "device": "mobile",
+      "width": 1440,
+      "scrollWidth": 1425,
+      "imageReady": true,
+      "marks": 3,
+      "notes": 3,
+      "contained": true
+    },
+    {
+      "id": "accept",
+      "device": "mobile",
+      "width": 1440,
+      "scrollWidth": 1425,
+      "imageReady": true,
+      "marks": 2,
+      "notes": 2,
+      "contained": true
+    },
+    {
+      "id": "request",
+      "device": "desktop",
+      "width": 390,
+      "scrollWidth": 390,
+      "imageReady": true,
+      "marks": 2,
+      "notes": 2,
+      "contained": true
+    },
+    {
+      "id": "tasks",
+      "device": "desktop",
+      "width": 390,
+      "scrollWidth": 390,
+      "imageReady": true,
+      "marks": 1,
+      "notes": 1,
+      "contained": true
+    },
+    {
+      "id": "create",
+      "device": "desktop",
+      "width": 390,
+      "scrollWidth": 390,
+      "imageReady": true,
+      "marks": 1,
+      "notes": 1,
+      "contained": true
+    },
+    {
+      "id": "materials",
+      "device": "desktop",
+      "width": 390,
+      "scrollWidth": 390,
+      "imageReady": true,
+      "marks": 2,
+      "notes": 2,
+      "contained": true
+    },
+    {
+      "id": "agents",
+      "device": "desktop",
+      "width": 390,
+      "scrollWidth": 390,
+      "imageReady": true,
+      "marks": 1,
+      "notes": 1,
+      "contained": true
+    },
+    {
+      "id": "private",
+      "device": "desktop",
+      "width": 390,
+      "scrollWidth": 390,
+      "imageReady": true,
+      "marks": 2,
+      "notes": 2,
+      "contained": true
+    },
+    {
+      "id": "chat-start",
+      "device": "desktop",
+      "width": 390,
+      "scrollWidth": 390,
+      "imageReady": true,
+      "marks": 2,
+      "notes": 2,
+      "contained": true
+    },
+    {
+      "id": "chat-result",
+      "device": "desktop",
+      "width": 390,
+      "scrollWidth": 390,
+      "imageReady": true,
+      "marks": 4,
+      "notes": 4,
+      "contained": true
+    },
+    {
+      "id": "chat-media",
+      "device": "desktop",
+      "width": 390,
+      "scrollWidth": 390,
+      "imageReady": true,
+      "marks": 2,
+      "notes": 2,
+      "contained": true
+    },
+    {
+      "id": "workspace",
+      "device": "desktop",
+      "width": 390,
+      "scrollWidth": 390,
+      "imageReady": true,
+      "marks": 1,
+      "notes": 1,
+      "contained": true
+    },
+    {
+      "id": "detail",
+      "device": "desktop",
+      "width": 390,
+      "scrollWidth": 390,
+      "imageReady": true,
+      "marks": 3,
+      "notes": 3,
+      "contained": true
+    },
+    {
+      "id": "accept",
+      "device": "desktop",
+      "width": 390,
+      "scrollWidth": 390,
+      "imageReady": true,
+      "marks": 2,
+      "notes": 2,
+      "contained": true
+    },
+    {
+      "id": "request",
+      "device": "mobile",
+      "width": 390,
+      "scrollWidth": 390,
+      "imageReady": true,
+      "marks": 2,
+      "notes": 2,
+      "contained": true
+    },
+    {
+      "id": "tasks",
+      "device": "mobile",
+      "width": 390,
+      "scrollWidth": 390,
+      "imageReady": true,
+      "marks": 1,
+      "notes": 1,
+      "contained": true
+    },
+    {
+      "id": "create",
+      "device": "mobile",
+      "width": 390,
+      "scrollWidth": 390,
+      "imageReady": true,
+      "marks": 1,
+      "notes": 1,
+      "contained": true
+    },
+    {
+      "id": "materials",
+      "device": "mobile",
+      "width": 390,
+      "scrollWidth": 390,
+      "imageReady": true,
+      "marks": 2,
+      "notes": 2,
+      "contained": true
+    },
+    {
+      "id": "agents",
+      "device": "mobile",
+      "width": 390,
+      "scrollWidth": 390,
+      "imageReady": true,
+      "marks": 1,
+      "notes": 1,
+      "contained": true
+    },
+    {
+      "id": "private",
+      "device": "mobile",
+      "width": 390,
+      "scrollWidth": 390,
+      "imageReady": true,
+      "marks": 2,
+      "notes": 2,
+      "contained": true
+    },
+    {
+      "id": "chat-start",
+      "device": "mobile",
+      "width": 390,
+      "scrollWidth": 390,
+      "imageReady": true,
+      "marks": 2,
+      "notes": 2,
+      "contained": true
+    },
+    {
+      "id": "chat-result",
+      "device": "mobile",
+      "width": 390,
+      "scrollWidth": 390,
+      "imageReady": true,
+      "marks": 4,
+      "notes": 4,
+      "contained": true
+    },
+    {
+      "id": "chat-media",
+      "device": "mobile",
+      "width": 390,
+      "scrollWidth": 390,
+      "imageReady": true,
+      "marks": 2,
+      "notes": 2,
+      "contained": true
+    },
+    {
+      "id": "workspace",
+      "device": "mobile",
+      "width": 390,
+      "scrollWidth": 390,
+      "imageReady": true,
+      "marks": 1,
+      "notes": 1,
+      "contained": true
+    },
+    {
+      "id": "detail",
+      "device": "mobile",
+      "width": 390,
+      "scrollWidth": 390,
+      "imageReady": true,
+      "marks": 3,
+      "notes": 3,
+      "contained": true
+    },
+    {
+      "id": "accept",
+      "device": "mobile",
+      "width": 390,
+      "scrollWidth": 390,
+      "imageReady": true,
+      "marks": 2,
+      "notes": 2,
+      "contained": true
+    },
+    {
+      "id": "request",
+      "device": "desktop",
+      "width": 320,
+      "scrollWidth": 320,
+      "imageReady": true,
+      "marks": 2,
+      "notes": 2,
+      "contained": true
+    },
+    {
+      "id": "tasks",
+      "device": "desktop",
+      "width": 320,
+      "scrollWidth": 320,
+      "imageReady": true,
+      "marks": 1,
+      "notes": 1,
+      "contained": true
+    },
+    {
+      "id": "create",
+      "device": "desktop",
+      "width": 320,
+      "scrollWidth": 320,
+      "imageReady": true,
+      "marks": 1,
+      "notes": 1,
+      "contained": true
+    },
+    {
+      "id": "materials",
+      "device": "desktop",
+      "width": 320,
+      "scrollWidth": 320,
+      "imageReady": true,
+      "marks": 2,
+      "notes": 2,
+      "contained": true
+    },
+    {
+      "id": "agents",
+      "device": "desktop",
+      "width": 320,
+      "scrollWidth": 320,
+      "imageReady": true,
+      "marks": 1,
+      "notes": 1,
+      "contained": true
+    },
+    {
+      "id": "private",
+      "device": "desktop",
+      "width": 320,
+      "scrollWidth": 320,
+      "imageReady": true,
+      "marks": 2,
+      "notes": 2,
+      "contained": true
+    },
+    {
+      "id": "chat-start",
+      "device": "desktop",
+      "width": 320,
+      "scrollWidth": 320,
+      "imageReady": true,
+      "marks": 2,
+      "notes": 2,
+      "contained": true
+    },
+    {
+      "id": "chat-result",
+      "device": "desktop",
+      "width": 320,
+      "scrollWidth": 320,
+      "imageReady": true,
+      "marks": 4,
+      "notes": 4,
+      "contained": true
+    },
+    {
+      "id": "chat-media",
+      "device": "desktop",
+      "width": 320,
+      "scrollWidth": 320,
+      "imageReady": true,
+      "marks": 2,
+      "notes": 2,
+      "contained": true
+    },
+    {
+      "id": "workspace",
+      "device": "desktop",
+      "width": 320,
+      "scrollWidth": 320,
+      "imageReady": true,
+      "marks": 1,
+      "notes": 1,
+      "contained": true
+    },
+    {
+      "id": "detail",
+      "device": "desktop",
+      "width": 320,
+      "scrollWidth": 320,
+      "imageReady": true,
+      "marks": 3,
+      "notes": 3,
+      "contained": true
+    },
+    {
+      "id": "accept",
+      "device": "desktop",
+      "width": 320,
+      "scrollWidth": 320,
+      "imageReady": true,
+      "marks": 2,
+      "notes": 2,
+      "contained": true
+    },
+    {
+      "id": "request",
+      "device": "mobile",
+      "width": 320,
+      "scrollWidth": 320,
+      "imageReady": true,
+      "marks": 2,
+      "notes": 2,
+      "contained": true
+    },
+    {
+      "id": "tasks",
+      "device": "mobile",
+      "width": 320,
+      "scrollWidth": 320,
+      "imageReady": true,
+      "marks": 1,
+      "notes": 1,
+      "contained": true
+    },
+    {
+      "id": "create",
+      "device": "mobile",
+      "width": 320,
+      "scrollWidth": 320,
+      "imageReady": true,
+      "marks": 1,
+      "notes": 1,
+      "contained": true
+    },
+    {
+      "id": "materials",
+      "device": "mobile",
+      "width": 320,
+      "scrollWidth": 320,
+      "imageReady": true,
+      "marks": 2,
+      "notes": 2,
+      "contained": true
+    },
+    {
+      "id": "agents",
+      "device": "mobile",
+      "width": 320,
+      "scrollWidth": 320,
+      "imageReady": true,
+      "marks": 1,
+      "notes": 1,
+      "contained": true
+    },
+    {
+      "id": "private",
+      "device": "mobile",
+      "width": 320,
+      "scrollWidth": 320,
+      "imageReady": true,
+      "marks": 2,
+      "notes": 2,
+      "contained": true
+    },
+    {
+      "id": "chat-start",
+      "device": "mobile",
+      "width": 320,
+      "scrollWidth": 320,
+      "imageReady": true,
+      "marks": 2,
+      "notes": 2,
+      "contained": true
+    },
+    {
+      "id": "chat-result",
+      "device": "mobile",
+      "width": 320,
+      "scrollWidth": 320,
+      "imageReady": true,
+      "marks": 4,
+      "notes": 4,
+      "contained": true
+    },
+    {
+      "id": "chat-media",
+      "device": "mobile",
+      "width": 320,
+      "scrollWidth": 320,
+      "imageReady": true,
+      "marks": 2,
+      "notes": 2,
+      "contained": true
+    },
+    {
+      "id": "workspace",
+      "device": "mobile",
+      "width": 320,
+      "scrollWidth": 320,
+      "imageReady": true,
+      "marks": 1,
+      "notes": 1,
+      "contained": true
+    },
+    {
+      "id": "detail",
+      "device": "mobile",
+      "width": 320,
+      "scrollWidth": 320,
+      "imageReady": true,
+      "marks": 3,
+      "notes": 3,
+      "contained": true
+    },
+    {
+      "id": "accept",
+      "device": "mobile",
+      "width": 320,
+      "scrollWidth": 320,
+      "imageReady": true,
+      "marks": 2,
+      "notes": 2,
+      "contained": true
+    }
+  ],
+  "errors": [],
+  "productSourceChanged": false
+}

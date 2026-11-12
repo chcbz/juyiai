@@ -1,0 +1,55 @@
+{
+  "frozenAt": "2026-11-09T16:56:13.148795+00:00",
+  "scope": "JYT01..17 core UI; JYT17 region oracle corrected explicitly",
+  "versions": {
+    "web": {
+      "source": {
+        "commit": "092962d10134970851159e6ae348597700b55d19",
+        "tree": "4f48c8aa6ee5c074854e0d6e2af371d93fea3654",
+        "version": "1.16.136"
+      },
+      "artifactSha256": "e76b76262c9740aa1cf007f2bc3ab7fea8c707cecb273d45aa2c885c3b95cdb9"
+    },
+    "api": {
+      "buildId": "juyiting-root-cause-20261109",
+      "commit": "cbeab0d8c51fc7fdabfb724a71bde35251dac955",
+      "tree": "94dd1421f78c45fa6def1bc0d3bdda5b58d4d8c9",
+      "version": "1.1.47-SNAPSHOT"
+    },
+    "runtime": {
+      "version": "1.3.71",
+      "bridgeVersion": "1.1.59",
+      "pid": 212973,
+      "commit": "01914a4f8b1777e0e7496548d240cb46d138efde",
+      "tree": "712d8615d91f4e9baa885aa17a701112c3ded9d1",
+      "artifactSha256": "b1b661426c61c4822a8559a1dc10b6ce8ded85c72caeaff712efbff38a570be0"
+    }
+  },
+  "imageSkillVersions": "1.4.2",
+  "result": {
+    "pass": 17,
+    "fail": 0,
+    "blocked": 0,
+    "status": "PASS_WITH_ORACLE_CORRECTION"
+  },
+  "executionEvidence": "/home/isp/state/juyiting-root-cause-20261109/full-r5/report.md",
+  "machineEvidence": "/home/isp/state/juyiting-root-cause-20261109/full-r5/verification-summary.json",
+  "historicalFailedRound": "/home/isp/state/juyiting-root-cause-20261109/full-r4/report.md",
+  "fixture": {
+    "path": "fixtures/core-ui-shapes.png",
+    "sha256": "5261f79df8bec3de932682be9368d2d596d60328bba4398ba8a5a1741f7ba746"
+  },
+  "oracle": {
+    "path": "tools/check-flat-graphic-background.mjs",
+    "sha256": "3008ab42530e947cd508f740159ee0f192b0a856598c1f47e906e39d003ae697",
+    "guardPixels": 8,
+    "scope": "outside color-derived foreground rectangles and guards; not all semantic background"
+  },
+  "notCovered": [
+    "camera",
+    "album",
+    "management writes",
+    "full product/security/load"
+  ],
+  "sourceIntegration": "Component release commits fixed, no new push/merge in this continuation; root documents saved locally."
+}

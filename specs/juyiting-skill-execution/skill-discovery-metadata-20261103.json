@@ -1,0 +1,32 @@
+[
+  {
+    "skillKey": "image-understanding",
+    "name": "图片识别",
+    "description": "识别图片内容、辨读可见文字、解释图表并比较图片差异，不生成或修改图片。"
+  },
+  {
+    "skillKey": "image-generate",
+    "name": "图片生成",
+    "description": "根据文字需求创作新图片，支持指定风格、内容和尺寸，输出图片文件。"
+  },
+  {
+    "skillKey": "image-edit",
+    "name": "图片编辑",
+    "description": "根据用户要求修改已有图片的内容、颜色、背景或风格，输出新图片。"
+  },
+  {
+    "skillKey": "document-workbench",
+    "name": "文档处理",
+    "description": "读取、编辑、整理和转换文档及表格，提取PDF正文，生成可下载文件。"
+  },
+  {
+    "skillKey": "web-research",
+    "name": "信息检索",
+    "description": "搜索公开信息，核验来源与时效，汇总结果并提供出处。"
+  },
+  {
+    "skillKey": "browser-workbench",
+    "name": "网页操作",
+    "description": "浏览指定网页，点击、填表、截图并核对操作结果。"
+  }
+]

@@ -1,0 +1,15 @@
+{
+  "as_of": "2026-10-13",
+  "design_revision": "SE-2",
+  "scope": "documentation_structure_and_consistency_only",
+  "task_count": 56,
+  "task_estimates_le_30_minutes": true,
+  "dependencies_acyclic": true,
+  "local_links_and_json_checked": true,
+  "source_baseline": "baseline.json is previous read baseline; no new online/release assertion",
+  "errors": [],
+  "application_tests": "NOT_RUN",
+  "production_changes": false,
+  "historical_design_sha256": "d451ba4d1b3fd4b58960e249f0f42f1478599ca4836892521a73479168d7bc0d",
+  "current_design_sha256": "a6b1d317208ee5448e06844186d0e6debca62b8e778f907e8eec68089cc31216"
+}

@@ -1,0 +1,6 @@
+{
+  "schema_version": 1,
+  "web_marker": "<div id=\"app\"></div>",
+  "email_enabled": true,
+  "reminder_interval_seconds": 21600
+}

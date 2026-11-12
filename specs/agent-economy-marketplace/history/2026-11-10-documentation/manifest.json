@@ -1,0 +1,25 @@
+{
+  "scope": "Superseded mutable primary documents preserved byte-for-byte; frozen inputs unchanged",
+  "files": [
+    {
+      "path": "specs/agent-economy-marketplace/spec.md",
+      "snapshot": "specs/agent-economy-marketplace/history/2026-11-10-documentation/spec.md.original",
+      "sha256": "de026dc25f300cbfedbb1b3cac19974e851bc86098dda0f278c3a812b47f67a9"
+    },
+    {
+      "path": "specs/agent-economy-marketplace/design.md",
+      "snapshot": "specs/agent-economy-marketplace/history/2026-11-10-documentation/design.md.original",
+      "sha256": "b463065954318dc7200b1facfec5dbb558613863ef5f801653700e9c3b0aadcc"
+    },
+    {
+      "path": "specs/agent-economy-marketplace/tasks.md",
+      "snapshot": "specs/agent-economy-marketplace/history/2026-11-10-documentation/tasks.md.original",
+      "sha256": "0cb58107d5e378b0d492cf6d67e282a9dd63dd6da705336a3c97c2834947ea5d"
+    },
+    {
+      "path": "specs/agent-economy-marketplace/acceptance.md",
+      "snapshot": "specs/agent-economy-marketplace/history/2026-11-10-documentation/acceptance.md.original",
+      "sha256": "1b0745f6d7649ffc02e5646da9d0f9792621818f673d47e1705543202dbce6d8"
+    }
+  ]
+}

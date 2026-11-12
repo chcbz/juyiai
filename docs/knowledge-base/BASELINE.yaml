@@ -1,0 +1,11 @@
+schema_version: 1
+generated_on: "2026-08-15"
+root_baseline: "not-version-pinned"
+api_sha: "a3253ef6432c4c9c1f41a6abec0b8a84d99e176e"
+web_sha: "b0394ed7910bcc62d09a75d69d6cc74989769479"
+api_inventory:
+  controller_files: 38
+  method_mappings: 393
+notes:
+  - "This is a static reverse-engineering baseline, not a runtime or production audit."
+  - "Run ./docs/knowledge-base/kb-search.sh --freshness before relying on current-state claims."

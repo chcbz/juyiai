@@ -1,0 +1,494 @@
+{
+  "checkedAt": "2026-10-18T11:31:33.578139+08:00",
+  "scope": "2026-10-18 code-level documentation, fetched develop; no production recheck or application tests",
+  "repositories": {
+    ".": {
+      "head": "aae93c074960580942112707e9518d831a0ff0af",
+      "tree": "91d9bb8a8e36fc269e93b19dee41aa1a2c129e43",
+      "remoteDevelop": "aae93c074960580942112707e9518d831a0ff0af",
+      "branch": "develop",
+      "dirty": true
+    },
+    "web": {
+      "head": "6fbdb6618b1132316a95db87cca9402de83138e8",
+      "tree": "212194b370ec40c2c8b1e4184ad09c5f01c1a3bb",
+      "remoteDevelop": "6fbdb6618b1132316a95db87cca9402de83138e8",
+      "branch": "develop",
+      "dirty": true
+    },
+    "api": {
+      "head": "b76a1d0aeda572767a6d4734d050121d985bd9c9",
+      "tree": "82b7ff2f49d23ec99af3a190ba1433b3704c1780",
+      "remoteDevelop": "b76a1d0aeda572767a6d4734d050121d985bd9c9",
+      "branch": "develop",
+      "dirty": false
+    }
+  },
+  "owner": "current thread",
+  "handoff": "docs/implementation/handoffs/REQUIREMENT-EXECUTION-20261016.md",
+  "interfaceStandard": {
+    "path": "api/docs/interface-standard.md",
+    "version": "1.2",
+    "sha256": "7dc50a51b5c3faa2d5311dd0f749ed2000365c34febc3c3714ba2a945180548f"
+  },
+  "sources": {
+    "api/agent/jia-agent-service/src/main/java/cn/jia/agent/api/AgentTaskCreationOperationController.java": {
+      "commit": "b76a1d0aeda572767a6d4734d050121d985bd9c9",
+      "sha256": "3387ee7457016d79222829574c13f2d7e455d02a5f4f5ea178fa0030b1a5cf1b",
+      "workingTreeSha256": "3387ee7457016d79222829574c13f2d7e455d02a5f4f5ea178fa0030b1a5cf1b",
+      "workingTreeMatchesCommit": true
+    },
+    "api/agent/jia-agent-api/src/main/java/cn/jia/agent/service/AgentTaskCreationOperationService.java": {
+      "commit": "b76a1d0aeda572767a6d4734d050121d985bd9c9",
+      "sha256": "9ce515909be6c246e86f78ae0f4c2cead551d3925db888bb8fa39084eb33b821",
+      "workingTreeSha256": "9ce515909be6c246e86f78ae0f4c2cead551d3925db888bb8fa39084eb33b821",
+      "workingTreeMatchesCommit": true
+    },
+    "api/agent/jia-agent-service/src/main/java/cn/jia/agent/service/impl/AgentTaskCreationOperationServiceImpl.java": {
+      "commit": "b76a1d0aeda572767a6d4734d050121d985bd9c9",
+      "sha256": "4667514524b48288b57ff8f5d608ab105067e7108018fda20b9181157f663762",
+      "workingTreeSha256": "4667514524b48288b57ff8f5d608ab105067e7108018fda20b9181157f663762",
+      "workingTreeMatchesCommit": true
+    },
+    "api/agent/jia-agent-api/src/main/java/cn/jia/agent/service/HallTaskCreationService.java": {
+      "commit": "b76a1d0aeda572767a6d4734d050121d985bd9c9",
+      "sha256": "2b4446291e3fff3aa3bef099d803518df89faf1f575fa1ef1e995fe6260f56b9",
+      "workingTreeSha256": "2b4446291e3fff3aa3bef099d803518df89faf1f575fa1ef1e995fe6260f56b9",
+      "workingTreeMatchesCommit": true
+    },
+    "api/agent/jia-agent-service/src/main/java/cn/jia/agent/service/impl/HallTaskCreationServiceImpl.java": {
+      "commit": "b76a1d0aeda572767a6d4734d050121d985bd9c9",
+      "sha256": "3e7218ff5f344c6f014d6015800f5e6e2cfb1943327275c4439e9e33362414d4",
+      "workingTreeSha256": "3e7218ff5f344c6f014d6015800f5e6e2cfb1943327275c4439e9e33362414d4",
+      "workingTreeMatchesCommit": true
+    },
+    "api/agent/jia-agent-service/src/main/java/cn/jia/agent/service/impl/HallRequestDraftServiceImpl.java": {
+      "commit": "b76a1d0aeda572767a6d4734d050121d985bd9c9",
+      "sha256": "fb364b26209a729522edab9e0bc0587697ea6360eddaa4d0e37a791b2ca63af0",
+      "workingTreeSha256": "fb364b26209a729522edab9e0bc0587697ea6360eddaa4d0e37a791b2ca63af0",
+      "workingTreeMatchesCommit": true
+    },
+    "api/agent/jia-agent-service/src/main/java/cn/jia/agent/api/AgentController.java": {
+      "commit": "b76a1d0aeda572767a6d4734d050121d985bd9c9",
+      "sha256": "29d3073165e2c9bfb69c76c33144d3c5e67b15a5637f8f203908dd4be76cfe06",
+      "workingTreeSha256": "29d3073165e2c9bfb69c76c33144d3c5e67b15a5637f8f203908dd4be76cfe06",
+      "workingTreeMatchesCommit": true
+    },
+    "api/agent/jia-agent-service/src/main/java/cn/jia/agent/service/impl/AgentServiceImpl.java": {
+      "commit": "b76a1d0aeda572767a6d4734d050121d985bd9c9",
+      "sha256": "e7201d0c68d3d1dc4b15d9026320e09128391fce68fd7b564559e68166396cd6",
+      "workingTreeSha256": "e7201d0c68d3d1dc4b15d9026320e09128391fce68fd7b564559e68166396cd6",
+      "workingTreeMatchesCommit": true
+    },
+    "api/agent/jia-agent-core/src/main/java/cn/jia/agent/entity/AgentTaskSearchDTO.java": {
+      "commit": "b76a1d0aeda572767a6d4734d050121d985bd9c9",
+      "sha256": "d1f4f564ee4e2d85704f42fdc0a6ad547f26aa6896d49f93a7eb07f60af9fbce",
+      "workingTreeSha256": "d1f4f564ee4e2d85704f42fdc0a6ad547f26aa6896d49f93a7eb07f60af9fbce",
+      "workingTreeMatchesCommit": true
+    },
+    "api/agent/jia-agent-mapper/src/main/java/cn/jia/agent/dao/AgentTaskMetaDao.java": {
+      "commit": "b76a1d0aeda572767a6d4734d050121d985bd9c9",
+      "sha256": "0f045770d977271bd9155b51886823ac3193dcefd6971e269ed2440b5e806ce4",
+      "workingTreeSha256": "0f045770d977271bd9155b51886823ac3193dcefd6971e269ed2440b5e806ce4",
+      "workingTreeMatchesCommit": true
+    },
+    "api/agent/jia-agent-mapper/src/main/java/cn/jia/agent/dao/impl/AgentTaskMetaDaoImpl.java": {
+      "commit": "b76a1d0aeda572767a6d4734d050121d985bd9c9",
+      "sha256": "1fc04945dcf120743ab20e46e464c309b168f772c222ae85a875381c285f71df",
+      "workingTreeSha256": "1fc04945dcf120743ab20e46e464c309b168f772c222ae85a875381c285f71df",
+      "workingTreeMatchesCommit": true
+    },
+    "api/agent/jia-agent-mapper/src/main/java/cn/jia/agent/mapper/AgentTaskMetaMapper.java": {
+      "commit": "b76a1d0aeda572767a6d4734d050121d985bd9c9",
+      "sha256": "943cf4820832aaede1a8887f56fbeb482ebac6aa6d0ff367a6e8817588d242f9",
+      "workingTreeSha256": "943cf4820832aaede1a8887f56fbeb482ebac6aa6d0ff367a6e8817588d242f9",
+      "workingTreeMatchesCommit": true
+    },
+    "api/agent/jia-agent-service/src/main/java/cn/jia/agent/api/AgentTaskFormalDeliveryController.java": {
+      "commit": "b76a1d0aeda572767a6d4734d050121d985bd9c9",
+      "sha256": "b6101d9f1d0868e469a5ca77e8cdda02c919ac45790125ad8e18d0c17f312642",
+      "workingTreeSha256": "b6101d9f1d0868e469a5ca77e8cdda02c919ac45790125ad8e18d0c17f312642",
+      "workingTreeMatchesCommit": true
+    },
+    "api/agent/jia-agent-service/src/main/java/cn/jia/agent/service/impl/AgentTaskFormalDeliveryDecisionServiceImpl.java": {
+      "commit": "b76a1d0aeda572767a6d4734d050121d985bd9c9",
+      "sha256": "f59d3c6c042465b78c8302c5d4693413e3fb845967606fc01633dbf8c66e0ce8",
+      "workingTreeSha256": "f59d3c6c042465b78c8302c5d4693413e3fb845967606fc01633dbf8c66e0ce8",
+      "workingTreeMatchesCommit": true
+    },
+    "api/agent/jia-agent-service/src/main/java/cn/jia/agent/service/impl/AgentTaskReworkExecutionServiceImpl.java": {
+      "commit": "b76a1d0aeda572767a6d4734d050121d985bd9c9",
+      "sha256": "3285533c1a60bb5a3b1a46ce66c5dd835c4e018101fb8e6005100fa1f84ebbca",
+      "workingTreeSha256": "3285533c1a60bb5a3b1a46ce66c5dd835c4e018101fb8e6005100fa1f84ebbca",
+      "workingTreeMatchesCommit": true
+    },
+    "api/agent/jia-agent-api/src/main/java/cn/jia/agent/service/AgentSelectedOutputFinalizationService.java": {
+      "commit": "b76a1d0aeda572767a6d4734d050121d985bd9c9",
+      "sha256": "985b74f1effef4f2a3d5e052c581912e3cea6e2856dce893cfad402cbb91321f",
+      "workingTreeSha256": "985b74f1effef4f2a3d5e052c581912e3cea6e2856dce893cfad402cbb91321f",
+      "workingTreeMatchesCommit": true
+    },
+    "api/agent/jia-agent-service/src/main/java/cn/jia/agent/service/impl/AgentSelectedOutputFinalizationServiceImpl.java": {
+      "commit": "b76a1d0aeda572767a6d4734d050121d985bd9c9",
+      "sha256": "0f2521b30916178d081d7783fb1cfa5b85526f33003db2b18f2f6dddde771af2",
+      "workingTreeSha256": "0f2521b30916178d081d7783fb1cfa5b85526f33003db2b18f2f6dddde771af2",
+      "workingTreeMatchesCommit": true
+    },
+    "api/chat/jia-chat-service/src/main/java/cn/jia/chat/service/ChatSelectedOutputFinalizationService.java": {
+      "commit": "b76a1d0aeda572767a6d4734d050121d985bd9c9",
+      "sha256": "83a1554522f375bbdf31bdcfb80fe9acde2b1f0de6edd58855510527acec71f6",
+      "workingTreeSha256": "83a1554522f375bbdf31bdcfb80fe9acde2b1f0de6edd58855510527acec71f6",
+      "workingTreeMatchesCommit": true
+    },
+    "api/chat/jia-chat-service/src/main/java/cn/jia/chat/service/ChatSelectedOutputFinalizationStore.java": {
+      "commit": "b76a1d0aeda572767a6d4734d050121d985bd9c9",
+      "sha256": "f9b5a43c83ab310ef21bdd7241ad64df67b78c0e467b276d7d642d304b106725",
+      "workingTreeSha256": "f9b5a43c83ab310ef21bdd7241ad64df67b78c0e467b276d7d642d304b106725",
+      "workingTreeMatchesCommit": true
+    },
+    "api/chat/jia-chat-service/src/main/java/cn/jia/chat/config/ChatSelectedOutputFinalizationSchemaInitializer.java": {
+      "commit": "b76a1d0aeda572767a6d4734d050121d985bd9c9",
+      "sha256": "c4ea451eed2ec021e10685c3aa342a6844ed243fa0d01be6bd193f3a141326bb",
+      "workingTreeSha256": "c4ea451eed2ec021e10685c3aa342a6844ed243fa0d01be6bd193f3a141326bb",
+      "workingTreeMatchesCommit": true
+    },
+    "api/chat/jia-chat-service/src/main/java/cn/jia/chat/api/AgentTaskSelectedOutputFinalizationController.java": {
+      "commit": "b76a1d0aeda572767a6d4734d050121d985bd9c9",
+      "sha256": "992d24ec01512d714b0f0c4bf7b76ae12273d06664faf9ea579e533db9ffeb3a",
+      "workingTreeSha256": "992d24ec01512d714b0f0c4bf7b76ae12273d06664faf9ea579e533db9ffeb3a",
+      "workingTreeMatchesCommit": true
+    },
+    "api/chat/jia-chat-service/src/main/java/cn/jia/chat/api/ChatFinalizationWire.java": {
+      "commit": "b76a1d0aeda572767a6d4734d050121d985bd9c9",
+      "sha256": "5627c727ecda941b7d8604296d9a33b15ca88492b97ee8d1cdd97f013f2d9f9b",
+      "workingTreeSha256": "5627c727ecda941b7d8604296d9a33b15ca88492b97ee8d1cdd97f013f2d9f9b",
+      "workingTreeMatchesCommit": true
+    },
+    "api/chat/jia-chat-service/src/main/java/cn/jia/chat/service/ChatActionFinalService.java": {
+      "commit": "b76a1d0aeda572767a6d4734d050121d985bd9c9",
+      "sha256": "986aef69b7f428f5c266965f86a77dc287d33a59c5c25dfc206090dcca1400e5",
+      "workingTreeSha256": "986aef69b7f428f5c266965f86a77dc287d33a59c5c25dfc206090dcca1400e5",
+      "workingTreeMatchesCommit": true
+    },
+    "api/chat/jia-chat-service/src/main/java/cn/jia/chat/service/ChatDeliberationOutboxRelay.java": {
+      "commit": "b76a1d0aeda572767a6d4734d050121d985bd9c9",
+      "sha256": "1fc4299a1da96e099059f29d5ecd3920f367dd97716a36452779c787a785729a",
+      "workingTreeSha256": "1fc4299a1da96e099059f29d5ecd3920f367dd97716a36452779c787a785729a",
+      "workingTreeMatchesCommit": true
+    },
+    "api/chat/jia-chat-service/src/main/java/cn/jia/chat/service/ChatDeliberationOutboxService.java": {
+      "commit": "b76a1d0aeda572767a6d4734d050121d985bd9c9",
+      "sha256": "4b19f0f4ae2956e530a94bbb66e941dd870f7417914dc408691ec718dce2dd44",
+      "workingTreeSha256": "4b19f0f4ae2956e530a94bbb66e941dd870f7417914dc408691ec718dce2dd44",
+      "workingTreeMatchesCommit": true
+    },
+    "api/chat/jia-chat-service/src/main/java/cn/jia/chat/service/ChatCompletedMessageSourceService.java": {
+      "commit": "b76a1d0aeda572767a6d4734d050121d985bd9c9",
+      "sha256": "45b579649f38b54d137776aa1e78dbb286a414d7fb0e845c4b017edf00658c4b",
+      "workingTreeSha256": "45b579649f38b54d137776aa1e78dbb286a414d7fb0e845c4b017edf00658c4b",
+      "workingTreeMatchesCommit": true
+    },
+    "api/chat/jia-chat-service/src/main/java/cn/jia/chat/service/ChatTypedDiscussionAdmissionService.java": {
+      "commit": "b76a1d0aeda572767a6d4734d050121d985bd9c9",
+      "sha256": "7d3bdd501add2ddf0ca8a3ec050b1eb26ab0837783a709919d37c40a7c58888c",
+      "workingTreeSha256": "7d3bdd501add2ddf0ca8a3ec050b1eb26ab0837783a709919d37c40a7c58888c",
+      "workingTreeMatchesCommit": true
+    },
+    "api/chat/jia-chat-service/src/main/java/cn/jia/chat/service/ChatTypedDeliberationContextService.java": {
+      "commit": "b76a1d0aeda572767a6d4734d050121d985bd9c9",
+      "sha256": "0bf13b8d17232169e8d66cb9e0021258d602818af43e204342ca664554529517",
+      "workingTreeSha256": "0bf13b8d17232169e8d66cb9e0021258d602818af43e204342ca664554529517",
+      "workingTreeMatchesCommit": true
+    },
+    "api/chat/jia-chat-service/src/main/java/cn/jia/chat/api/ChatTypedDeliberationWire.java": {
+      "commit": "b76a1d0aeda572767a6d4734d050121d985bd9c9",
+      "sha256": "6556bfb20c6d3edbb1c591cb9b6524859f58cf7f8de58e8364a76dceaa41b79f",
+      "workingTreeSha256": "6556bfb20c6d3edbb1c591cb9b6524859f58cf7f8de58e8364a76dceaa41b79f",
+      "workingTreeMatchesCommit": true
+    },
+    "api/agent/jia-agent-service/src/main/java/cn/jia/agent/service/impl/PersonalWorkspaceExecutionServiceImpl.java": {
+      "commit": "b76a1d0aeda572767a6d4734d050121d985bd9c9",
+      "sha256": "8ed3ceb590b5e21cb9c13f57840a985d8fa421fa3dedb615c0f7aa7e239268f4",
+      "workingTreeSha256": "8ed3ceb590b5e21cb9c13f57840a985d8fa421fa3dedb615c0f7aa7e239268f4",
+      "workingTreeMatchesCommit": true
+    },
+    "web/src/components/world/JuyiHall.vue": {
+      "commit": "6fbdb6618b1132316a95db87cca9402de83138e8",
+      "sha256": "3bb18273ea8d01122ef3c3d07fee22b5affbcc65b394dd0fd0b0cb27e9a905d5",
+      "workingTreeSha256": "3bb18273ea8d01122ef3c3d07fee22b5affbcc65b394dd0fd0b0cb27e9a905d5",
+      "workingTreeMatchesCommit": true
+    },
+    "web/src/components/juyiting/HallOverview.vue": {
+      "commit": "6fbdb6618b1132316a95db87cca9402de83138e8",
+      "sha256": "48306c10eb7609b495be49bbf2968d58a737141b91ffb4ca893bd0971433ae7d",
+      "workingTreeSha256": "48306c10eb7609b495be49bbf2968d58a737141b91ffb4ca893bd0971433ae7d",
+      "workingTreeMatchesCommit": true
+    },
+    "web/src/components/juyiting/BountyPanel.vue": {
+      "commit": "6fbdb6618b1132316a95db87cca9402de83138e8",
+      "sha256": "3271e4f6635bd2caa795b19c66fc485b58b3ef158dd3210eab6f0da1571736b2",
+      "workingTreeSha256": "3271e4f6635bd2caa795b19c66fc485b58b3ef158dd3210eab6f0da1571736b2",
+      "workingTreeMatchesCommit": true
+    },
+    "web/src/components/juyiting/AgentPanel.vue": {
+      "commit": "6fbdb6618b1132316a95db87cca9402de83138e8",
+      "sha256": "3aa85dc8a9f0c5f8e7a801eada06fce983953a254d62309ed5a569e2a2a52c26",
+      "workingTreeSha256": "3aa85dc8a9f0c5f8e7a801eada06fce983953a254d62309ed5a569e2a2a52c26",
+      "workingTreeMatchesCommit": true
+    },
+    "web/src/components/juyiting/ChatPanel.vue": {
+      "commit": "6fbdb6618b1132316a95db87cca9402de83138e8",
+      "sha256": "447313f2d54a2c1a0affaa3c31dd19a20e3fddc08064d20e1aa74bba2fc59d1f",
+      "workingTreeSha256": "447313f2d54a2c1a0affaa3c31dd19a20e3fddc08064d20e1aa74bba2fc59d1f",
+      "workingTreeMatchesCommit": true
+    },
+    "web/src/components/juyiting/HallDraftEditor.vue": {
+      "commit": "6fbdb6618b1132316a95db87cca9402de83138e8",
+      "sha256": "bcfcf7059b48895ff3ad512987e758bada389cc85cf3bf6f849eb202d637cd79",
+      "workingTreeSha256": "bcfcf7059b48895ff3ad512987e758bada389cc85cf3bf6f849eb202d637cd79",
+      "workingTreeMatchesCommit": true
+    },
+    "web/src/components/juyiting/HallMaterialPicker.vue": {
+      "commit": "6fbdb6618b1132316a95db87cca9402de83138e8",
+      "sha256": "5abf3174f33bdfe0b2ad78e29904ae4a598e11e18ad6b588e505249cde01a8fa",
+      "workingTreeSha256": "5abf3174f33bdfe0b2ad78e29904ae4a598e11e18ad6b588e505249cde01a8fa",
+      "workingTreeMatchesCommit": true
+    },
+    "web/src/components/juyiting/HallChatComposer.vue": {
+      "commit": "6fbdb6618b1132316a95db87cca9402de83138e8",
+      "sha256": "03c68977647578b6c90bcdc0d3e3f5f071a6b823389cf0b53586116e4b79bd50",
+      "workingTreeSha256": "03c68977647578b6c90bcdc0d3e3f5f071a6b823389cf0b53586116e4b79bd50",
+      "workingTreeMatchesCommit": true
+    },
+    "web/src/components/juyiting/HallVoiceControls.vue": {
+      "commit": "6fbdb6618b1132316a95db87cca9402de83138e8",
+      "sha256": "df36529759a255225e1f8260b7fa18fe97776a6f2b8f6aa704ab42e649043f80",
+      "workingTreeSha256": "df36529759a255225e1f8260b7fa18fe97776a6f2b8f6aa704ab42e649043f80",
+      "workingTreeMatchesCommit": true
+    },
+    "web/src/components/juyiting/HallConversationHistory.vue": {
+      "commit": "6fbdb6618b1132316a95db87cca9402de83138e8",
+      "sha256": "f2225b8be208ae44c39f7302e3a5c081af8f8d1c03b31aeace465fa9cbe9fbfe",
+      "workingTreeSha256": "f2225b8be208ae44c39f7302e3a5c081af8f8d1c03b31aeace465fa9cbe9fbfe",
+      "workingTreeMatchesCommit": true
+    },
+    "web/src/components/juyiting/HallMessageMedia.vue": {
+      "commit": "6fbdb6618b1132316a95db87cca9402de83138e8",
+      "sha256": "d9e972a712eab03ef3d3174efa0e24c234cd6001fa43c2b6b2d52f357cb2a2b3",
+      "workingTreeSha256": "d9e972a712eab03ef3d3174efa0e24c234cd6001fa43c2b6b2d52f357cb2a2b3",
+      "workingTreeMatchesCommit": true
+    },
+    "web/src/components/juyiting/BountyExecutionOutputs.vue": {
+      "commit": "6fbdb6618b1132316a95db87cca9402de83138e8",
+      "sha256": "2844982e83e2e4ff586775708c9d6e11113142d1b8882bfa0a36d404cd2fb322",
+      "workingTreeSha256": "2844982e83e2e4ff586775708c9d6e11113142d1b8882bfa0a36d404cd2fb322",
+      "workingTreeMatchesCommit": true
+    },
+    "web/src/components/juyiting/BountyDiscussionPanel.vue": {
+      "commit": "6fbdb6618b1132316a95db87cca9402de83138e8",
+      "sha256": "e17e83916afc9daf4383b1bcab7dd76776281489899bdee36230aa18a9ef331e",
+      "workingTreeSha256": "e17e83916afc9daf4383b1bcab7dd76776281489899bdee36230aa18a9ef331e",
+      "workingTreeMatchesCommit": true
+    },
+    "web/src/components/juyiting/BountyAcceptancePanel.vue": {
+      "commit": "6fbdb6618b1132316a95db87cca9402de83138e8",
+      "sha256": "3032c0de5e4d1155dc3b5352d31cd5393da9c19ea87ea57432adde190bc06c5d",
+      "workingTreeSha256": "3032c0de5e4d1155dc3b5352d31cd5393da9c19ea87ea57432adde190bc06c5d",
+      "workingTreeMatchesCommit": true
+    },
+    "web/src/components/juyiting/discussionPanelContract.js": {
+      "commit": "6fbdb6618b1132316a95db87cca9402de83138e8",
+      "sha256": "9751142efccc1365dd9a77922d51771b21a3f2f6a260dc8cde9be772d53c3479",
+      "workingTreeSha256": "9751142efccc1365dd9a77922d51771b21a3f2f6a260dc8cde9be772d53c3479",
+      "workingTreeMatchesCommit": true
+    },
+    "web/src/components/deliveries/FormalDeliveryList.vue": {
+      "commit": "6fbdb6618b1132316a95db87cca9402de83138e8",
+      "sha256": "a5255b9e099104a5849b83fc519401734917934edf807c0415fa26027e6a3c2b",
+      "workingTreeSha256": "a5255b9e099104a5849b83fc519401734917934edf807c0415fa26027e6a3c2b",
+      "workingTreeMatchesCommit": true
+    },
+    "web/src/components/workspace/PersonalWorkspace.vue": {
+      "commit": "6fbdb6618b1132316a95db87cca9402de83138e8",
+      "sha256": "e8df80d67859ee91342d7f29eab1b6c5f7f98beadc4cf5b790037be437addd85",
+      "workingTreeSha256": "e8df80d67859ee91342d7f29eab1b6c5f7f98beadc4cf5b790037be437addd85",
+      "workingTreeMatchesCommit": true
+    },
+    "web/src/components/juyiting/LibraryPanel.vue": {
+      "commit": "6fbdb6618b1132316a95db87cca9402de83138e8",
+      "sha256": "7b93bee2819903d794836222b1c6b9878bdc9b594571520d9d84638037402070",
+      "workingTreeSha256": "7b93bee2819903d794836222b1c6b9878bdc9b594571520d9d84638037402070",
+      "workingTreeMatchesCommit": true
+    },
+    "web/src/components/juyiting/PersonaCatalogPanel.vue": {
+      "commit": "6fbdb6618b1132316a95db87cca9402de83138e8",
+      "sha256": "3c8a0cb4cae651a483cef7b5147c92da916e9e88f9183bf77cf8066d406889aa",
+      "workingTreeSha256": "3c8a0cb4cae651a483cef7b5147c92da916e9e88f9183bf77cf8066d406889aa",
+      "workingTreeMatchesCommit": true
+    },
+    "web/src/components/juyiting/HallOnboarding.vue": {
+      "commit": "6fbdb6618b1132316a95db87cca9402de83138e8",
+      "sha256": "5fa89fb63a8cfac7be03e51e404718a0b7cf5cfc7e64dd0512b9696534f7d045",
+      "workingTreeSha256": "5fa89fb63a8cfac7be03e51e404718a0b7cf5cfc7e64dd0512b9696534f7d045",
+      "workingTreeMatchesCommit": true
+    },
+    "web/src/components/juyiting/archive/ArchiveReader.vue": {
+      "commit": "6fbdb6618b1132316a95db87cca9402de83138e8",
+      "sha256": "2ff5da6b308537c7957e8818b44965d3fa2e516cc51878690eb44dec81decfb7",
+      "workingTreeSha256": "2ff5da6b308537c7957e8818b44965d3fa2e516cc51878690eb44dec81decfb7",
+      "workingTreeMatchesCommit": true
+    },
+    "web/src/composables/juyiting/useHallRequirementCreate.js": {
+      "commit": "6fbdb6618b1132316a95db87cca9402de83138e8",
+      "sha256": "20b494beecb1b70a77316c455aaa4942a97b0e325c77b141d50fdac9ed527325",
+      "workingTreeSha256": "20b494beecb1b70a77316c455aaa4942a97b0e325c77b141d50fdac9ed527325",
+      "workingTreeMatchesCommit": true
+    },
+    "web/src/composables/juyiting/hallRequirementCreateIntent.js": {
+      "commit": "6fbdb6618b1132316a95db87cca9402de83138e8",
+      "sha256": "13d4379584e30c862364b210f55897e3375c9bdd98b7278afc52d9e6f95cf39a",
+      "workingTreeSha256": "13d4379584e30c862364b210f55897e3375c9bdd98b7278afc52d9e6f95cf39a",
+      "workingTreeMatchesCommit": true
+    },
+    "web/src/composables/juyiting/useHallPointAndStart.js": {
+      "commit": "6fbdb6618b1132316a95db87cca9402de83138e8",
+      "sha256": "b46bf1550b7b94d938111eb11a22bccbcfcb5571932aa92c6b140b0cb23894d0",
+      "workingTreeSha256": "b46bf1550b7b94d938111eb11a22bccbcfcb5571932aa92c6b140b0cb23894d0",
+      "workingTreeMatchesCommit": true
+    },
+    "web/src/composables/juyiting/useHallDrafts.js": {
+      "commit": "6fbdb6618b1132316a95db87cca9402de83138e8",
+      "sha256": "d08479c2cc6383d913d42b0bb134407b21b747fd8d6b51ffc6328a8b7f755baa",
+      "workingTreeSha256": "d08479c2cc6383d913d42b0bb134407b21b747fd8d6b51ffc6328a8b7f755baa",
+      "workingTreeMatchesCommit": true
+    },
+    "web/src/composables/juyiting/useHallData.js": {
+      "commit": "6fbdb6618b1132316a95db87cca9402de83138e8",
+      "sha256": "f950587dbb735c0ab55b6adfce808942e86d90b55a8283648c5300fc1f936d45",
+      "workingTreeSha256": "f950587dbb735c0ab55b6adfce808942e86d90b55a8283648c5300fc1f936d45",
+      "workingTreeMatchesCommit": true
+    },
+    "web/src/composables/juyiting/useHallTypedDeliberation.js": {
+      "commit": "6fbdb6618b1132316a95db87cca9402de83138e8",
+      "sha256": "f14af28347a641fecc9f05adf4736f2bb464342604c6fb6d5c5afd5cd300ba46",
+      "workingTreeSha256": "f14af28347a641fecc9f05adf4736f2bb464342604c6fb6d5c5afd5cd300ba46",
+      "workingTreeMatchesCommit": true
+    },
+    "web/src/composables/juyiting/useHallBountyFinalization.js": {
+      "commit": "6fbdb6618b1132316a95db87cca9402de83138e8",
+      "sha256": "f01cfa0b3b71cf098793d64fc4afed9fd2ded88c85f4bf3b8514cfc6ad851fc9",
+      "workingTreeSha256": "f01cfa0b3b71cf098793d64fc4afed9fd2ded88c85f4bf3b8514cfc6ad851fc9",
+      "workingTreeMatchesCommit": true
+    },
+    "web/src/composables/juyiting/useHallBountyAcceptance.js": {
+      "commit": "6fbdb6618b1132316a95db87cca9402de83138e8",
+      "sha256": "97835261adf89403b659c6b44ad74ec035d7e1cb3e379df2334162b505865668",
+      "workingTreeSha256": "97835261adf89403b659c6b44ad74ec035d7e1cb3e379df2334162b505865668",
+      "workingTreeMatchesCommit": true
+    },
+    "web/src/composables/juyiting/bountyOutputCatalog.js": {
+      "commit": "6fbdb6618b1132316a95db87cca9402de83138e8",
+      "sha256": "3a2b5745fc48d41e2b2b0d50d82e6b3b6ad68344b3b7f5e8bf7e6417071e09a5",
+      "workingTreeSha256": "3a2b5745fc48d41e2b2b0d50d82e6b3b6ad68344b3b7f5e8bf7e6417071e09a5",
+      "workingTreeMatchesCommit": true
+    },
+    "web/src/composables/useFormalDeliveries.js": {
+      "commit": "6fbdb6618b1132316a95db87cca9402de83138e8",
+      "sha256": "679615957a81c83fa983b71052728bb39ef80e3dca670b2d15a7f8e36a6b8607",
+      "workingTreeSha256": "679615957a81c83fa983b71052728bb39ef80e3dca670b2d15a7f8e36a6b8607",
+      "workingTreeMatchesCommit": true
+    },
+    "web/src/composables/useHttp.js": {
+      "commit": "6fbdb6618b1132316a95db87cca9402de83138e8",
+      "sha256": "4848d32b4518bd13e7235cb6ac2c870efc5f37af89e5adccdf9b28eec0002b84",
+      "workingTreeSha256": "4848d32b4518bd13e7235cb6ac2c870efc5f37af89e5adccdf9b28eec0002b84",
+      "workingTreeMatchesCommit": true
+    },
+    "web/src/constants/juyiting.js": {
+      "commit": "6fbdb6618b1132316a95db87cca9402de83138e8",
+      "sha256": "0a6ceec60a36024f2d409c8743dc79fd7ac2cc7b1aae0efd6d37b4c4afd3edc1",
+      "workingTreeSha256": "0a6ceec60a36024f2d409c8743dc79fd7ac2cc7b1aae0efd6d37b4c4afd3edc1",
+      "workingTreeMatchesCommit": true
+    },
+    "web/src/styles/theme.less": {
+      "commit": "6fbdb6618b1132316a95db87cca9402de83138e8",
+      "sha256": "a66b2dc500df6264556d55f73bfa145c9861591fc474f581b3d7017fff02ddb5",
+      "workingTreeSha256": "a66b2dc500df6264556d55f73bfa145c9861591fc474f581b3d7017fff02ddb5",
+      "workingTreeMatchesCommit": true
+    },
+    "web/package.json": {
+      "commit": "6fbdb6618b1132316a95db87cca9402de83138e8",
+      "sha256": "8549e5450518cc6347e9577debcd12ab59425c6da7b58603d628cbeeaef1234d",
+      "workingTreeSha256": "8549e5450518cc6347e9577debcd12ab59425c6da7b58603d628cbeeaef1234d",
+      "workingTreeMatchesCommit": true
+    },
+    "web/.mocharc.json": {
+      "commit": "6fbdb6618b1132316a95db87cca9402de83138e8",
+      "sha256": "9eecc4eaa412eea14a040bcb5fe739f2715e6d072d29c04bfa558b33b116a466",
+      "workingTreeSha256": "9eecc4eaa412eea14a040bcb5fe739f2715e6d072d29c04bfa558b33b116a466",
+      "workingTreeMatchesCommit": true
+    },
+    "api/build.gradle": {
+      "commit": "b76a1d0aeda572767a6d4734d050121d985bd9c9",
+      "sha256": "9c0137edebf4e38d2c032818c77f8e6e1bcdf396d3dda196effd8b16db9a6c1a",
+      "workingTreeSha256": "9c0137edebf4e38d2c032818c77f8e6e1bcdf396d3dda196effd8b16db9a6c1a",
+      "workingTreeMatchesCommit": true
+    },
+    "api/settings.gradle": {
+      "commit": "b76a1d0aeda572767a6d4734d050121d985bd9c9",
+      "sha256": "5da920eb4f3c4fb8215b5f4bf0a9680390205cde8da0011eb13313395abee1bd",
+      "workingTreeSha256": "5da920eb4f3c4fb8215b5f4bf0a9680390205cde8da0011eb13313395abee1bd",
+      "workingTreeMatchesCommit": true
+    },
+    "api/chat/jia-chat-service/build.gradle": {
+      "commit": "b76a1d0aeda572767a6d4734d050121d985bd9c9",
+      "sha256": "4656f1f84c30c59e3e926e60583574a37eb3cd6fde1fa2c5302162fb99066552",
+      "workingTreeSha256": "4656f1f84c30c59e3e926e60583574a37eb3cd6fde1fa2c5302162fb99066552",
+      "workingTreeMatchesCommit": true
+    },
+    "api/agent/jia-agent-service/build.gradle": {
+      "commit": "b76a1d0aeda572767a6d4734d050121d985bd9c9",
+      "sha256": "1ab628bfcb06718bced3976303fb901c9900527b1eb5e5e112dbb351404c7f28",
+      "workingTreeSha256": "1ab628bfcb06718bced3976303fb901c9900527b1eb5e5e112dbb351404c7f28",
+      "workingTreeMatchesCommit": true
+    },
+    "api/chat/jia-chat-mapper/src/main/resources/db/chat-selected-output-finalization-v1.sql": {
+      "commit": "b76a1d0aeda572767a6d4734d050121d985bd9c9",
+      "sha256": "80454a13fba732011ab8160882bd9824034d2d8633977f56f6ad9c8aa45166fa",
+      "workingTreeSha256": "80454a13fba732011ab8160882bd9824034d2d8633977f56f6ad9c8aa45166fa",
+      "workingTreeMatchesCommit": true
+    },
+    "api/chat/jia-chat-mapper/src/main/resources/db/chat-deliberation-schema.sql": {
+      "commit": "b76a1d0aeda572767a6d4734d050121d985bd9c9",
+      "sha256": "ff5f6b22ab5fc0e97afb3a39d9834124abc923b010e444a8228181c44d10bb3c",
+      "workingTreeSha256": "ff5f6b22ab5fc0e97afb3a39d9834124abc923b010e444a8228181c44d10bb3c",
+      "workingTreeMatchesCommit": true
+    },
+    "api/agent/jia-agent-api/src/main/java/cn/jia/agent/service/SelectedOutputFinalizationDigest.java": {
+      "commit": "b76a1d0aeda572767a6d4734d050121d985bd9c9",
+      "sha256": "bc0b10526d119de62ee5a188e1067c754cc80712c2ddb9dbc2309646ef2ec913",
+      "workingTreeSha256": "bc0b10526d119de62ee5a188e1067c754cc80712c2ddb9dbc2309646ef2ec913",
+      "workingTreeMatchesCommit": true
+    },
+    "api/agent/jia-agent-core/src/main/java/cn/jia/agent/entity/AgentTaskFormalDeliveryDecisionDTO.java": {
+      "commit": "b76a1d0aeda572767a6d4734d050121d985bd9c9",
+      "sha256": "40693c3cff49b3c4f3f27672527e5461d286a9292773355bf7416c165a588d6b",
+      "workingTreeSha256": "40693c3cff49b3c4f3f27672527e5461d286a9292773355bf7416c165a588d6b",
+      "workingTreeMatchesCommit": true
+    },
+    "api/agent/jia-agent-mapper/src/main/resources/db/agent-selected-output-finalization-v1.sql": {
+      "commit": "b76a1d0aeda572767a6d4734d050121d985bd9c9",
+      "sha256": "4e1ab0212364e339289973dfc3f44b02e1d217740a2c923621dc206018dd8c4e",
+      "workingTreeSha256": "4e1ab0212364e339289973dfc3f44b02e1d217740a2c923621dc206018dd8c4e",
+      "workingTreeMatchesCommit": true
+    },
+    "api/agent/jia-agent-service/src/main/java/cn/jia/agent/config/AgentSelectedOutputFinalizationSchemaInitializer.java": {
+      "commit": "b76a1d0aeda572767a6d4734d050121d985bd9c9",
+      "sha256": "4a3183fc07ab0840985f15127825d224262a099f0445b9a3e3b83358acfc36a2",
+      "workingTreeSha256": "4a3183fc07ab0840985f15127825d224262a099f0445b9a3e3b83358acfc36a2",
+      "workingTreeMatchesCommit": true
+    }
+  },
+  "sourceAuditScope": "Targeted code inventory and method reading; not application test, not full repository audit",
+  "sourceFileCount": 76
+}

@@ -1,0 +1,253 @@
+#!/usr/bin/python3
+"""Derive a one-use exact approval from the same Flow run artifact, then exec the audited installer."""
+import fcntl
+import hashlib
+import json
+import os
+import re
+import stat
+import sys
+import tarfile
+import tempfile
+from datetime import datetime, timezone
+from pathlib import Path
+
+ROOT = Path('/home/isp/state/cyf-api-flow')
+PACKAGE = ROOT / 'incoming/package.tgz'
+APPROVAL = ROOT / 'approval.json'
+BACKUPS = ROOT / 'backups'
+INSTALLER = '/usr/local/sbin/cyf-api-flow-install'
+INSTALLER_SIZE = 47995
+INSTALLER_SHA256 = 'ecd726baf84c029153633f790757b69fc9d17b438381976efe962ef6fa553f13'
+SELF_SIZE = 10909
+LIFECYCLE = Path('/usr/local/sbin/cyf-api-kit')
+LIFECYCLE_SIZE = 37060
+LIFECYCLE_SHA256 = '63a7ba180603d021666af77e9535b93bdbdcedf0ce799d0b5e09e7718e8d0bcd'
+ATTESTER = Path('/usr/local/sbin/cyf-api-flow-write-attestation')
+ATTESTER_SIZE = 4686
+ATTESTER_SHA256 = '31d9da4f6b61a8374ae65b42d6c1c4fe1ea01eac2db7387eb2e3c279f1688d98'
+LOCK = '/tmp/cyf-api-flow-auto-approval.lock'
+EXPECTED_ORG = '5fb7d76ee6f9d07f148529c7'
+EXPECTED_PIPELINE = '5260799'
+EXPECTED_JOB = 'cloud_ci.api_ci'
+LEGACY_EXPECTED_TICKET_FILE = ROOT / 'legacy-expected-ticket.sha256'
+EXPECTED_MEMBERS = {
+    'application.jar', 'application.metadata.json', 'application.sidecar.json',
+    'dependency.provenance.json', 'receipt.json',
+}
+SHA256 = re.compile(r'^[0-9a-f]{64}$')
+GIT_SHA = re.compile(r'^[0-9a-f]{40,64}$')
+RUN_ID = re.compile(r'^[1-9][0-9]*$')
+
+
+def fail(message):
+    raise SystemExit('cyf-api-flow-auto-approve: ' + message)
+
+
+def digest_fileobj(handle):
+    h = hashlib.sha256()
+    for chunk in iter(lambda: handle.read(1024 * 1024), b''):
+        h.update(chunk)
+    return h.hexdigest()
+
+
+def exact_dict(value, keys, label):
+    if not isinstance(value, dict) or set(value) != set(keys):
+        fail(label + ' schema is invalid')
+
+
+def fsync_dir(path):
+    fd = os.open(path, os.O_RDONLY | os.O_DIRECTORY)
+    try:
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+
+
+def atomic_write(path, data, mode=0o600):
+    fd, tmp = tempfile.mkstemp(prefix='.' + path.name + '.', dir=path.parent)
+    try:
+        os.fchmod(fd, mode)
+        os.write(fd, data)
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+    try:
+        os.replace(tmp, path)
+        fsync_dir(path.parent)
+    except BaseException:
+        try:
+            os.unlink(tmp)
+        except FileNotFoundError:
+            pass
+        raise
+
+
+def safe_regular(path, uid=0, mode=None):
+    try:
+        s = path.lstat()
+    except FileNotFoundError:
+        fail(str(path) + ' is missing')
+    if not stat.S_ISREG(s.st_mode) or s.st_uid != uid or s.st_nlink != 1:
+        fail(str(path) + ' is not a root-owned single-link regular file')
+    if mode is not None and stat.S_IMODE(s.st_mode) != mode:
+        fail(str(path) + ' mode is unsafe')
+    return s
+
+
+def main():
+    if os.geteuid() != 0:
+        fail('must run as root')
+    if len(sys.argv) not in (4, 5, 6):
+        fail('expected pipeline id, run number, source commit, optional expected ticket SHA, and optional own SHA')
+    pipeline_id, run_id, source_commit = sys.argv[1:4]
+    if len(sys.argv) >= 5:
+        expected_ticket = sys.argv[4]
+    else:
+        safe_regular(LEGACY_EXPECTED_TICKET_FILE, mode=0o600)
+        expected_ticket = LEGACY_EXPECTED_TICKET_FILE.read_text(encoding='ascii').strip()
+    if not SHA256.fullmatch(expected_ticket):
+        fail('expected ticket SHA is invalid')
+    if pipeline_id != EXPECTED_PIPELINE or not RUN_ID.fullmatch(run_id):
+        fail('Flow execution identity mismatch')
+    if not GIT_SHA.fullmatch(source_commit):
+        fail('Flow source commit is invalid')
+    self_path = Path(__file__).resolve()
+    self_stat = safe_regular(self_path, mode=0o755)
+    if self_stat.st_gid != 0 or self_stat.st_size != SELF_SIZE:
+        fail('helper metadata changed')
+    if len(sys.argv) == 6:
+        expected_self_sha = sys.argv[5]
+        if not SHA256.fullmatch(expected_self_sha):
+            fail('expected helper SHA is invalid')
+        with self_path.open('rb') as self_handle:
+            if digest_fileobj(self_handle) != expected_self_sha:
+                fail('helper own digest changed')
+        lifecycle_stat = safe_regular(LIFECYCLE, mode=0o755)
+        if lifecycle_stat.st_gid != 0 or lifecycle_stat.st_size != LIFECYCLE_SIZE:
+            fail('lifecycle metadata changed')
+        with LIFECYCLE.open('rb') as lifecycle_handle:
+            if digest_fileobj(lifecycle_handle) != LIFECYCLE_SHA256:
+                fail('lifecycle digest changed')
+        attester_stat = safe_regular(ATTESTER, mode=0o755)
+        if attester_stat.st_gid != 0 or attester_stat.st_size != ATTESTER_SIZE:
+            fail('attester metadata changed')
+        with ATTESTER.open('rb') as attester_handle:
+            if digest_fileobj(attester_handle) != ATTESTER_SHA256:
+                fail('attester digest changed')
+    installer_path = Path(INSTALLER)
+    installer_stat = safe_regular(installer_path, mode=0o755)
+    if installer_stat.st_gid != 0 or installer_stat.st_size != INSTALLER_SIZE:
+        fail('installer size changed')
+    with installer_path.open('rb') as installer_handle:
+        if digest_fileobj(installer_handle) != INSTALLER_SHA256:
+            fail('installer digest changed')
+    ps = safe_regular(PACKAGE)
+    if ps.st_size <= 0 or ps.st_size > 2 * 1024 * 1024 * 1024:
+        fail('incoming package size is invalid')
+    if PACKAGE.parent.lstat().st_uid != 0 or stat.S_IMODE(PACKAGE.parent.lstat().st_mode) != 0o700:
+        fail('incoming directory is unsafe')
+    BACKUPS.mkdir(mode=0o700, parents=True, exist_ok=True)
+    if BACKUPS.is_symlink() or BACKUPS.lstat().st_uid != 0 or stat.S_IMODE(BACKUPS.lstat().st_mode) != 0o700:
+        fail('backup directory is unsafe')
+
+    lock_fd = os.open(LOCK, os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600)
+    os.fchmod(lock_fd, 0o600)
+    try:
+        fcntl.flock(lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        fail('another automatic approval is active')
+
+    with tarfile.open(PACKAGE, mode='r:*') as archive:
+        members = archive.getmembers()
+        member_map = {}
+        for member in members:
+            raw = member.name
+            if raw.startswith('/') or '..' in Path(raw).parts:
+                fail('release package contains an unsafe path')
+            normalized = raw[2:] if raw.startswith('./') else raw
+            if normalized in ('', '.'):
+                if not member.isdir():
+                    fail('release package root entry is unsafe')
+                continue
+            if not member.isfile() or '/' in normalized or normalized in member_map:
+                fail('release package contains an unsafe member')
+            member_map[normalized] = member
+        if set(member_map) != EXPECTED_MEMBERS:
+            fail('release package member set is invalid')
+        if member_map['receipt.json'].size > 1024 * 1024:
+            fail('receipt exceeds size limit')
+        receipt_handle = archive.extractfile(member_map['receipt.json'])
+        if receipt_handle is None:
+            fail('receipt is unavailable')
+        receipt_bytes = receipt_handle.read()
+        try:
+            receipt = json.loads(receipt_bytes.decode('utf-8'))
+        except Exception:
+            fail('receipt JSON is invalid')
+        if not isinstance(receipt, dict):
+            fail('receipt shape is invalid')
+        flow, source, records = receipt.get('flow'), receipt.get('source'), receipt.get('files')
+        if not isinstance(flow, dict) or not isinstance(source, dict) or not isinstance(records, list):
+            fail('receipt release identity is invalid')
+        if (receipt.get('status') != 'success' or receipt.get('gradle_exit_code') != 0
+                or receipt.get('bridge_exit_code') != 0 or receipt.get('ticket_sha256') != expected_ticket):
+            fail('receipt quality gate failed')
+        if (flow.get('organization_id') != EXPECTED_ORG or flow.get('pipeline_id') != EXPECTED_PIPELINE
+                or flow.get('run_id') != run_id or flow.get('job_id') != EXPECTED_JOB):
+            fail('receipt Flow identity mismatch')
+        if (source.get('commit_sha') != source_commit or flow.get('source_tip_sha') != source_commit
+                or not GIT_SHA.fullmatch(str(source.get('tree_sha', '')))):
+            fail('receipt source identity mismatch')
+        by_kind = {}
+        for record in records:
+            if isinstance(record, dict) and record.get('kind') in ('application_jar', 'dependency_provenance'):
+                kind = record['kind']
+                if kind in by_kind:
+                    fail('duplicate release file record')
+                by_kind[kind] = record
+        if set(by_kind) != {'application_jar', 'dependency_provenance'}:
+            fail('release file records are incomplete')
+        jar_record = by_kind['application_jar']
+        if (not isinstance(jar_record.get('path'), str) or not jar_record['path']
+                or Path(jar_record['path']).is_absolute() or '..' in Path(jar_record['path']).parts
+                or not SHA256.fullmatch(str(jar_record.get('sha256', '')))
+                or jar_record.get('size') != member_map['application.jar'].size):
+            fail('application JAR record is invalid')
+        jar_handle = archive.extractfile(member_map['application.jar'])
+        if jar_handle is None or digest_fileobj(jar_handle) != jar_record['sha256']:
+            fail('application JAR digest mismatch')
+
+    approval = {
+        'schema_version': 2,
+        'ticket_sha256': expected_ticket,
+        'source_commit_sha': source['commit_sha'],
+        'source_tree_sha': source['tree_sha'],
+        'run_id': run_id,
+        'receipt_sha256': hashlib.sha256(receipt_bytes).hexdigest(),
+        'jar_sha256': jar_record['sha256'],
+        'consumed': False,
+    }
+    if APPROVAL.exists() or APPROVAL.is_symlink():
+        safe_regular(APPROVAL, mode=0o600)
+        stamp = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S.%fZ')
+        backup = BACKUPS / ('approval-before-auto-run-' + run_id + '-' + stamp + '.json')
+        fd = os.open(backup, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+        try:
+            with APPROVAL.open('rb') as src:
+                old = src.read()
+            os.write(fd, old)
+            os.fsync(fd)
+        finally:
+            os.close(fd)
+        fsync_dir(BACKUPS)
+    data = (json.dumps(approval, sort_keys=True, separators=(',', ':')) + '\n').encode('utf-8')
+    atomic_write(APPROVAL, data)
+    print(json.dumps({'auto_approval': 'prepared', 'pipeline': pipeline_id, 'run': run_id,
+                      'source_commit': source_commit, 'jar_sha256': approval['jar_sha256'],
+                      'receipt_sha256': approval['receipt_sha256']}, sort_keys=True), flush=True)
+    os.execv(INSTALLER, [INSTALLER])
+
+
+if __name__ == '__main__':
+    main()

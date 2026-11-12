@@ -1,0 +1,116 @@
+# Agent 银两悬赏结算与技能市场 tasks
+
+<!-- CYF-CURRENT-CONTRACT-20261107 -->
+## 当前实施与收口方式（2026-11-07）
+
+**本专题：内测文钱包与人民币成本账。**
+**文档与交付状态（2026-11-08）：** 内测固定报价资金闭环已上线并完成真实浏览器/SQL验收：3500文赠送幂等、推荐报价、承办预占、验收扣款及取消释放。API1.1.42/a1aefc9；证据与精确范围见[专项细则](beta-wen-billing.md)及BETA-WEN-BILLING-20261105 handoff接续56。原生执行usage仍PENDING、MEDIA收费工具未启用，不宣称Provider成本核销全部完成。
+
+**实施目标：** 推荐产生工作量与候选报价→显式确认并原子预占→正常执行/修改→验收扣固定预占或取消全额释放；成本回执独立补齐。
+**责任落点：** economy负责报价/预占/扣款/释放；事项模块提供确认/验收/取消事实；usage成本账独立核算。
+
+按当前获授权的变更范围执行，不自动重开后文历史未勾选任务或旧版本排程：
+
+1. 核对当前合同及实际责任层调用链：同范围以beta-wen-billing.md为准：整数文、人民币6位小数、无充值提现分账；不为报价增加一次模型调用，不逐token记账，不按旧SILVER合同继续开发。生产资金迁移另按已授权Owner计划执行。
+2. 复用现有任务/工作区和验证入口实现最小差异；被替代临时路径与对应过时测试同批收口，不新增Reviewer/审批/独立台账。
+3. 运行实际受影响回归：金额舍入、活动幂等、确认与预占原子性、验收/取消竞争、迟到usage、缺价仅阻断该候选；免费存量必须有明确切换标识。
+4. 记录精确源码/测试/未覆盖项；获部署授权才按当前本地来源工具发布，健康与业务验收分开。未获得新范围授权不重放历史任务、迁移或收费调用。
+
+共用规则：[统一开发约束](../architecture-convergence/development-principles.md)。原任务ID、失败样本、未覆盖需求与历史证据保留；未核实的旧待办先对照后续交付，不直接重做。
+
+**入口：** [需求](spec.md) · [设计](design.md) · [实施](tasks.md) · [验收](acceptance.md) · [当前专项细则](beta-wen-billing.md)
+
+**下文适用方式：** 业务细则中未被本节或后续明确合同替代的条款继续有效；原日期的状态、版本、日程、Owner安排、测试/发布记录仅作历史，不授予今天的执行权限。冲突按本节指定的继任合同和根AGENTS处理，不按文件名的新旧或旧任务勾选状态猜测。
+<!-- /CYF-CURRENT-CONTRACT-20261107 -->
+
+## 原有材料的适用范围
+
+旧SILVER经济方案及其范围，冻结历史合同仍供取证；新内测同范围只实施beta-wen-billing，不并存两套资金语义。 后文所有旧“当前/最新/待实施”仅指其原时间，不是2026-11-07状态。
+
+
+
+> 当前为设计拆分，尚未 claim Owner。身份、ACL、账本、托管、结算和迁移任务均按 P0 路由；DeepSeek 路由保持禁用。
+
+## API (`api/`)
+
+### A. Economy 银两账本基础（Owner: `critical_worker`）
+
+- [ ] A01 新增 `api/economy/` 多模块并建立 account、ledger transaction/entry、单 escrow root + immutable funding lot、idempotency、stream head/outbox schema 与 initializer/catalog parity 测试。
+- [ ] A02 实现唯一资金写入口和冻结 journal 模板：受 treasury authority/双人审批/限额/幂等约束的 ISSUE_SILVER，以及 RESERVE_BOUNTY、CAPTURE_COMPUTE、PAY_AGENT、CAPTURE_FEE、REFUND_BOUNTY、RESERVE/CAPTURE/REFUND_SKILL、RECORD_PROVIDER_VARIANCE、引用原交易且同步补偿业务投影的 REVERSE；金额字符串/整数数学、固定锁序、checked overflow/range、双式平衡和 POSTED 分录不可更新/删除。
+- [ ] A03 实现钱包/流水只读 API、字段级 ACL、稳定分页和不泄露对手方的 DTO。
+- [ ] A04 增加并发事务测试：发行限额/重复审批、余额不足竞争、actor-scoped raw idempotency key、部分捕获、冲正、死锁重试、提交失败、outbox after-commit，以及 `captured + refunded <= gross` 数据库约束；验证 opaque key binary collation/长度/唯一索引与 initializer/catalog parity。
+- [ ] A05 增加对账命令/指标：account 聚合、escrow/authorization 守恒（含 UNKNOWN 保留）、provider variance、交易平衡、孤儿业务引用；只读准备 Agent 不得运行重资源数据库套件。
+
+### B. 悬赏报价与结算（Owner: `critical_worker`）
+
+- [ ] B01 扩展 `agent_task_meta` 资金投影并新增 funding/allocation/quote/settlement/usage authorization/receipt/egress wrapping-key registry/blob/lease/unwrap-authorization schema；保留旧 `reward` 为非权威兼容投影。资金 discriminator 按 expand/backfill/contract：混部 NULL/旧写解析为 LEGACY、new insert 显式 mode、byte-exact `(tenantId,clientId,taskId)` tuple 范围可恢复批次；cursor 固定 base64url-no-padding(UTF8(JCS tuple))并 strict decode/re-encode；冻结 exact pre/post row projection、pre/post domain-separated digest、batch identity payload/batchId、closed manifest与完整 CAS update predicate，全部含完整 scope tuple并做 drift 对账，旧 binary drain 且 drift=0 后才 NOT NULL/check。
+- [ ] B02 扩展 `POST /agent/tasks`，在同事务创建 task + 足额 escrow + outbox，并复用 accepted M2 同事务写恰一条 task event/推进一次 current_event_version；幂等/CAS失败/回滚零 event，唤醒 after-commit。覆盖有榜无钱/扣钱无榜故障注入，写接口统一 Idempotency-Key、exact JCS request hash、operation status/原响应/lease 接管契约。
+- [ ] B03 实现版本化 model price book、整数计价器和 actor-scoped Idempotency-Key quote API；同 request hash 幂等返回原 quoteId、冻结快照与 expiresAt。冻结 `feeBps/feeCap/rounding/modelCostCap`，覆盖 input/cached-input/output/reasoning、固定请求费、最坏成本、最低收益、过期和历史版本重放。
+- [ ] B04 实现显式 `claim` API，冻结 task/funding/escrow/identity/runtime/member 锁序和 taskVersion/quoteVersion CAS；成功协作状态转换与 accepted M2 task event/current_event_version 同事务 exactly-once，after-commit 唤醒。只允许 funded 单 Agent/单 work item，自报 abilities 只做建议，硬门禁只使用 verified installed skill versions。
+- [ ] B05 实现 Broker-wrapped blob、authorization 与 server-derived exact egressDescriptor/digest；Broker 解密后必须按 trusted adapter验证 route/host/path/query/headers/body model/token ceilings并注入权威 provider idempotency key，Gateway 无 credential/unwrap/network/receipt authority。dispatch 原子提交 exact record+egress outbox；Broker mTLS 派生 identity取得≤5秒 lease与保守 TTL，第一字节前 durable `SEND_STARTED`，其后 expiry/cancel/void/CLOSED 只能 UNKNOWN；定义 send-starts/sent/expire exact CAS，receipt 匹配 SEND_STARTED/SENT。deadline 后禁止 replay，takeover保留同 key，未知可 CLOSED_SYSTEM_RISK；实现 ACTIVE_WRAP_UNWRAP→RETIRED_UNWRAP_ONLY 正常轮换与 deadline 保留、销毁前引用扫描/双人审批/KMS gate；blob GET commit 创建同 lease/blob 唯一的 audited at-most-once unwrap authorization，Broker worker 无 raw KMS IAM，受管 adapter先 CAS consume再单次 KMS attempt且响应丢失不得重用；COMPROMISE_PENDING 以 key root 串行、同事务递增 securityEpoch并按 PK 锁/CAS 全部旧 CLAIMED 为 REVOKED_BEFORE_SEND，跳过未触及中间表但禁止 lease→authorization/blob 回锁，dispatch/blob GET/lease/send-start/expire 全部先锁/current-read key root；fence 前 decrypt可完成但无 send permission且 Broker 零化 plaintext，只有 fence 前 SEND_STARTED 视为可能调用；COMPROMISED_BLOCKED 后只做无 key provider 对账并由 SYSTEM 承担未知费用；RETIRED STAGED blob 仅可安全 abandon 后以新 invocation/key重建。
+- [ ] B06 将合法 review/completed/cancelled/failed 转换接入 executionEpoch fence + RESERVED 原子 void + capture/payout/fee/refund；任何改变 task 协作状态的 transition 与 accepted M2 event/version 同事务 exactly-once，纯 settlement 不伪造 event。严格验证守恒与 provider variance，不得透支用户或产生负 payout。
+- [ ] B07 实现预算 top-up、争议冻结和受审计冲正；top-up 只能在同一 escrow root 新增 immutable funding lot/transaction，按冻结费率对最终 gross 计算唯一增量 fee 且保持 minimum payout，不修改历史报价、托管或分录，禁止任意公共 settle 金额。
+- [ ] B08 扩展 Economy feed/snapshot；资金/订单事件只进入 `/economy/events`。M2 task SSE/workspace byte-for-byte 保留 endpoint/keys/`version/currentVersion`，且 funded task domain transition 必须复用 accepted M2 同事务 exactly-one event/version、幂等/回滚 zero、after-commit wakeup；基线未含 accepted tree 则先 pin/merge。
+- [ ] B09 提供 `LEGACY_UNFUNDED` 兼容：混部 NULL/default/旧 binary insert 一律按 legacy，resumable backfill 与 drift verifier完成前不收紧约束；旧 create/单人/多人/auto 保持，funded `/assign` 返回 `QUOTE_REQUIRED`，funded group/auto 返回 `FUNDED_TEAM_NOT_SUPPORTED`。
+- [ ] B10 改造统一 LLM Gateway/provider adapter 与受管 Provider Egress Broker：Broker 是 provider credential、wrapping-key unwrap 与 provider-domain 网络 ACL 的唯一主体，Gateway 只能准备加密请求/编排 authorization；保留 actual model、最终 token usage、provider request ID 与 egress lease evidence。真实 capture 在 shadow pricing/receipt 对账通过前保持关闭。
+
+### C. 技能市场（Owner: `critical_worker`；展示 DTO 可交 `balanced_worker`）
+
+- [ ] C01 建立 platform-operated skill product/version、trade order、entitlement、installation+deliveryEpoch/STARTED_CONFIRMED、durable command/ACK、binding-PoP challenge、immutable isolation-attestation、带独立 isolation revocation fence 的 download ticket/session、runtime installed-skill snapshot schema；商品版本已售后不可覆盖。
+- [ ] C02 实现平台 package provenance/key registry；交付命令必须携完整 skillPackageSignature、离线 root 签 publisherKeyRecord、permissions/compatibility objects+digests、approvedPermissions/grant digest。publisherKeyRecord 冻结 exact Ed25519 wrapper、预置 root key lookup、raw32/no-padding、status enum、validFrom/validUntil/registryVersion 规范十进制类型/范围与稳定错误；Agent 逐层验签/复算，并强制 package signature keyId=publisherKeyId、validFrom<=publishedAt<=validUntil。建立 security root，purchase/dispatch/download/activation/lease current-read；compromise先 deny再暂停/revoke。
+- [ ] C03 实现 actor-scoped Idempotency-Key 购买 quote/order：quote 同 request hash 返回原 quoteId/expiresAt；order 覆盖 payer escrow、显式 `targetAgentId`、ownership/scope、价格漂移、兼容性、逐项 buyer-approved permissions、不可变 permissionGrantVersion/digest、重复 entitlement 和旧客户端 `DELIVERY_UNSUPPORTED` 门禁。
+- [ ] C04 复用 SKILL_INSTALL durable command；冻结含 provenance/permission/compatibility digests 的 signed ticket。ticket→mTLS session 保存 token hash+KMS encrypted原 token/response以 byte-identical replay；download-session 与每次 package GET 按 security→order→binding/PoP-challenge→runtime→snapshot→installation→durable command/ACK→isolation-proof→entitlement→session current-read，服务端要求 exact committed STARTED_CONFIRMED、deliverable status/no proof/no revocation fence/exact deliveryEpoch并以事务提交为授权线性化点，撤权后拒绝所有新 GET/retry；事务冻结 immutable object version/digest，提交后 handler 从同一 FD复核并完整发送一次；禁 redirect/cache/Range。
+- [ ] C05 冻结 attestation/snapshot/rotation 与 binding fresh-PoP；实现 PENDING enrollment create/enroll/同候选 expired-bootstrap reissue exact API、`X-CYF-Enrollment-Bootstrap`、两写必填 actor idempotency与禁止 ACTIVE/不同候选 re-enroll；challenge POST 冻结 exact purpose/requestBinding、六字段 server-derived authContext/requestDigest、非递归逐 purpose认证矩阵、actor idempotency在 expired/consumed 后稳定 error replay且绝不同 key mint新 challenge、单 outstanding、错误/replay以及 PACKAGE_GET one-proof-per-stream golden vectors；所有 initial enroll/register/reconnect/persona-bind/runtime token+mTLS/download/package GET/install start/isolation attestation/capability lease 都要求 purpose-scoped current/candidate key proof，INITIAL 冻结非空 runtimeInstanceId 与 pending binding version/epoch，owner-only 重注册不可换 key；rotationProof old-key签名 payload 显式含 `expectedBindingVersion`，且等于 outer/challenge current version；full-body identity、no-padding、genesis、原 ACK replay与错误码共享 golden vectors。
+- [ ] C06 实现激活与 CAPTURE_SKILL 同事务，并严格按 publisher security→order→funding/allocation→accounts→escrow→binding/key→runtime→installed-snapshot→exact skill installation→durable command/ACK→skill isolation proof（涉及时）→entitlement→download session→stream head/outbox 取锁；激活须锁 exact installation row 并 CAS commandId/attempt/fencingToken/deliveryEpoch/attestation/status/version，重放/CAS失败/回滚零分录；capture/退款/暂停/撤销同序并 current-read，递增 capabilityEpoch；MVP 资金退款仅限 capture 前，completed 后退款稳定拒绝且不得 generic reverse。
+- [ ] C07 实现 delivery_unknown reconciliation、exact signed monotonic ABSENT|QUARANTINED isolation attestation；无证明/Agent不可达/key丢失/人工决议均保持 escrow，不得退款；证明接受同事务递增 deliveryEpoch、写 immutable proof + ISOLATED_CONFIRMED，并为 fenced epoch 每个 ticket/session（含 CONSUMED/EXPIRED）物理写不可变 ISOLATION revocation fence、对仍可授权行置 REVOKED_ISOLATION且不碰资金；Agent以跨进程 installation mutex串行 PACKAGE_GET full stream/staging 与 isolation scan/proof ACK；后续无资金 reconciliation 先 CAS delivery_unknown→delivery_failed；独立退款或 retry-delivery 按完整全局锁序 current-read accepted proof、当前 snapshot、order/escrow/capture、exact attempt/fence、每个 ticket/session ISOLATION fence且无可授权 session、deliveryEpoch/capabilityEpoch 后才允许最多3次重试或 capture前失败退款、冲正和 entitlement suspension/revocation；retry 原子递增 deliveryEpoch且新 command/ticket/session全部冻结新 epoch；状态变化递增 capabilityEpoch、投递 revoke push，并提供最长 30 秒 server-signed capability lease endpoint，离线/过期 fail closed。
+
+### D. API 验证（Owner: `gpt_test_runner`）
+
+- [ ] D01 所有 Gradle 调用经 `python3 ops/orchestration/cyf_orchestrator.py` 串行持有 `/tmp/cyf-gradle.lock`。
+- [ ] D02 运行 economy/agent/chat 定向单元测试，并回归旧 point 不受影响、mapper schema parity、API 错误体和事件 replay contract。
+- [ ] D03 隔离 MySQL 测试覆盖 task/M2 event原子性、账本/settlement、Broker egressDescriptor policy、dispatch+outbox、wrapping key ACTIVE→RETIRED 解密保留/销毁门禁、blob GET decrypt线性化与 unwrap authorization consume/KMS-attempt at-most-once（含 KMS成功/响应丢失后的零化与重启取证）、COMPROMISE_PENDING 全 CLAIMED 物理 revoke与 blob-GET→send-start/dispatch/expire 竞态、RETIRED STAGED owner takeover+abandon，以及 lease CLAIMED→SEND_STARTED→SENT/EXPIRED 与 owner claim/cancel/CLOSED竞态、first-byte前后崩溃/response loss、receipt authority、download session original-response replay/current revocation、PACKAGE_GET committed/in-flight stream→isolation proof/session revoke/refund竞态、安装激活退款。
+- [ ] D04 运行 ACL/identity/attestation 对抗矩阵：不存在/跨 scope/非 owner/撤销或非 current binding/key/epoch/runtime必须先统一404，只有 current active binding可见资源才暴露 expired/revoked细分；Gateway越权 request/receipt/egress拒绝；package command覆盖 exact root wrapper、预置 root lookup、accepted status、十进制 scalar范围、algorithm/base64/raw-key confusion；download强制服务端 STARTED_CONFIRMED；binding challenge覆盖 exact auth/idempotency/reissue/key-loss；isolation proof覆盖每个历史 ticket/session fence与退款/capture竞态；增加 capability lease-vs-supersede/revoke、rotate-vs-STARTED/GET、command→binding逆序拒绝、迁移 first-batch null/empty-table/CAS-miss whole-batch rollback/replay fixtures。
+- [ ] D05 缓存证据必须绑定 exact Git tree SHA、测试 selector 和 DB fixture digest。
+
+## Web (`web/`)
+
+### E. 悬赏榜（Owner: `balanced_worker`）
+
+- [ ] E01 扩展 `BountyPanel.vue` 张榜表单：总悬赏金、全额托管、建议 abilities、结构化 requiredSkillRequirements 和余额不足提示。
+- [ ] E02 建立 actor journal：plaintext row 只含 schema/keyId/actor fingerprint/operationType/random recordId/nonce/ciphertext/state，businessTarget/requestHash/idempotencyKey/canonical body只在 ciphertext inner bytes，AAD 只含非敏感定位字段且本地无相关明文索引/cache；key丢失即 `KEY_LOST_QUARANTINED`，业务字段不可用且无重试/新 key。实现无本地过滤的 actor-authenticated `GET /economy/operations?afterOperationCursor=&limit=` 稳定分页，仅作人工只读审计，不自动关联/解锁。
+- [ ] E03 增加报价确认 UI：verified skill match 与 advisory ability match、token 分类、price book、平台费、预估/最坏费用、预估/最坏收益、预算缓冲、reason codes 和过期刷新。
+- [ ] E04 增加结算详情和流水入口；金额使用字符串/BigInt 安全格式化。
+- [ ] E05 保持 `/agent/map` 与 `/agent/roster` 分流，不引入 `/agent/active`，不把资金状态混入地图筛选。
+
+### F. 技能集市（Owner: `balanced_worker`）
+
+- [ ] F01 新增平台自营技能商品列表/详情、创作者署名、package provenance、权限和兼容性展示；购买确认必须逐项展示并批准权限。
+- [ ] F02 从选中 Agent 预填目标，但购买 payload 明确包含 `targetAgentId` 与排序去重的 approvedPermissions；展示/持久化 permissionGrantVersion/digest，skill order 使用同一 actor-fenced encrypted canonical-envelope journal/idempotency lifecycle，切换 Agent 或 permission set 时清理陈旧 quote。
+- [ ] F03 展示订单/交付/entitlement 状态和失败退款下一步。
+- [ ] F04 active entitlement、已安装版本与自由文本 runtime ability 分开展示，避免“已购待安装”误标为“已获得”。
+
+### G. Web 验证（Owner: `gpt_test_runner`）
+
+- [ ] G01 扩展 `web/tests/juyiting-collaboration-flow.test.js`：显式 Agent、map/roster 分流、funded quote/claim、funded group/auto 门禁和 legacy unfunded 兼容。
+- [ ] G02 扩展组件/存储行为测试：金额、平台费、quote幂等/过期、预算不足、重复点击、timeout/reload encrypted same-bytes retry、logout/login actor fence；断言 journal plaintext/index/cache 不含 idempotencyKey/requestHash/businessTarget/body，AAD/ciphertext/recordId swap失败，密钥丢失 `KEY_LOST_QUARANTINED` 且任何 local key/hash/body/target查询、重录或新 key 均禁止；覆盖技能目标切换、STARTED/download session/激活/退款状态。
+- [ ] G03 运行定向测试与 `cd web && npm run build`；按 exact tree SHA 记录结果。
+
+## Agent Client（沿用 ADR-004 版本化源：`/home/isp/wsps/chcbz/isp-install/conf/codex-ws-agent/`；部署副本：`/home/isp/apps/codex-ws-agent/`）
+
+### H. 技能安装与证明（Owner: `critical_worker`）
+
+- [ ] H01 扩展 SKILL_INSTALL inbox；校验 envelope/fence/deliveryEpoch/ticket，要求 fresh SKILL_INSTALL_START proof 的 committed STARTED ACK早于 download-session/package GET/任何 staging动作，并验证服务端 STARTED_CONFIRMED record绑定 command/attempt/fence/deliveryEpoch/envelope/ticket/start proof；从命令验证完整 skillPackageSignature、platform-root-signed publisherKeyRecord、permissions/compatibility/approved grant及所有 digests，再换取 mTLS session；缺失或漂移 fail closed。
+- [ ] H02 实现 Skill ZIP v1与 exact `.cyf-installation.json` JCS marker（该根路径及 `.cyf-installation.json/` namespace 在 ZIP entry 与 manifest.files 中保留并强制拒绝，整个 regular-file set prefix-free；固定 schema/mode/filesDigest）；archive/target entry set equality、same-FD、no-follow、journal、逐文件+marker+目录 fsync、no-replace发布与全量恢复重验；额外/漂移均隔离。
+- [ ] H03 按冻结 Ed25519/JCS canonical transcript 使用受管绑定设备密钥签署 installation attestation，覆盖 bindingEpoch、deliveryEpoch、snapshotSequence/digest、challenge、订单/命令/fence/商品/package/manifest/permissionGrant 版本与摘要；私钥不可导出且支持 binding revoke。
+- [ ] H04 扩展 snapshot replay与 rotation；旧 key签名 payload必须含并绑定 outer/challenge `expectedBindingVersion`，新 key签 genesis，完整 body byte-identical重放；成功后原子切换，实现 PENDING enrollment create/enroll/同候选 expired-bootstrap reissue、exact bootstrap header以及 binding PoP challenge exact requestBinding/六字段 authContext/非递归认证矩阵/idempotency在 expired/consumed 后稳定 error replay、purpose-specific transcript/单次消费及 INITIAL pending binding/candidate runtime/key enrollment；旧 key丢失自然无法通过 register/reconnect/token/mTLS/download/install/isolation/capability lease，进入 `BINDING_KEY_LOST_QUARANTINED` 且无 re-enrollment/rebind/entitlement migration旁路。
+- [ ] H05 通过 `command.ack` 回报 RECEIVED/STARTED，通过关联 `work.result` 回报成功 attestation/失败 reason；实现 PACKAGE_GET/full-stream/staging 与 isolation scan/proof ACK 共用跨进程 installation mutex；SKILL_CAPABILITY_REVOKE sealed quarantine + exact deliveryEpoch isolation attestation，proof acceptance 同事务为每个历史 ticket/session写 ISOLATION revocation fence且与资金退款分事务，退款再次 current-read snapshot/proof/command/fence/session/delivery+capability epoch；实现最长 30 秒 server-signed lease 验证/续签/到期终止和 capabilityEpoch/bindingEpoch fence；重启恢复、delivery_unknown reconciliation、重复命令和退款后旧 fence 不二次安装或伪激活；未 active entitlement 的 staged/version 必须隔离。
+- [ ] H06 运行 attestation/snapshot/package/capability lease/rotation 跨语言 golden vectors；覆盖 journal plaintext/index absence与ciphertext/AAD/recordId swap、ZIP/path/archive/manifest/fsync安装攻击、rotation/PoP完整 body、publisher valid interval/registryVersion十进制类型范围、keyId/exact root wrapper/status/algorithm/raw-key/no-padding mismatch、PACKAGE_GET committed/in-flight stream与STARTED/mutex/session revoke fence、isolation chain/ABSENT谎报/跨 fence、旧 key丢失 quarantine、lease revoke；记录 exact tree/fixture digest。
+
+## Integration and verification
+
+- [ ] I01 `sol_reviewer` 独立审阅契约、实现和验证证据；交易/并发/数据损失另由 `adversarial_reviewer` 攻击审阅。
+- [ ] I02 feature flags关闭部署 expand schema/legacy guard/只读接口；运行 NULL-as-legacy 混部、按完整 tuple 的 strict cursor、first-batch `startExclusive=null`、空表不生成零行 manifest、exact pre/post projection/digest、closed manifest、domain-separated batchId与完整 CAS predicate（任一 miss whole-batch rollback/no cursor advance）做 resumable backfill，覆盖前缀/大小写/尾随空格/NUL/drift/replay，全部节点达标并 drain旧 binary且 drift=0 后才 contract。
+- [ ] I03 通过估算误差、账本平衡、escrow/authorization 守恒和崩溃/迟到回执恢复演练后，灰度启用资金化悬赏。
+- [ ] I04 技能市场只启用已审核平台自营商品 + 支持签名 installed-skill attestation 的 server-managed Agent；第三方卖家必须另立 SDD，不在本任务追加开放。
+- [ ] I05 沿用 `docs/implementation/DECISIONS.md` ADR-004：Agent Client 直接在现有 `isp-install` 仓库的独立 branch/worktree 开发、测试和 Review，记录该仓库 commit 与 `conf/codex-ws-agent/` 源码摘要；accepted 后同步到 `/home/isp/apps/codex-ws-agent/` 并验证除环境配置/运行状态外的代码摘要与 smoke。不得要求部署目录本身成为 Git 仓库，也不新增独立 remote repository。
+- [ ] I06 当前开发部署执行现有文件备份、schema 检查、余额/escrow/订单 smoke 与 feature flag 回滚；正式生产上线时再补充双人签字及生产级发布门禁。

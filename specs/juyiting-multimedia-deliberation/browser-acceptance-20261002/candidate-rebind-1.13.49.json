@@ -1,0 +1,16 @@
+{
+  "at": "2026-10-02T22:25:42.896930+08:00",
+  "previousCommit": "c74a3864b0909c8db4489c5938a590952a56d555",
+  "previousTree": "fd23ba55cc1294523b62b7f3d44618fe6d3719a9",
+  "candidateCommit": "7aaca8916bc2cad2d053328af0780913fff64bca",
+  "candidateTree": "71c0536a8b3eeb9cbc7db9028b92ccfc05cd127c",
+  "changedPaths": [
+    "scripts/ci/prepare-runtime.mjs",
+    "tests/ci-test-bootstrap.test.js"
+  ],
+  "selectorSourceByteIdentical": true,
+  "flowRun": 152,
+  "actualCheckoutVerified": true,
+  "deployment": "NOT_VERIFIED",
+  "productAcceptance": "NOT_RUN"
+}

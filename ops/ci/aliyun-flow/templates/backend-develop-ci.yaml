@@ -1,0 +1,94 @@
+# CI-only Flow pipeline. It builds the Flow-provided develop checkout and never deploys.
+name: cyf-api-kit-develop-ci
+variableGroups: ["q37x7n8snxqq744z"]
+sources:
+  repo_0:
+    type: git
+    name: cyf_api_develop
+    endpoint: https://github.com/chcbz/juyiai-api.git
+    branch: develop
+    triggerEvents: []
+    branchesFilter: develop
+defaultWorkspace: repo_0
+stages:
+  cloud_ci:
+    name: Backend develop CI
+    jobs:
+      api_ci:
+        name: Targeted tests and bootJar
+        runsOn: public/cn-beijing
+        timeoutMinutes: 60
+        steps:
+          targeted_build:
+            name: Targeted tests, layering, and bootJar
+            step: JavaBuild
+            with:
+              jdkVersion: "21"
+              mavenVersion: "3.5.2"
+              run: |-
+                set -eu
+                test "${CI_COMMIT_REF_NAME:-}" = develop
+                test -n "${CI_COMMIT_SHA:-}"
+                test "$(git rev-parse HEAD)" = "$CI_COMMIT_SHA"
+                export CYF_FLOW_GRADLE_ACTIVE=1
+                export CYF_FLOW_BUILD_ROOT="$PWD/_cyf_flow_build"
+                test ! -e "$CYF_FLOW_BUILD_ROOT"
+                mkdir -p "$CYF_FLOW_BUILD_ROOT"
+                chmod +x gradlew
+                ./gradlew --no-daemon --stacktrace --console=plain \
+                  --init-script ops/ci/aliyun-flow/cold-init.gradle \
+                  --project-cache-dir "$PWD/_cyf_project_cache" \
+                  :common:jia-common-core:test \
+                  --tests cn.jia.core.security.SensitiveDataSanitizerTest \
+                  :common:jia-common-service:test \
+                  --tests cn.jia.core.config.CorsConfigTest \
+                  validateLayering \
+                  :starter:bootJar
+                python3 - <<'PYARTIFACT'
+                import hashlib
+                import json
+                import os
+                import pathlib
+                import shutil
+
+                root = pathlib.Path.cwd()
+                build_root = root / '_cyf_flow_build'
+                jars = [item for item in (build_root / 'jia/starter/libs').glob('*.jar') if not item.name.endswith('-plain.jar')]
+                if len(jars) != 1 or not jars[0].is_file() or jars[0].is_symlink():
+                    raise SystemExit('expected exactly one bootJar')
+                provenance = build_root / 'opencv-resolved.json'
+                if not provenance.is_file() or provenance.is_symlink():
+                    raise SystemExit('missing OpenCV provenance')
+                export = root / '_cyf_api_ci_export'
+                if export.exists():
+                    raise SystemExit('artifact export must be fresh')
+                export.mkdir(mode=0o700)
+                jar_bytes = jars[0].read_bytes()
+                jar_sha = hashlib.sha256(jar_bytes).hexdigest()
+                (export / 'application.jar').write_bytes(jar_bytes)
+                shutil.copyfile(provenance, export / 'opencv-resolved.json')
+                metadata = {
+                    'schema_version': 1,
+                    'pipeline_id': os.environ.get('PIPELINE_ID'),
+                    'run_number': os.environ.get('BUILD_NUMBER'),
+                    'source_branch': os.environ.get('CI_COMMIT_REF_NAME'),
+                    'source_commit': os.environ.get('CI_COMMIT_SHA'),
+                    'source_tree': os.popen('git rev-parse HEAD^{tree}').read().strip(),
+                    'application_jar_sha256': jar_sha,
+                    'application_jar_size': len(jar_bytes),
+                }
+                (export / 'application.jar.sha256').write_text(jar_sha + '  application.jar\n', encoding='utf-8')
+                (export / 'metadata.json').write_text(json.dumps(metadata, sort_keys=True, separators=(',', ':')) + '\n', encoding='utf-8')
+                if {item.name for item in export.iterdir()} != {'application.jar', 'application.jar.sha256', 'metadata.json', 'opencv-resolved.json'}:
+                    raise SystemExit('unexpected artifact export member')
+                print('CYF_API_CI_ARTIFACT ' + json.dumps(metadata, sort_keys=True), flush=True)
+                PYARTIFACT
+          upload_artifact:
+            name: Upload backend CI artifact
+            step: ArtifactUpload
+            with:
+              uploadType: flowPublic
+              artifact: cyf_api_develop_ci_${PIPELINE_ID}
+              filePath:
+                - _cyf_api_ci_export/
+              includePathInArtifact: false

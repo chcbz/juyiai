@@ -1,0 +1,14 @@
+{
+  "scope": "documentation_structure_only_not_application_test",
+  "as_of": "2026-10-13",
+  "files": 9,
+  "task_count": 51,
+  "all_task_estimates_le_30_minutes": true,
+  "json_parsed": true,
+  "local_links_checked": true,
+  "read_baseline_heads_unchanged": true,
+  "errors": [],
+  "application_tests": "NOT_RUN",
+  "database_migration": "NOT_RUN",
+  "production_changes": false
+}

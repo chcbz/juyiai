@@ -1,0 +1,5 @@
+# U2 owner 媒体读取候选（2026-09-29）
+
+API feature commit `2bbe4ff48f97b27b65fe35d05ccad0242e4c293f` / tree `a40fd73250d32716d887917a5b9e53feb71389fe` 已推送并远端 SHA 读回；原 Chat/Agent 集成 `9180da17` 保留为祖先。新增仅默认关闭的 `chat.bounty-media.enabled` 控制器：`GET /chat/requests/{requestId}/steps/{stepId}/outputs/{outputId}?download=false|true`。服务端从认证身份取得 owner/client/tenant，读取既有存活 request 的受权 step/link，逐一确认 task、conversation、agent、执行类型及 `OUTPUT_COMMITTED`，再经 Agent owner-scoped 输出读取器获取字节并核 SHA-256/长度。已知图像、音频、纯文本可 inline；显式下载或未知 MIME 一律 `application/octet-stream` attachment，设置 nosniff/no-store；不把 Agent URI/路径当内容，不暴露原始用户文件名。
+
+经 orchestrator 精确 tree 定向 `:chat:jia-chat-service:chatDeliberation` **23 classes / 112 tests，0 failures/errors/skips**；日志 `/home/isp/wsps/cyf/.worktrees/juyiting-multimedia-deliberation-20260928/evidence/u2-media-read/gradle-2bbe4ff4-attempt1.log`，key `222b3fb1aeeecd2072d5b59545c3395c3eb210ec9dbda596763300f2e0153c19`。测试仅验证 mock 的 ACL/关联/字节校验以及 MIME；未经过真实 HTTP 授权、实际 MySQL 服务事务或浏览器。该 URL 尚无从产物清单发现 outputId 的正式 API，也无媒体 asset.ready 事件/持久 part，Agent 尚未发起真实 START/Provider。不可将此候选当可预览的用户交付，更不可启用付费执行或合入 develop 发布。

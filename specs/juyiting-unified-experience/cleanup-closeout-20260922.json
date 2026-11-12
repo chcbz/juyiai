@@ -1,0 +1,40 @@
+{
+  "date": "2026-09-22",
+  "userInstruction": "Update current context in SDD, remove completed worktrees, clean disk",
+  "phaseOne": {
+    "status": "PASS_WITH_CONCURRENT_LEDGER_OBSERVATION",
+    "removedWorktrees": [
+      "/home/isp/wsps/cyf/.worktrees/jyt-immersive-20260922",
+      "/home/isp/wsps/cyf/.worktrees/jyt-ux-b01a-20260921",
+      "/home/isp/wsps/cyf/.worktrees/jyt-ux-l01-api-integration-20260922",
+      "/home/isp/wsps/cyf/.worktrees/jyt-ux-l01-web-integration-20260922",
+      "/home/isp/wsps/cyf/.worktrees/jyt-ux-q01-api-20260922",
+      "/home/isp/wsps/cyf/.worktrees/jyt-ux-q02-final-20260922",
+      "/home/isp/wsps/cyf/.worktrees/jyt-ux-q02-w01-20260921",
+      "/home/isp/wsps/cyf/.worktrees/jyt-ux-w01-20260921"
+    ],
+    "removedCacheDirectories": 44,
+    "protectedEvidenceFilesVerified": 534,
+    "archivedEvidenceFiles": 208
+  },
+  "documentationWorktree": {
+    "path": "/home/isp/wsps/cyf/.worktrees/jyt-ux-root-integration-20260922",
+    "nextAction": "Commit/push this summary, then remove this last clean remote-saved worktree; final completion journal lives outside removed trees"
+  },
+  "allocatedBytesInScope": 2323345408,
+  "beforeAvailableBytes": 2704953344,
+  "afterPhaseOneAvailableBytes": 5021724672,
+  "archive": {
+    "path": "deliverables/cleanup/juyiting-closeout-20260922/worktree-evidence.tar.gz",
+    "sha256": "ec52c15424ebf75e2af28f3c190fde71bd68efdd43986d29c876665eac94a6dd"
+  },
+  "finalJournal": "deliverables/cleanup/juyiting-closeout-20260922/final-result.json",
+  "unchanged": [
+    "main api/web tracked diffs",
+    "release archives and rollback sites",
+    "shared dependencies",
+    "534 retained evidence files"
+  ],
+  "concurrentObservation": "Initial aggregate main-root diff assertion failed only because shared TASKS.yaml was updated18:37:52 by concurrent BUG-JUYITING-FORMAL-CHAT retry. No deletion rerun or ledger restore; component tracked diffs unchanged, protected evidence rehashed.",
+  "productionReadback": "deliverables/cleanup/juyiting-closeout-20260922/post-cleanup-production-readback.json"
+}

@@ -1,0 +1,55 @@
+feature_id: archive-agent-maintenance
+status: ready
+owners:
+  api: unassigned
+  web: unassigned
+  client: unassigned
+  integration: unassigned
+contract:
+  revision: D2
+  api_or_event_changes: archive_admin_native_v1_and_typed_execution_via_shared_adapters
+  compatibility: >-
+    Preserve legacy Shuihu identifiers, bytes, hashes, personal-owner isolation,
+    catalog response shape and existing command payloads. Add a multi-work reader,
+    explicit publication visibility and immutable historic-edition access.
+    New commands and platform skill provisioning do not alter paid market orders.
+    Preserve ItemRef/OVERVIEW-v1; separate management panel and authorized conversation card.
+    Reuse execution/transport/install/storage; preserve direct-Agent routing; do not mix Runtime protocols.
+pinned_revisions:
+  api_commit: null
+  web_commit: null
+  client_commit: null
+  root_base_commit: null
+source_observation:
+  evidence: /home/isp/wsps/cyf/specs/archive-agent-maintenance/source-audit.json
+  remote_refs_fetched: false
+  production_verified: false
+  release_evidence: false
+verification:
+  documentation: passed_static_self_check
+  api: not_run
+  web: not_run
+  client: not_run
+  integration: not_run
+acceptance:
+  status: not_run
+  evidence: /home/isp/wsps/cyf/specs/archive-agent-maintenance/acceptance.md
+release:
+  status: not_started
+  production_operations_authorized_by_this_document: false
+  flow_run: null
+  build_origin: null
+  artifact_sha256: null
+implementation_handoff:
+  status: ready_for_M0_not_dispatched
+  entry: /home/isp/wsps/cyf/specs/archive-agent-maintenance/handoff.md
+  design_baseline: D2
+  runtime_ledger_modified: false
+  production_activation_authorized: false
+  shared_adapter_mapping: required_in_M0
+  neighboring_feature: juyiting-multimedia-deliberation
+document_delivery:
+  target_branch: develop
+  root_remote_base: ccd6cbabe0c9f737ae61237c0d01c4df821e8a5c
+  root_remote_checked_on: '2026-09-28'
+  component_refs_refreshed_for_delivery: false

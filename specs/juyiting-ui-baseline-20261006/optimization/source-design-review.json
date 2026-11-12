@@ -1,0 +1,415 @@
+{
+  "checkedAt": "2026-10-18T16:43:46.458464+08:00",
+  "method": "fresh root/api/web develop fetch + targeted source inspection; Runtime local only",
+  "status": "DESIGN_REVISED_RUNTIME_VALIDATION_PENDING",
+  "repositories": {
+    ".": {
+      "path": "/home/isp/wsps/cyf",
+      "commit": "aae93c074960580942112707e9518d831a0ff0af",
+      "tree": "91d9bb8a8e36fc269e93b19dee41aa1a2c129e43",
+      "remoteFetchedThisReview": true,
+      "originDevelop": "aae93c074960580942112707e9518d831a0ff0af"
+    },
+    "api": {
+      "path": "/home/isp/wsps/cyf/api",
+      "commit": "b76a1d0aeda572767a6d4734d050121d985bd9c9",
+      "tree": "82b7ff2f49d23ec99af3a190ba1433b3704c1780",
+      "remoteFetchedThisReview": true,
+      "originDevelop": "b76a1d0aeda572767a6d4734d050121d985bd9c9"
+    },
+    "web": {
+      "path": "/home/isp/wsps/cyf/web",
+      "commit": "6fbdb6618b1132316a95db87cca9402de83138e8",
+      "tree": "212194b370ec40c2c8b1e4184ad09c5f01c1a3bb",
+      "remoteFetchedThisReview": true,
+      "originDevelop": "6fbdb6618b1132316a95db87cca9402de83138e8"
+    },
+    "/home/isp/wsps/chcbz/isp-install": {
+      "path": "/home/isp/wsps/chcbz/isp-install",
+      "commit": "6a9d8d3c1219450c19b3edfbef317e615940ab5d",
+      "tree": "e4d60f86995fa7070e4adfff2ef1b01c4e805031",
+      "remoteFetchedThisReview": false
+    }
+  },
+  "sources": [
+    {
+      "path": "/home/isp/wsps/cyf/api/chat/jia-chat-service/src/main/java/cn/jia/chat/service/ChatTypedDiscussionAdmissionService.java",
+      "sha256": "7d3bdd501add2ddf0ca8a3ec050b1eb26ab0837783a709919d37c40a7c58888c",
+      "matchesFixedCommit": true,
+      "anchors": [
+        {
+          "symbol": "admitPreparedBootstrap",
+          "lines": [
+            77
+          ]
+        },
+        {
+          "symbol": "input.setContent",
+          "lines": [
+            144
+          ]
+        },
+        {
+          "symbol": "insertAdmission",
+          "lines": [
+            164
+          ]
+        }
+      ]
+    },
+    {
+      "path": "/home/isp/wsps/cyf/api/chat/jia-chat-service/src/main/java/cn/jia/chat/service/ChatActionFinalService.java",
+      "sha256": "986aef69b7f428f5c266965f86a77dc287d33a59c5c25dfc206090dcca1400e5",
+      "matchesFixedCommit": true,
+      "anchors": []
+    },
+    {
+      "path": "/home/isp/wsps/cyf/api/chat/jia-chat-service/src/main/java/cn/jia/chat/service/ChatDeliberationService.java",
+      "sha256": "612c3a6ded74caa2cab6a870c2e85b940feeb13983e3c6e5f1893883636d0c77",
+      "matchesFixedCommit": true,
+      "anchors": [
+        {
+          "symbol": "admitInspectionContinuation",
+          "lines": [
+            152
+          ]
+        },
+        {
+          "symbol": "requireActionUser",
+          "lines": [
+            158,
+            190
+          ]
+        },
+        {
+          "symbol": "dao.persistFinal",
+          "lines": [
+            626
+          ]
+        },
+        {
+          "symbol": "private boolean terminal",
+          "lines": [
+            1657
+          ]
+        }
+      ]
+    },
+    {
+      "path": "/home/isp/wsps/cyf/api/chat/jia-chat-service/src/main/java/cn/jia/chat/service/ChatDeliberationOutboxRelay.java",
+      "sha256": "1fc4299a1da96e099059f29d5ecd3920f367dd97716a36452779c787a785729a",
+      "matchesFixedCommit": true,
+      "anchors": [
+        {
+          "symbol": "settleUnexpectedFailure",
+          "lines": [
+            130,
+            141,
+            146,
+            150
+          ]
+        },
+        {
+          "symbol": "UNSUPPORTED_EVENT_TYPE",
+          "lines": [
+            172
+          ]
+        }
+      ]
+    },
+    {
+      "path": "/home/isp/wsps/cyf/api/chat/jia-chat-service/src/main/java/cn/jia/chat/service/ChatActionDispatchService.java",
+      "sha256": "14b8ac1ea58979d63a19b6e3497a262bcddb327fb91b36e1144943c53bbeb330",
+      "matchesFixedCommit": true,
+      "anchors": [
+        {
+          "symbol": "public void consume",
+          "lines": [
+            57
+          ]
+        },
+        {
+          "symbol": "executor.admit(action)",
+          "lines": [
+            88
+          ]
+        }
+      ]
+    },
+    {
+      "path": "/home/isp/wsps/cyf/api/chat/jia-chat-service/src/main/java/cn/jia/chat/service/ChatActionOutcomeContract.java",
+      "sha256": "4e8efafcaf036f3bb9640d9de59e57014b38bebbb34134fd962bd023cfca4dc7",
+      "matchesFixedCommit": true,
+      "anchors": [
+        {
+          "symbol": "VERSION = 4",
+          "lines": [
+            19
+          ]
+        },
+        {
+          "symbol": "!\"EXECUTE\".equals(kind)",
+          "lines": [
+            109
+          ]
+        },
+        {
+          "symbol": "outcomeNode",
+          "lines": [
+            67,
+            68,
+            117
+          ]
+        }
+      ]
+    },
+    {
+      "path": "/home/isp/wsps/cyf/api/chat/jia-chat-service/src/main/java/cn/jia/chat/service/ChatActionFinalValidator.java",
+      "sha256": "dc40fe65b44677c3e01dde425e99de6f84c0fd613958898753c3581206d91d76",
+      "matchesFixedCommit": true,
+      "anchors": [
+        {
+          "symbol": "outcomeContractVersion",
+          "lines": [
+            29,
+            32,
+            53
+          ]
+        },
+        {
+          "symbol": "value.put(\"schemaVersion\", 4)",
+          "lines": [
+            65
+          ]
+        }
+      ]
+    },
+    {
+      "path": "/home/isp/wsps/cyf/api/chat/jia-chat-service/src/main/java/cn/jia/chat/service/ChatTypedDeliberationContextService.java",
+      "sha256": "0bf13b8d17232169e8d66cb9e0021258d602818af43e204342ca664554529517",
+      "matchesFixedCommit": true,
+      "anchors": []
+    },
+    {
+      "path": "/home/isp/wsps/cyf/api/chat/jia-chat-service/src/main/java/cn/jia/chat/handler/TypedDeliberationDeclaration.java",
+      "sha256": "3814772eb0a93e87953df42750068e6ac12272e03c6e5a8c3fdf5b974ac7da8f",
+      "matchesFixedCommit": true,
+      "anchors": [
+        {
+          "symbol": "CHAT_MESSAGE_FINAL_SIDECAR_V4",
+          "lines": [
+            16
+          ]
+        }
+      ]
+    },
+    {
+      "path": "/home/isp/wsps/cyf/api/chat/jia-chat-mapper/src/main/resources/db/chat-typed-deliberation-schema-v1.sql",
+      "sha256": "3f6b0a42c36c266f8382ecb9b2976719ea655ce65b59b425fac6e2539d944c08",
+      "matchesFixedCommit": true,
+      "anchors": [
+        {
+          "symbol": "request_revision=1",
+          "lines": [
+            35,
+            163
+          ]
+        },
+        {
+          "symbol": "uk_chat_typed_outcome_scope_request",
+          "lines": [
+            28
+          ]
+        },
+        {
+          "symbol": "chk_chat_typed_outcome_kind",
+          "lines": [
+            38
+          ]
+        }
+      ]
+    },
+    {
+      "path": "/home/isp/wsps/cyf/api/chat/jia-chat-mapper/src/main/resources/db/chat-deliberation-schema.sql",
+      "sha256": "ff5f6b22ab5fc0e97afb3a39d9834124abc923b010e444a8228181c44d10bb3c",
+      "matchesFixedCommit": true,
+      "anchors": []
+    },
+    {
+      "path": "/home/isp/wsps/cyf/api/agent/jia-agent-service/src/main/java/cn/jia/agent/service/impl/AgentTaskFormalDeliveryDecisionServiceImpl.java",
+      "sha256": "f59d3c6c042465b78c8302c5d4693413e3fb845967606fc01633dbf8c66e0ce8",
+      "matchesFixedCommit": true,
+      "anchors": [
+        {
+          "symbol": "workUpdate.setStatus(READY)",
+          "lines": [
+            125
+          ]
+        },
+        {
+          "symbol": "workUpdate.setLeaseToken(null)",
+          "lines": [
+            129
+          ]
+        }
+      ]
+    },
+    {
+      "path": "/home/isp/wsps/cyf/api/agent/jia-agent-service/src/main/java/cn/jia/agent/service/impl/AgentSelectedOutputFinalizationServiceImpl.java",
+      "sha256": "0f2521b30916178d081d7783fb1cfa5b85526f33003db2b18f2f6dddde771af2",
+      "matchesFixedCommit": true,
+      "anchors": [
+        {
+          "symbol": "Finalization requires exactly one required work item",
+          "lines": [
+            553
+          ]
+        },
+        {
+          "symbol": "paidExecutionAuthorized()",
+          "lines": [
+            288
+          ]
+        },
+        {
+          "symbol": "Required work item is not available for promotion",
+          "lines": [
+            246
+          ]
+        }
+      ]
+    },
+    {
+      "path": "/home/isp/wsps/cyf/api/agent/jia-agent-service/src/main/java/cn/jia/agent/service/impl/AgentTaskMutationTransactionImpl.java",
+      "sha256": "6e4abce76350c397ba4c2ed1897dbf6f73f31070f78ae464f13408bda96826fc",
+      "matchesFixedCommit": true,
+      "anchors": []
+    },
+    {
+      "path": "/home/isp/wsps/cyf/api/agent/jia-agent-service/src/main/java/cn/jia/agent/service/impl/HallRequestDraftServiceImpl.java",
+      "sha256": "fb364b26209a729522edab9e0bc0587697ea6360eddaa4d0e37a791b2ca63af0",
+      "matchesFixedCommit": true,
+      "anchors": []
+    },
+    {
+      "path": "/home/isp/wsps/cyf/api/agent/jia-agent-service/src/main/java/cn/jia/agent/service/impl/AgentTaskCreationOperationServiceImpl.java",
+      "sha256": "4667514524b48288b57ff8f5d608ab105067e7108018fda20b9181157f663762",
+      "matchesFixedCommit": true,
+      "anchors": []
+    },
+    {
+      "path": "/home/isp/wsps/cyf/api/agent/jia-agent-service/src/main/java/cn/jia/agent/service/impl/AgentServiceImpl.java",
+      "sha256": "e7201d0c68d3d1dc4b15d9026320e09128391fce68fd7b564559e68166396cd6",
+      "matchesFixedCommit": true,
+      "anchors": []
+    },
+    {
+      "path": "/home/isp/wsps/cyf/web/src/composables/juyiting/useHallData.js",
+      "sha256": "f950587dbb735c0ab55b6adfce808942e86d90b55a8283648c5300fc1f936d45",
+      "matchesFixedCommit": true,
+      "anchors": [
+        {
+          "symbol": "pageSize: 30",
+          "lines": [
+            308
+          ]
+        },
+        {
+          "symbol": "selectedTask.value = null",
+          "lines": [
+            319,
+            328
+          ]
+        }
+      ]
+    },
+    {
+      "path": "/home/isp/wsps/cyf/web/src/composables/juyiting/useHallTypedDeliberation.js",
+      "sha256": "f14af28347a641fecc9f05adf4736f2bb464342604c6fb6d5c5afd5cd300ba46",
+      "matchesFixedCommit": true,
+      "anchors": []
+    },
+    {
+      "path": "/home/isp/wsps/cyf/web/src/composables/juyiting/hallTypedDeliberation.js",
+      "sha256": "4393002dcf39146dfd802a46e2e48da2f1abf0e94af1833bd7bbf4e5e4ec36b5",
+      "matchesFixedCommit": true,
+      "anchors": [
+        {
+          "symbol": "const validProgress",
+          "lines": [
+            129
+          ]
+        },
+        {
+          "symbol": "actionProgressAdvances",
+          "lines": [
+            140
+          ]
+        }
+      ]
+    },
+    {
+      "path": "/home/isp/wsps/cyf/web/src/components/juyiting/ChatPanel.vue",
+      "sha256": "447313f2d54a2c1a0affaa3c31dd19a20e3fddc08064d20e1aa74bba2fc59d1f",
+      "matchesFixedCommit": true,
+      "anchors": []
+    },
+    {
+      "path": "/home/isp/wsps/chcbz/isp-install/conf/codex-ws-agent/juyiting-action-outcome.mjs",
+      "sha256": "fa6bd2c70320131ca745549ca2e11532577a741a5e07c0fbff8d3866c75068de",
+      "matchesFixedCommit": true,
+      "anchors": [
+        {
+          "symbol": "value.schemaVersion !== 4",
+          "lines": [
+            163
+          ]
+        }
+      ]
+    }
+  ],
+  "findings": [
+    "R01",
+    "R02",
+    "R03",
+    "R04",
+    "R05",
+    "R06",
+    "R07",
+    "R08",
+    "R09",
+    "R10"
+  ],
+  "productChanged": false,
+  "prototypeRuntimeChanged": false,
+  "applicationTestsRun": false,
+  "productionChecked": false,
+  "flowRuns": [],
+  "documentChecks": {
+    "markdownLinksAndFences": "PASS",
+    "syntheticMessageReviewDigest": "PASS Python generation + Node independent recalculation",
+    "realJavaRuntimeWebCodec": "NOT_RUN",
+    "realDatabaseTransaction": "NOT_RUN",
+    "remainingProbes": [
+      "V01",
+      "V02",
+      "V03",
+      "V04",
+      "V05",
+      "V06"
+    ]
+  },
+  "documentHashes": {
+    "/home/isp/wsps/cyf/specs/juyiting-ui-baseline-20261006/optimization/README.md": "04a694e3dca55260e3b976390412402efa947ebcd648c353a96cba2ec9f3b5fa",
+    "/home/isp/wsps/cyf/specs/juyiting-ui-baseline-20261006/optimization/code-execution-checklist.md": "0c37b4278b4eb0165637bee05fa423399f58ab2aff28773b343ee2d3b59f5cd6",
+    "/home/isp/wsps/cyf/specs/juyiting-ui-baseline-20261006/optimization/change-plan.md": "013d3f13b4bd36d3c0621bdb2b2f48b08e69c1374d6b96e9d898bab43a116bdd",
+    "/home/isp/wsps/cyf/specs/juyiting-ui-baseline-20261006/optimization/code-frontend-design.md": "e5df18ad885aa17f090979369a7c9a4bff3fbb4e93b519dd7cc6877306f25b5b",
+    "/home/isp/wsps/cyf/specs/juyiting-ui-baseline-20261006/optimization/code-backend-design.md": "13625e29b7848acd8e332e438815ca81ec0772d988fa7940262cc208558e7042",
+    "/home/isp/wsps/cyf/specs/juyiting-ui-baseline-20261006/optimization/detailed-design.md": "67ef36af373702e88e9641ae6d94a245ef4a0cce7922a1f49cc655569b19ca75",
+    "/home/isp/wsps/cyf/specs/juyiting-ui-baseline-20261006/optimization/execution-plan.md": "a3ed47efed039a1714a0ab83cad4546ad1bab1ae1bac63fdb08b2e09b2df668a",
+    "/home/isp/wsps/cyf/specs/juyiting-ui-baseline-20261006/optimization/production-recheck.md": "7b5f5a4ec76879f7db940f7549d12b4ccb3e6d95e939b62ca592537f608ef27c",
+    "/home/isp/wsps/cyf/specs/juyiting-ui-baseline-20261006/optimization/source-design-review.md": "5821cdb243e6f807c2769300ec27840d6af3786a7eeac612501a6e69657655eb",
+    "/home/isp/wsps/cyf/specs/juyiting-ui-baseline-20261006/optimization/full-flow-recheck.md": "2e15289d38cb446a7dc6f083c1436d89aff9038e97548d7038abeab2f576bfe5",
+    "/home/isp/wsps/cyf/specs/juyiting-ui-baseline-20261006/optimization/code-contract-fixtures.json": "1b6e2197794c3abe36a90ee5d49a3811ceb2630375bf18fe7831405d71594ba0"
+  }
+}

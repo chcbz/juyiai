@@ -1,0 +1,299 @@
+{
+  "kind": "documentation-prototype-only",
+  "verifiedAt": "2026-10-04T02:40:49.692Z",
+  "browser": {
+    "protocolVersion": "1.3",
+    "product": "Chrome/133.0.6943.141",
+    "revision": "@2a5d6da0d6165d7b107502095a937fe7704fcef6",
+    "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/133.0.0.0 Safari/537.36",
+    "jsVersion": "13.3.415.23"
+  },
+  "viewportChecks": [
+    {
+      "page": "request",
+      "width": 1440,
+      "documentWidth": 1440,
+      "mainWidth": 1234,
+      "mainScrollWidth": 1234,
+      "overflow": [],
+      "composerBottom": null,
+      "height": 1000
+    },
+    {
+      "page": "agents",
+      "width": 1440,
+      "documentWidth": 1440,
+      "mainWidth": 1234,
+      "mainScrollWidth": 1234,
+      "overflow": [],
+      "composerBottom": null,
+      "height": 1000
+    },
+    {
+      "page": "chat",
+      "width": 1440,
+      "documentWidth": 1440,
+      "mainWidth": 1234,
+      "mainScrollWidth": 1234,
+      "overflow": [],
+      "composerBottom": 897.40625,
+      "height": 1000
+    },
+    {
+      "page": "accept",
+      "width": 1440,
+      "documentWidth": 1440,
+      "mainWidth": 1234,
+      "mainScrollWidth": 1234,
+      "overflow": [],
+      "composerBottom": null,
+      "height": 1000
+    },
+    {
+      "page": "done",
+      "width": 1440,
+      "documentWidth": 1440,
+      "mainWidth": 1234,
+      "mainScrollWidth": 1234,
+      "overflow": [],
+      "composerBottom": null,
+      "height": 1000
+    },
+    {
+      "page": "space",
+      "width": 1440,
+      "documentWidth": 1440,
+      "mainWidth": 1234,
+      "mainScrollWidth": 1234,
+      "overflow": [],
+      "composerBottom": null,
+      "height": 1000
+    },
+    {
+      "page": "materials-dialog",
+      "width": 1440,
+      "documentWidth": 1440,
+      "mainWidth": 1234,
+      "mainScrollWidth": 1234,
+      "overflow": [],
+      "composerBottom": null,
+      "height": 1000
+    },
+    {
+      "page": "request",
+      "width": 390,
+      "documentWidth": 390,
+      "mainWidth": 390,
+      "mainScrollWidth": 390,
+      "overflow": [],
+      "composerBottom": null,
+      "height": 844
+    },
+    {
+      "page": "agents",
+      "width": 390,
+      "documentWidth": 390,
+      "mainWidth": 390,
+      "mainScrollWidth": 390,
+      "overflow": [],
+      "composerBottom": null,
+      "height": 844
+    },
+    {
+      "page": "chat",
+      "width": 390,
+      "documentWidth": 390,
+      "mainWidth": 390,
+      "mainScrollWidth": 390,
+      "overflow": [],
+      "composerBottom": 772,
+      "height": 844
+    },
+    {
+      "page": "accept",
+      "width": 390,
+      "documentWidth": 390,
+      "mainWidth": 390,
+      "mainScrollWidth": 390,
+      "overflow": [],
+      "composerBottom": null,
+      "height": 844
+    },
+    {
+      "page": "done",
+      "width": 390,
+      "documentWidth": 390,
+      "mainWidth": 390,
+      "mainScrollWidth": 390,
+      "overflow": [],
+      "composerBottom": null,
+      "height": 844
+    },
+    {
+      "page": "space",
+      "width": 390,
+      "documentWidth": 390,
+      "mainWidth": 390,
+      "mainScrollWidth": 390,
+      "overflow": [],
+      "composerBottom": null,
+      "height": 844
+    },
+    {
+      "page": "materials-dialog",
+      "width": 390,
+      "documentWidth": 390,
+      "mainWidth": 390,
+      "mainScrollWidth": 390,
+      "overflow": [],
+      "composerBottom": null,
+      "height": 844
+    },
+    {
+      "page": "request",
+      "width": 320,
+      "documentWidth": 320,
+      "mainWidth": 320,
+      "mainScrollWidth": 320,
+      "overflow": [],
+      "composerBottom": null,
+      "height": 844
+    },
+    {
+      "page": "agents",
+      "width": 320,
+      "documentWidth": 320,
+      "mainWidth": 320,
+      "mainScrollWidth": 320,
+      "overflow": [],
+      "composerBottom": null,
+      "height": 844
+    },
+    {
+      "page": "chat",
+      "width": 320,
+      "documentWidth": 320,
+      "mainWidth": 320,
+      "mainScrollWidth": 320,
+      "overflow": [],
+      "composerBottom": 772,
+      "height": 844
+    },
+    {
+      "page": "accept",
+      "width": 320,
+      "documentWidth": 320,
+      "mainWidth": 320,
+      "mainScrollWidth": 320,
+      "overflow": [],
+      "composerBottom": null,
+      "height": 844
+    },
+    {
+      "page": "done",
+      "width": 320,
+      "documentWidth": 320,
+      "mainWidth": 320,
+      "mainScrollWidth": 320,
+      "overflow": [],
+      "composerBottom": null,
+      "height": 844
+    },
+    {
+      "page": "space",
+      "width": 320,
+      "documentWidth": 320,
+      "mainWidth": 320,
+      "mainScrollWidth": 320,
+      "overflow": [],
+      "composerBottom": null,
+      "height": 844
+    },
+    {
+      "page": "materials-dialog",
+      "width": 320,
+      "documentWidth": 320,
+      "mainWidth": 320,
+      "mainScrollWidth": 320,
+      "overflow": [],
+      "composerBottom": null,
+      "height": 844
+    }
+  ],
+  "interactionChecks": [
+    {
+      "name": "Top and workflow menus removed; existing four bottom destinations retained",
+      "pass": true
+    },
+    {
+      "name": "Empty request remains in form",
+      "pass": true
+    },
+    {
+      "name": "No materials can proceed",
+      "pass": true
+    },
+    {
+      "name": "Explicit selected Agent reaches conversation with initial requirement",
+      "pass": true
+    },
+    {
+      "name": "Mixed image/document/audio selection and preview preserve draft",
+      "pass": true
+    },
+    {
+      "name": "ESC closes picker; cancel does not change committed selection",
+      "pass": true
+    },
+    {
+      "name": "Draft removal does not remove workspace file",
+      "pass": true
+    },
+    {
+      "name": "Valid 2-second local demonstration audio metadata loaded",
+      "pass": true
+    },
+    {
+      "name": "Preview and actual local SVG demonstration download",
+      "pass": true
+    },
+    {
+      "name": "Save is optional and duplicate save produces one workspace item",
+      "pass": true
+    },
+    {
+      "name": "Continue with quoted output and material; previous visual remains",
+      "pass": true
+    },
+    {
+      "name": "Attachment-only follow-up sends in same conversation",
+      "pass": true
+    },
+    {
+      "name": "Acceptance completes without saving workspace",
+      "pass": true
+    },
+    {
+      "name": "Empty selection blocked; text-only acceptance is supported by prototype",
+      "pass": true
+    },
+    {
+      "name": "No browser runtime exceptions",
+      "pass": true
+    },
+    {
+      "name": "Bottom menu navigation and unchanged personal-area notice",
+      "pass": true
+    }
+  ],
+  "network": "External HTTP/HTTPS blocked in browser; no API/provider calls",
+  "notProductAcceptance": true,
+  "notProductionBuild": true,
+  "download": "Actual marked demonstration SVG bytes only",
+  "mockBoundaries": [
+    "Agents and task/conversation state are in-memory examples",
+    "Bird SVG is hand-drawn; WAV is synthesized placeholder",
+    "Save and acceptance are not persisted to a server"
+  ],
+  "ownedBrowserClosed": true
+}

@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'">
+<title>聚义厅 · 改动标注</title>
+<link rel="stylesheet" href="review.css"><script defer src="annotations.js"></script><script defer src="review.js"></script>
+</head>
+<body>
+<header class="review-header"><div><h1>改动标注</h1><p>红框圈出变化，编号对应说明；没圈的区域保持原样。</p></div><a href="../index.html#home">返回交互原型 →</a></header>
+<main>
+<div class="review-controls" aria-label="标注浏览工具（非产品菜单）">
+<label>查看界面 <select id="scene" aria-label="选择有变化的界面"></select></label>
+<div class="device-controls" aria-label="截图尺寸"><button id="desktop" type="button" aria-pressed="true">桌面</button><button id="mobile" type="button" aria-pressed="false">手机</button></div>
+<label class="toggle"><input id="marks" type="checkbox" checked>显示红框</label>
+<button id="prev" type="button">上一处</button><button id="next" type="button">下一处</button>
+</div>
+<h2 id="scene-title"></h2>
+<div class="review-layout"><figure><div id="stage" class="stage"><img id="screen" alt=""><div id="overlay" aria-label="变化区域"></div></div><figcaption>原型截图，示例数据。上方切换与红框仅用于本次说明，不加入产品界面。</figcaption></figure><aside aria-label="变化点说明"><ol id="notes"></ol><p class="unchanged">保留原有页面布局、红褐色主题、桌面侧栏及手机底部菜单。这里只标注，不再改动交互。</p></aside></div>
+</main>
+</body></html>

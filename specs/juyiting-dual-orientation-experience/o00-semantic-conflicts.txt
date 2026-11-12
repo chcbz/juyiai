@@ -1,0 +1,13 @@
+src/components/chat/Chat.vue
+src/composables/juyiting/useHallConversation.js
+src/composables/useHttp.js
+src/stores/api.js
+src/utils/oauthCallback.js
+src/utils/oauthTransaction.js
+tests/composables/apiStoreOauth.spec.js
+tests/composables/oauthCallback.spec.js
+tests/composables/oauthHttpAuth.spec.js
+tests/composables/oauthSseAuth.spec.js
+tests/composables/oauthTransaction.spec.js
+tests/juyiting-hall-conversation.test.js
+tests/juyiting-component-behavior.test.js

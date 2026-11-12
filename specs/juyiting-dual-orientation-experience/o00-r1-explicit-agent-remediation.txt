@@ -1,0 +1,5 @@
+src/components/world/JuyiHall.vue
+src/composables/juyiting/useHallData.js
+src/composables/juyiting/useHallTaskActions.js
+tests/juyiting-hall-task-actions.test.js
+tests/juyiting-task-workspace-wiring.test.js

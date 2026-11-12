@@ -1,0 +1,116 @@
+{
+  "baseline_id": "juyiting-ui-baseline-20261006",
+  "saved_on": "2026-10-06",
+  "timezone": "Asia/Shanghai",
+  "scope": "documentation-only; current source candidate, not a latest-live-site attestation",
+  "web_commit": "fe6d4d542079bdf07f5b5fcf2ff96e7f217be33e",
+  "web_tree": "a8e42ded0fbec8a26d6e4aa9f719473cc165e524",
+  "discussion_ui_commit": "446cfbe96aa6fa11759d93682ed0d3247d214d77",
+  "product_dom_capture": "2026-10-04",
+  "product_dom_source": "shared/baseline-source.json",
+  "prototype_engine_origin": "juyiting-multimedia-deliberation/prototypes/adjusted (2026-10-04), copied and updated without altering history",
+  "source_records": [
+    {
+      "path": "src/components/world/JuyiHall.vue",
+      "sha256": "69badc8071495badf61c6f3f4dcfe73bc1eb0658d80c740dfec83302e749246d"
+    },
+    {
+      "path": "src/components/juyiting/BountyDiscussionPanel.vue",
+      "sha256": "235d9fb4d944e9a1e56bd1574e73371e63721d9295333188e5061f5dbc34fe30"
+    },
+    {
+      "path": "src/components/juyiting/PrivateDiscussionPanel.vue",
+      "sha256": "2b6181e3f094dfd8ec290b71bd0fa3d3f32e1516ccf8edd5b29bac77f7b2e5dc"
+    },
+    {
+      "path": "src/components/juyiting/PublicDiscussionPanel.vue",
+      "sha256": "64dbb04c65de8091432c8ecae6bdef035f5f53acede977c8299b2875c13d8be4"
+    },
+    {
+      "path": "src/components/juyiting/ChatPanel.vue",
+      "sha256": "49691d48ed683969696c49189699eda2f215a5954fc6f4bc87e6ba2902dfac09"
+    },
+    {
+      "path": "src/components/juyiting/HallChatComposer.vue",
+      "sha256": "ca4443a8d7ebba17b490b8dbca254dd779078cad98992a493c7a60bd33ec2b4c"
+    },
+    {
+      "path": "src/components/juyiting/HallVoiceControls.vue",
+      "sha256": "57bf5a5df80face559e3eead604f2e4b9b2b52d05e1ed86dfbdc6af1a080ec41"
+    },
+    {
+      "path": "src/components/juyiting/HallMinePage.vue",
+      "sha256": "0c5417c0355c07e12f554a9eec820d38aacc0dd330da10e0e4b34ce0f6b30f2f"
+    },
+    {
+      "path": "src/components/juyiting/HallOverview.vue",
+      "sha256": "2c3ece40035aec5385f68daea2fe009e72bcfa88eb38fb6b5c2f8b3b634ba450"
+    },
+    {
+      "path": "src/components/juyiting/AgentPanel.vue",
+      "sha256": "d98b22e54da2a2fa4d64d862b4e395b4957df6348ee8e5a8fe10f64336b0002c"
+    },
+    {
+      "path": "src/components/juyiting/LibraryPanel.vue",
+      "sha256": "a886eb895a3d8f99e24917690348afbb062b0439c19456579a8379ba7c3f2249"
+    },
+    {
+      "path": "src/components/juyiting/PersonaCatalogPanel.vue",
+      "sha256": "96dc9ad67cbdbda133a6882019a6b86afa412637ed84a2197155848f3b5a7134"
+    },
+    {
+      "path": "src/components/juyiting/HallConversationHistory.vue",
+      "sha256": "f2225b8be208ae44c39f7302e3a5c081af8f8d1c03b31aeace465fa9cbe9fbfe"
+    }
+  ],
+  "fidelity": "shell/core pages: historical sanitized DOM plus source-aligned chat delta; supplemental pages: source-informed structural fixtures, not pixel-verified captures",
+  "production_run_for_this_doc": null,
+  "browser_visual_acceptance": "Owned Chromium local prototype layout/screenshots, 1440/390/320; not live site or real device",
+  "business_network": "CSP connect-src none; no business API calls",
+  "prototype_proposals": [
+    {
+      "date": "2026-10-06",
+      "scope": "home overview view tabs only",
+      "change": "Replace red underline with light-tinted rounded selected state; preserve interactions and keyboard focus",
+      "implementation": "prototype/baseline-ui.css only; product source unchanged",
+      "status": "prototype-only proposal, not deployed"
+    },
+    {
+      "date": "2026-10-06",
+      "scope": "overview/library/case/treasure view tabs; not action buttons",
+      "change": "Shared tinted capsule CSS, scoped to four existing view-switch groups",
+      "implementation_commit": "c897faca9c6246185b38d72ed1898ecebc307ad5",
+      "status": "implemented on remote develop; cloud verification tracked separately; not deployed"
+    },
+    {
+      "date": "2026-10-07",
+      "scope": "chat/private/public toolbar and single composer",
+      "change": "Right-aligned compact topic icons; direct attachment after plus; icon-only mic before send; remove duplicate material menu entry",
+      "status": "offline prototype proposal only; no Web/API change or deployment"
+    }
+  ],
+  "interaction_revision": "compact-chat-20261007",
+  "canonical_entry": "prototype/index.html",
+  "page_index": "prototype/pages.html",
+  "interaction_guide": "interaction-guide-20261007.md",
+  "interaction_scope": "Offline target interactions only; R01 remains not implemented; no source build/deployment",
+  "historical_source_manifest": "checks-history/baseline-source-before-completion-20261007.json",
+  "interaction_verification": {
+    "chromium_report": "browser-checks-20261007.json",
+    "document_report": "prototype-checks.json",
+    "checks": 31,
+    "layouts": 70,
+    "document_checks": 72,
+    "browser": "Chrome/133.0.6943.141",
+    "source_hashes": {
+      "index.html": "22a79693d0f007655918bddfb6483a69995a1f2e3b7148238469c8f144deddde",
+      "prototype.js": "eaddf7bb5cae368da970449a848c220ff718a1f9c52c18ff67a91e4fc066a6bc",
+      "baseline-ui.js": "5ce65852e5dd2ac483b57eefd3e4be724e422f023b00031fabb8587cf6cc6258",
+      "interaction-completion.js": "a7c09e729e745e4f8fedd5c54673827d7b324626545e82aa827e22296942608e",
+      "interaction-completion.css": "2c2d6c41b0ea4d688ea5664d258ea4dea557fb45c2dc16c967f5577087d727ef",
+      "hall-view-tabs.css": "221f6f9b41938a6e5c87dbd0fa6a9fc95df8640b4a36d4b18d194fe59b312d66",
+      "source-ui.css": "3fc2ee30f449f8f8cb5f057c8cff82ec3fdac592ab0bd807b625fc594ef9fd41"
+    },
+    "product_accepted": false
+  }
+}

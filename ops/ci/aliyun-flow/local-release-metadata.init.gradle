@@ -1,0 +1,180 @@
+/* Opt-in local producer metadata and compile-only cache policy. No dependency,
+ * default-task, installer or Flow identity changes. External build routing and
+ * pre-consumption dependency verification are explicit controller prerequisites.
+ * Proof/checksum consistency is not authentication or production admission. */
+import groovy.json.JsonOutput
+import java.nio.channels.FileChannel
+import java.nio.file.Files
+import java.nio.file.LinkOption
+import java.nio.file.StandardOpenOption
+import java.nio.file.attribute.PosixFilePermission
+import java.security.MessageDigest
+import java.util.jar.JarFile
+
+if (System.getenv('CYF_LOCAL_RELEASE_OPT_IN') != '1') {
+    throw new GradleException('CYF_LOCAL_RELEASE_INPUT_INVALID')
+}
+def required = { String suffix ->
+    def value = System.getenv('CYF_LOCAL_RELEASE_' + suffix)
+    if (!value) throw new GradleException('CYF_LOCAL_RELEASE_INPUT_INVALID')
+    value
+}
+def sourceText = required('SOURCE_ROOT')
+def buildText = required('BUILD_ROOT')
+def identity = [version: required('VERSION'), buildId: required('BUILD_ID'),
+                commit: required('COMMIT'), tree: required('TREE')]
+if (!(identity.version ==~ /[A-Za-z0-9][A-Za-z0-9_.-]*/) ||
+        !(identity.buildId ==~ /[A-Za-z0-9][A-Za-z0-9_.-]*/) ||
+        !(identity.commit ==~ /[0-9a-f]{40}/) || !(identity.tree ==~ /[0-9a-f]{40}/)) {
+    throw new GradleException('CYF_LOCAL_RELEASE_INPUT_INVALID')
+}
+def physical = { File file, boolean directory ->
+    def path = file.toPath()
+    if (!file.isAbsolute() || file.absolutePath != file.canonicalPath ||
+            !Files.exists(path, LinkOption.NOFOLLOW_LINKS) ||
+            (directory ? !Files.isDirectory(path, LinkOption.NOFOLLOW_LINKS) :
+                    !Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS))) {
+        throw new GradleException('CYF_LOCAL_RELEASE_PATH_UNSAFE')
+    }
+    for (def part = path; part != null; part = part.parent) {
+        if (Files.isSymbolicLink(part)) throw new GradleException('CYF_LOCAL_RELEASE_PATH_UNSAFE')
+    }
+    if (!directory && Files.getAttribute(path, 'unix:nlink') != 1) {
+        throw new GradleException('CYF_LOCAL_RELEASE_PATH_UNSAFE')
+    }
+    file
+}
+def sourceRoot = physical(new File(sourceText), true)
+def buildRoot = physical(new File(buildText), true)
+if (sourceRoot.toPath().startsWith(buildRoot.toPath()) || buildRoot.toPath().startsWith(sourceRoot.toPath()) ||
+        Files.getPosixFilePermissions(buildRoot.toPath()).any { permission ->
+            permission in [PosixFilePermission.GROUP_READ, PosixFilePermission.GROUP_WRITE,
+                PosixFilePermission.GROUP_EXECUTE, PosixFilePermission.OTHERS_READ,
+                PosixFilePermission.OTHERS_WRITE, PosixFilePermission.OTHERS_EXECUTE]
+        }) {
+    throw new GradleException('CYF_LOCAL_RELEASE_PATH_UNSAFE')
+}
+def git = { List<String> args ->
+    def builder = new ProcessBuilder(['git', '-C', sourceRoot.absolutePath] + args)
+    builder.environment().clear()
+    builder.environment().putAll([PATH: System.getenv('PATH') ?: '/usr/bin:/bin', LANG: 'C',
+        GIT_CONFIG_NOSYSTEM: '1', GIT_CONFIG_GLOBAL: '/dev/null', GIT_OPTIONAL_LOCKS: '0'])
+    builder.redirectError(ProcessBuilder.Redirect.DISCARD)
+    def process = builder.start()
+    def result = process.inputStream.getText('UTF-8').trim()
+    if (process.waitFor() != 0) throw new GradleException('CYF_LOCAL_RELEASE_SOURCE_MISMATCH')
+    result
+}
+def cleanState = {
+    if (git(['rev-parse', '--show-toplevel']) != sourceRoot.absolutePath ||
+            git(['rev-parse', 'HEAD']) != identity.commit ||
+            git(['rev-parse', 'HEAD^{tree}']) != identity.tree) {
+        throw new GradleException('CYF_LOCAL_RELEASE_SOURCE_MISMATCH')
+    }
+    if (git(['status', '--porcelain=v1', '--untracked-files=all'])) {
+        throw new GradleException('CYF_LOCAL_RELEASE_SOURCE_DIRTY')
+    }
+    [commit: identity.commit, tree: identity.tree, clean: true]
+}
+def digest = { File file ->
+    def hash = MessageDigest.getInstance('SHA-256')
+    file.withInputStream { stream ->
+        byte[] buffer = new byte[65536]
+        int count
+        while ((count = stream.read(buffer)) != -1) hash.update(buffer, 0, count)
+    }
+    hash.digest().encodeHex().toString()
+}
+def metadata = ['CYF-Release-Version': identity.version, 'CYF-Source-Commit': identity.commit,
+                'CYF-Source-Tree': identity.tree, 'CYF-Local-Build-Id': identity.buildId]
+def proofFile = new File(buildRoot, 'local-bootjar-proof.json')
+def matchedSettings = false
+// Included-build settings are deliberately untouched.
+settingsEvaluated { settings ->
+    if (settings.settingsDir.canonicalFile != sourceRoot) return
+    if (settings.rootProject.name != 'jia' || !new File(sourceRoot, 'starter/build.gradle').isFile() ||
+            !new File(sourceRoot, 'settings.gradle').isFile()) {
+        throw new GradleException('CYF_LOCAL_RELEASE_SETTINGS_MISMATCH')
+    }
+    matchedSettings = true
+}
+// Opt-in local release only: reuse content-keyed JavaCompile outputs, never
+// tests, final JARs or other task outputs. New buildRoot remains mandatory.
+// JavaCompile is already a Gradle @CacheableTask; no manual cache keys.
+gradle.beforeProject { project ->
+    project.tasks.configureEach { candidate ->
+        if (!(candidate instanceof org.gradle.api.tasks.compile.JavaCompile)) {
+            candidate.outputs.cacheIf { false }
+        }
+        if (candidate instanceof org.gradle.api.tasks.testing.Test) {
+            candidate.outputs.upToDateWhen { false }
+        }
+    }
+}
+gradle.projectsEvaluated {
+    if (gradle.rootProject.projectDir.canonicalFile != sourceRoot) return
+    if (!matchedSettings) throw new GradleException('CYF_LOCAL_RELEASE_SETTINGS_MISMATCH')
+    def starter = gradle.rootProject.findProject(':starter')
+    if (starter == null) throw new GradleException('CYF_LOCAL_RELEASE_BOOTJAR_MISSING')
+    def task = starter.tasks.findByName('bootJar')
+    def realBootJar = false
+    for (def type = task?.getClass(); type != null; type = type.superclass) {
+        if (type.name == 'org.springframework.boot.gradle.tasks.bundling.BootJar') realBootJar = true
+    }
+    if (!realBootJar || task.path != ':starter:bootJar') {
+        throw new GradleException('CYF_LOCAL_RELEASE_BOOTJAR_MISSING')
+    }
+    task.inputs.properties(metadata)
+    task.manifest.attributes(metadata) // leave Implementation-Version entirely untouched
+    task.outputs.upToDateWhen { false }
+    task.outputs.cacheIf { false }
+    def sourceBefore = null
+    task.doFirst {
+        physical(sourceRoot, true)
+        physical(buildRoot, true)
+        def jar = task.archiveFile.get().asFile
+        if (!jar.toPath().startsWith(buildRoot.toPath()) || jar.absolutePath != jar.canonicalPath ||
+                Files.exists(jar.toPath(), LinkOption.NOFOLLOW_LINKS) ||
+                Files.exists(proofFile.toPath(), LinkOption.NOFOLLOW_LINKS)) {
+            throw new GradleException('CYF_LOCAL_RELEASE_BUILD_NOT_FRESH')
+        }
+        def existingParent = jar.parentFile
+        while (!Files.exists(existingParent.toPath(), LinkOption.NOFOLLOW_LINKS)) {
+            existingParent = existingParent.parentFile
+        }
+        physical(existingParent, true) // bootJar itself may create fresh libs parents
+        sourceBefore = cleanState()
+        println('CYF_LOCAL_BOOTJAR_BEGIN ' + identity.buildId)
+    }
+    // Registered after project evaluation, hence after the original production
+    // PublicArtifactVerifier doLast. No replacement/reimplementation of security.
+    task.doLast {
+        def jar = physical(task.archiveFile.get().asFile, false)
+        if (!jar.toPath().startsWith(buildRoot.toPath()) || sourceBefore == null) {
+            throw new GradleException('CYF_LOCAL_RELEASE_BUILD_NOT_FRESH')
+        }
+        def sourceAfter = cleanState()
+        def implementationVersion
+        new JarFile(jar).withCloseable { archive ->
+            def attributes = archive.manifest?.mainAttributes
+            if (attributes == null || metadata.any { key, value -> attributes.getValue(key) != value }) {
+                throw new GradleException('CYF_LOCAL_RELEASE_METADATA_MISMATCH')
+            }
+            implementationVersion = attributes.getValue('Implementation-Version')
+        }
+        def proof = [format: 'cyf-api-local-bootjar-proof-v1', identity: identity,
+            sourceRoot: sourceRoot.absolutePath, buildRoot: buildRoot.absolutePath,
+            sourceBefore: sourceBefore, sourceAfter: sourceAfter, task: task.path,
+            metadata: metadata, moduleVersion: String.valueOf(starter.version),
+            implementationVersion: implementationVersion,
+            jar: [path: jar.absolutePath, sha256: digest(jar), size: jar.length()],
+            publicArtifactVerifier: 'bootJar-original-doLast-completed']
+        def bytes = (JsonOutput.toJson(proof) + '\n').getBytes('UTF-8')
+        Files.write(proofFile.toPath(), bytes, StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE)
+        Files.setPosixFilePermissions(proofFile.toPath(), [PosixFilePermission.OWNER_READ,
+            PosixFilePermission.OWNER_WRITE] as Set)
+        FileChannel.open(proofFile.toPath(), StandardOpenOption.WRITE).withCloseable { channel -> channel.force(true) }
+        physical(proofFile, false)
+        println('CYF_LOCAL_BOOTJAR_END ' + digest(proofFile))
+    }
+}

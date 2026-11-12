@@ -1,0 +1,433 @@
+{
+  "kind": "current-deployed-ui-baseline-prototype",
+  "browser": {
+    "protocolVersion": "1.3",
+    "product": "Chrome/133.0.6943.141",
+    "revision": "@2a5d6da0d6165d7b107502095a937fe7704fcef6",
+    "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/133.0.0.0 Safari/537.36",
+    "jsVersion": "13.3.415.23"
+  },
+  "checks": [
+    {
+      "name": "Original product content and old entry retained; no proposed workflow navigation",
+      "pass": true
+    },
+    {
+      "name": "Visible bottom menu works with native browser mouse events",
+      "pass": true
+    },
+    {
+      "name": "Existing separate material and reference pickers reachable",
+      "pass": true
+    }
+  ],
+  "layouts": [
+    {
+      "page": "#home",
+      "width": 1440,
+      "documentWidth": 1440,
+      "bodyHeight": 1000,
+      "visibleHeading": [
+        "今天，想办成什么事？",
+        "说一句你想办成的事",
+        "接着上次办",
+        "需要你看一眼",
+        "找位好汉"
+      ],
+      "bottom": [],
+      "images": [
+        {
+          "loaded": true,
+          "src": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%"
+        }
+      ]
+    },
+    {
+      "page": "#tasks",
+      "width": 1440,
+      "documentWidth": 1440,
+      "bodyHeight": 1000,
+      "visibleHeading": [
+        "今天，想办成什么事？",
+        "说一句你想办成的事",
+        "接着上次办",
+        "需要你看一眼",
+        "找位好汉"
+      ],
+      "bottom": [],
+      "images": [
+        {
+          "loaded": true,
+          "src": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%"
+        }
+      ]
+    },
+    {
+      "page": "#create",
+      "width": 1440,
+      "documentWidth": 1440,
+      "bodyHeight": 1000,
+      "visibleHeading": [
+        "今天，想办成什么事？",
+        "说一句你想办成的事",
+        "接着上次办",
+        "需要你看一眼",
+        "找位好汉"
+      ],
+      "bottom": [],
+      "images": [
+        {
+          "loaded": true,
+          "src": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%"
+        }
+      ]
+    },
+    {
+      "page": "#agents",
+      "width": 1440,
+      "documentWidth": 1440,
+      "bodyHeight": 1000,
+      "visibleHeading": [
+        "今天，想办成什么事？",
+        "说一句你想办成的事",
+        "接着上次办",
+        "需要你看一眼",
+        "找位好汉"
+      ],
+      "bottom": [],
+      "images": [
+        {
+          "loaded": true,
+          "src": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%"
+        }
+      ]
+    },
+    {
+      "page": "#detail",
+      "width": 1440,
+      "documentWidth": 1440,
+      "bodyHeight": 1000,
+      "visibleHeading": [
+        "今天，想办成什么事？",
+        "说一句你想办成的事",
+        "接着上次办",
+        "需要你看一眼",
+        "找位好汉",
+        "事项详情"
+      ],
+      "bottom": [],
+      "images": [
+        {
+          "loaded": true,
+          "src": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%"
+        }
+      ]
+    },
+    {
+      "page": "#chat",
+      "width": 1440,
+      "documentWidth": 1440,
+      "bodyHeight": 1000,
+      "visibleHeading": [
+        "今天，想办成什么事？",
+        "说一句你想办成的事",
+        "接着上次办",
+        "需要你看一眼",
+        "找位好汉"
+      ],
+      "bottom": [],
+      "images": [
+        {
+          "loaded": true,
+          "src": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%"
+        },
+        {
+          "loaded": true,
+          "src": "../bird.svg"
+        }
+      ]
+    },
+    {
+      "page": "#workspace",
+      "width": 1440,
+      "documentWidth": 1440,
+      "bodyHeight": 1000,
+      "visibleHeading": [
+        "今天，想办成什么事？",
+        "说一句你想办成的事",
+        "接着上次办",
+        "需要你看一眼",
+        "找位好汉",
+        "这一箱，都是可继续用的资料"
+      ],
+      "bottom": [],
+      "images": [
+        {
+          "loaded": true,
+          "src": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%"
+        }
+      ]
+    },
+    {
+      "page": "#mine",
+      "width": 1440,
+      "documentWidth": 1440,
+      "bodyHeight": 1000,
+      "visibleHeading": [
+        "今天，想办成什么事？",
+        "说一句你想办成的事",
+        "接着上次办",
+        "需要你看一眼",
+        "找位好汉",
+        "常用入口与设置"
+      ],
+      "bottom": [],
+      "images": [
+        {
+          "loaded": true,
+          "src": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%"
+        }
+      ]
+    },
+    {
+      "page": "#materials",
+      "width": 1440,
+      "documentWidth": 1440,
+      "bodyHeight": 1000,
+      "visibleHeading": [
+        "今天，想办成什么事？",
+        "说一句你想办成的事",
+        "接着上次办",
+        "需要你看一眼",
+        "找位好汉",
+        "为新事项选择资料"
+      ],
+      "bottom": [],
+      "images": [
+        {
+          "loaded": true,
+          "src": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%"
+        }
+      ]
+    },
+    {
+      "page": "#reference",
+      "width": 1440,
+      "documentWidth": 1440,
+      "bodyHeight": 1000,
+      "visibleHeading": [
+        "今天，想办成什么事？",
+        "说一句你想办成的事",
+        "接着上次办",
+        "需要你看一眼",
+        "找位好汉",
+        "为新事项选择参考图"
+      ],
+      "bottom": [],
+      "images": [
+        {
+          "loaded": true,
+          "src": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%"
+        }
+      ]
+    },
+    {
+      "page": "#home",
+      "width": 390,
+      "documentWidth": 390,
+      "bodyHeight": 844,
+      "visibleHeading": [
+        "今天，想办成什么事？",
+        "说一句你想办成的事",
+        "接着上次办",
+        "需要你看一眼",
+        "找位好汉"
+      ],
+      "bottom": [
+        "办事",
+        "事项",
+        "资料",
+        "我的"
+      ],
+      "images": []
+    },
+    {
+      "page": "#tasks",
+      "width": 390,
+      "documentWidth": 390,
+      "bodyHeight": 844,
+      "visibleHeading": [
+        "今天，想办成什么事？",
+        "说一句你想办成的事",
+        "接着上次办",
+        "需要你看一眼",
+        "找位好汉"
+      ],
+      "bottom": [
+        "办事",
+        "事项",
+        "资料",
+        "我的"
+      ],
+      "images": []
+    },
+    {
+      "page": "#create",
+      "width": 390,
+      "documentWidth": 390,
+      "bodyHeight": 844,
+      "visibleHeading": [
+        "今天，想办成什么事？",
+        "说一句你想办成的事",
+        "接着上次办",
+        "需要你看一眼",
+        "找位好汉"
+      ],
+      "bottom": [
+        "办事",
+        "事项",
+        "资料",
+        "我的"
+      ],
+      "images": []
+    },
+    {
+      "page": "#agents",
+      "width": 390,
+      "documentWidth": 390,
+      "bodyHeight": 844,
+      "visibleHeading": [
+        "今天，想办成什么事？",
+        "说一句你想办成的事",
+        "接着上次办",
+        "需要你看一眼",
+        "找位好汉"
+      ],
+      "bottom": [],
+      "images": []
+    },
+    {
+      "page": "#detail",
+      "width": 390,
+      "documentWidth": 390,
+      "bodyHeight": 844,
+      "visibleHeading": [
+        "今天，想办成什么事？",
+        "说一句你想办成的事",
+        "接着上次办",
+        "需要你看一眼",
+        "找位好汉",
+        "事项详情"
+      ],
+      "bottom": [],
+      "images": []
+    },
+    {
+      "page": "#chat",
+      "width": 390,
+      "documentWidth": 390,
+      "bodyHeight": 844,
+      "visibleHeading": [
+        "今天，想办成什么事？",
+        "说一句你想办成的事",
+        "接着上次办",
+        "需要你看一眼",
+        "找位好汉"
+      ],
+      "bottom": [],
+      "images": [
+        {
+          "loaded": true,
+          "src": "../bird.svg"
+        }
+      ]
+    },
+    {
+      "page": "#workspace",
+      "width": 390,
+      "documentWidth": 390,
+      "bodyHeight": 844,
+      "visibleHeading": [
+        "今天，想办成什么事？",
+        "说一句你想办成的事",
+        "接着上次办",
+        "需要你看一眼",
+        "找位好汉",
+        "这一箱，都是可继续用的资料"
+      ],
+      "bottom": [
+        "办事",
+        "事项",
+        "资料",
+        "我的"
+      ],
+      "images": []
+    },
+    {
+      "page": "#mine",
+      "width": 390,
+      "documentWidth": 390,
+      "bodyHeight": 844,
+      "visibleHeading": [
+        "今天，想办成什么事？",
+        "说一句你想办成的事",
+        "接着上次办",
+        "需要你看一眼",
+        "找位好汉",
+        "常用入口与设置"
+      ],
+      "bottom": [
+        "办事",
+        "事项",
+        "资料",
+        "我的"
+      ],
+      "images": []
+    },
+    {
+      "page": "#materials",
+      "width": 390,
+      "documentWidth": 390,
+      "bodyHeight": 844,
+      "visibleHeading": [
+        "今天，想办成什么事？",
+        "说一句你想办成的事",
+        "接着上次办",
+        "需要你看一眼",
+        "找位好汉",
+        "为新事项选择资料"
+      ],
+      "bottom": [
+        "办事",
+        "事项",
+        "资料",
+        "我的"
+      ],
+      "images": []
+    },
+    {
+      "page": "#reference",
+      "width": 390,
+      "documentWidth": 390,
+      "bodyHeight": 844,
+      "visibleHeading": [
+        "今天，想办成什么事？",
+        "说一句你想办成的事",
+        "接着上次办",
+        "需要你看一眼",
+        "找位好汉",
+        "为新事项选择参考图"
+      ],
+      "bottom": [
+        "办事",
+        "事项",
+        "资料",
+        "我的"
+      ],
+      "images": []
+    }
+  ],
+  "errors": [],
+  "externalNetwork": "blocked; CSP connect-src none",
+  "notProductionAcceptance": true
+}

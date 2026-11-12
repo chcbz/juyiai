@@ -1,0 +1,63 @@
+{
+  "revision": "v1.1_whitespace_domain_clarification",
+  "baseFixture": "typed-deliberation-api-final-validator-v1.json",
+  "baseFixtureSha256": "f1327d5fd1041a0149b3b0b788e503504a955cd24cbe9a0847d0d0bc1019af63",
+  "runtimeExpectations": [
+    {
+      "id": "WS01",
+      "field": "content",
+      "input": "U+001C only",
+      "expected": "INVALID_CONTENT; retain API isBlank",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "WS02",
+      "field": "clarification.question",
+      "input": "U+001C only with ordinary nonblank content/text",
+      "expected": "ACCEPT; Client trim nonblank; prose does not inherit instruction ISOControl ban",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "WS03",
+      "field": "interactionOutcome.text/question",
+      "input": "NBSP or BOM only with normal supplied content",
+      "expected": "INVALID_OUTCOME; exact Client trim domain",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "WS04",
+      "field": "binding.ownerJiacn/clientId/opaque IDs",
+      "input": "NBSP or BOM only within existing UTF16 bounds",
+      "expected": "ACCEPT pure field domain; existing Java isBlank/strip allow; no ACL or ownership implication",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "WS05",
+      "field": "instruction/sourceRefId",
+      "input": "NBSP/BOM-only or U+001C/U+0085-containing",
+      "expected": "INVALID_OUTCOME or INVALID_FACTS by position; Client trim+ISOControl domains",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "WS06",
+      "field": "content/text/question/instruction/sourceRefId",
+      "input": "U+200B only",
+      "expected": "nonblank per Client; content not Java blank; non-control; accept iff other operation/catalog constraints satisfied",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "WS07",
+      "field": "content/text",
+      "input": "normal Chinese prose with LF",
+      "expected": "ACCEPT; preserve exact bytes; no trimming",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "WS08",
+      "field": "content/binding",
+      "input": "unpaired surrogate",
+      "expected": "INVALID_CONTENT/INVALID_BINDING; scalar requirement still applies",
+      "status": "NOT_RUN"
+    }
+  ]
+}

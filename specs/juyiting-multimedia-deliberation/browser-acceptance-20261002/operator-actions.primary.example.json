@@ -1,0 +1,81 @@
+{
+  "status": "TEMPLATE_ONLY_NOT_EXECUTED",
+  "instructions": "Copy outside Git, replace source-derived selectors only after a real deployed DOM discovery snapshot, and never place credentials here. Each click/fill is a real browser interaction; use only under --execute plus the live authorization gate.",
+  "actions": [
+    {
+      "name": "open-juyi-hall",
+      "type": "navigate",
+      "url": "https://DEPLOYED-HOST/juyiting",
+      "screenshot": true
+    },
+    {
+      "name": "ready-juyi-hall",
+      "type": "readyCheckpoint",
+      "condition": {
+        "kind": "selectorVisible",
+        "selector": ".hall-stage"
+      },
+      "screenshot": true
+    },
+    {
+      "name": "discover-no-reference-state",
+      "type": "snapshot",
+      "screenshot": true
+    },
+    {
+      "name": "enter-bird-request",
+      "type": "fill",
+      "selector": "OPERATOR_REPLACE_VISIBLE_REQUEST_INPUT",
+      "value": "画一只鸟"
+    },
+    {
+      "name": "explicit-target-assignment",
+      "type": "clickSelector",
+      "selector": "OPERATOR_REPLACE_EXACT_AGENT_ASSIGNMENT_CONTROL",
+      "screenshot": true
+    },
+    {
+      "name": "ready-deliberation-state",
+      "type": "readyCheckpoint",
+      "condition": {
+        "kind": "selectorVisible",
+        "selector": "[aria-label=\"悬赏议事 v2 状态\"]"
+      },
+      "screenshot": true
+    },
+    {
+      "name": "observe-automatic-deliberation",
+      "type": "checkpoint",
+      "note": "Record actual assignment/conversation/request/turn IDs and one execution only; do not infer from a toast.",
+      "screenshot": true
+    },
+    {
+      "name": "verify-real-image",
+      "type": "imageProof",
+      "screenshot": true
+    },
+    {
+      "name": "download-and-hash",
+      "type": "downloadProof",
+      "screenshot": true
+    },
+    {
+      "name": "enter-blue-edit",
+      "type": "fill",
+      "selector": "OPERATOR_REPLACE_SAME_CONVERSATION_INPUT",
+      "value": "改成蓝色"
+    },
+    {
+      "name": "observe-original-retained-and-new-execution",
+      "type": "checkpoint",
+      "note": "Prove first asset is an input reference, remains visible, and the second output has a distinct real execution/asset identity.",
+      "screenshot": true
+    },
+    {
+      "name": "select-only-new-output-and-text",
+      "type": "checkpoint",
+      "note": "Use actual finalization UI; record exact selected outputs, delivery/decision/task states separately. Do not accept the original image.",
+      "screenshot": true
+    }
+  ]
+}

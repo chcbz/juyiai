@@ -1,0 +1,24 @@
+{
+  "checked_on": "2026-10-13",
+  "purpose": "primary_sources_for_fixed_schema_dialect_and_validator_selection_not_application_verification",
+  "sources": [
+    {
+      "title": "JSON Schema Draft 2020-12",
+      "url": "https://json-schema.org/draft/2020-12",
+      "verification": "not_verified",
+      "error_type": "HTTPError"
+    },
+    {
+      "title": "Ajv JSON Schema versions",
+      "url": "https://ajv.js.org/json-schema.html",
+      "verification": "primary_page_retrieved",
+      "evidence_excerpt": "st JSON schema Validator. Supports JSON Schema draft-04/06/07/2019-09/2020-12 and JSON Type Definition (RFC8927)\">"
+    },
+    {
+      "title": "networknt JSON Schema Validator README",
+      "url": "https://github.com/networknt/json-schema-validator",
+      "verification": "primary_page_retrieved",
+      "evidence_excerpt": "a JSON schema validator that supports draft V4, V6, V7, V2019-09 and V2020-12 · GitHub "
+    }
+  ]
+}

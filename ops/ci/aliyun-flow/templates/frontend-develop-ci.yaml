@@ -1,0 +1,90 @@
+# CI-only Flow pipeline. It tests and builds the develop checkout in an Alinux3 custom-environment step and never deploys.
+name: cyf-web-kit-develop-ci
+sources:
+  repo_0:
+    type: git
+    name: cyf_web_develop
+    endpoint: https://github.com/chcbz/juyiai-web.git
+    branch: develop
+    triggerEvents: []
+    branchesFilter: develop
+defaultWorkspace: repo_0
+stages:
+  cloud_ci:
+    name: Frontend develop CI
+    jobs:
+      web_ci:
+        name: Locked install, full tests, and Vite build
+        runsOn: public/cn-beijing
+        timeoutMinutes: 60
+        steps:
+          test_and_build:
+            name: Alinux3 full frontend CI
+            step: CustomEnvironmentBuild
+            with:
+              image: build-steps-public-registry.cn-beijing.cr.aliyuncs.com/build-steps/alinux3:latest
+              run: |-
+                set -eu
+                test "${CI_COMMIT_REF_NAME:-}" = develop
+                test -n "${CI_COMMIT_SHA:-}"
+                test "$(git rev-parse HEAD)" = "$CI_COMMIT_SHA"
+                manager=
+                if test -x /usr/bin/dnf; then manager=/usr/bin/dnf; elif test -x /usr/bin/yum; then manager=/usr/bin/yum; fi
+                test -n "$manager"
+                "$manager" -y --setopt=gpgcheck=1 --setopt=install_weak_deps=False install ca-certificates curl tar xz git
+                node_sha=6c172a9ab6718f7b801fb5a7bd486af2ee5e32758086a04b84fcce2aa77095e6
+                cache_root="$HOME/.cache/cyf-test-runtime"
+                node_archive="$cache_root/node-$node_sha"
+                mkdir -p "$cache_root"
+                if test -f "$node_archive"; then
+                  printf '%s  %s\n' "$node_sha" "$node_archive" | sha256sum -c -
+                else
+                  downloaded=0
+                  attempt=0
+                  for node_url in \
+                    https://mirrors.aliyun.com/nodejs-release/v24.22.1/node-v24.22.1-linux-x64.tar.xz \
+                    https://cdn.npmmirror.com/binaries/node/v24.22.1/node-v24.22.1-linux-x64.tar.xz \
+                    https://nodejs.org/dist/v24.22.1/node-v24.22.1-linux-x64.tar.xz
+                  do
+                    attempt=$((attempt + 1))
+                    partial="$node_archive.$$.${attempt}.partial"
+                    test ! -e "$partial"
+                    if curl --fail --location --retry 2 --connect-timeout 20 --max-time 240 "$node_url" --output "$partial"; then
+                      printf '%s  %s\n' "$node_sha" "$partial" | sha256sum -c -
+                      mv "$partial" "$node_archive"
+                      downloaded=1
+                      break
+                    fi
+                  done
+                  test "$downloaded" = 1
+                fi
+                node_root="$PWD/_cyf_node24"
+                test ! -e "$node_root"
+                mkdir "$node_root"
+                tar -xJf "$node_archive" -C "$node_root"
+                export PATH="$node_root/node-v24.22.1-linux-x64/bin:$PATH"
+                test "$(node --version)" = v24.22.1
+                npm ci --include=dev --registry=https://registry.npmmirror.com --replace-registry-host=npmjs --fetch-retries=2 --fetch-retry-mintimeout=10000 --fetch-retry-maxtimeout=30000 --fetch-timeout=120000 --no-audit --no-fund
+                test -x node_modules/.bin/vite
+                test -f node_modules/vite/bin/vite.js
+                npm run test
+                npm run build
+                test -d dist
+                test -f mochawesome-report/mochawesome.html
+                test -f mochawesome-report/mochawesome.json
+                export_root="$PWD/_cyf_web_develop_ci_export"
+                test ! -e "$export_root"
+                mkdir -m 700 "$export_root"
+                cp -a dist "$export_root/dist"
+                cp -a mochawesome-report "$export_root/mochawesome-report"
+                printf '%s\n' "$CI_COMMIT_SHA" > "$export_root/source-commit.txt"
+                git rev-parse HEAD^{tree} > "$export_root/source-tree.txt"
+          upload_artifact:
+            name: Upload frontend CI artifact
+            step: ArtifactUpload
+            with:
+              uploadType: flowPublic
+              artifact: cyf_web_develop_ci_${PIPELINE_ID}
+              filePath:
+                - _cyf_web_develop_ci_export/
+              includePathInArtifact: false

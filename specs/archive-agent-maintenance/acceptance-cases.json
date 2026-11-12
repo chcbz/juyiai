@@ -1,0 +1,1394 @@
+{
+  "feature_id": "archive-agent-maintenance",
+  "revision": "D2",
+  "status": "not_run",
+  "cases": [
+    {
+      "id": "AUTH-01",
+      "category": "身份与任职",
+      "title": "普通读者不能任命",
+      "trigger": "读者调用任职写接口或诱导宋江任命",
+      "expected": "拒绝写入，数据库无任职/授权变化",
+      "work_packages": [
+        "M2",
+        "M7"
+      ],
+      "user_stories": [
+        "U1",
+        "U9"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "AUTH-02",
+      "category": "身份与任职",
+      "title": "显示名不能授权",
+      "trigger": "另一个 Agent 显示名也叫吴用",
+      "expected": "仅 canonical Agent/binding 的任职有效",
+      "work_packages": [
+        "M2"
+      ],
+      "user_stories": [
+        "U1",
+        "U7"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "AUTH-03",
+      "category": "身份与任职",
+      "title": "同 owner 任命",
+      "trigger": "管理者选择自己的当前绑定 Agent",
+      "expected": "保存准确 scope/binding/skill/profile；可离线任命",
+      "work_packages": [
+        "M2"
+      ],
+      "user_stories": [
+        "U1"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "AUTH-04",
+      "category": "身份与任职",
+      "title": "跨 owner 任命拒绝",
+      "trigger": "书库管理者指定他人 Agent",
+      "expected": "首期拒绝，不能仅凭管理公共书库权获得他人 Agent",
+      "work_packages": [
+        "M2"
+      ],
+      "user_stories": [
+        "U1"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "AUTH-05",
+      "category": "身份与任职",
+      "title": "换 owner / binding",
+      "trigger": "任职后 Agent 解绑或变更 owner",
+      "expected": "有效任职失效；旧作业写/发布拒绝，历史保留",
+      "work_packages": [
+        "M2",
+        "M4"
+      ],
+      "user_stories": [
+        "U7"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "AUTH-06",
+      "category": "身份与任职",
+      "title": "撤任线性化",
+      "trigger": "用数据库 barrier 并发撤任与发布",
+      "expected": "按提交/锁先后产生唯一正确结果，撤任提交后无新发布",
+      "work_packages": [
+        "M2",
+        "M4"
+      ],
+      "user_stories": [
+        "U7"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "AUTH-07",
+      "category": "身份与任职",
+      "title": "单岗位并发任命",
+      "trigger": "两个管理请求竞争同一 slot revision",
+      "expected": "一个生效，另一个冲突；无两个当前负责人",
+      "work_packages": [
+        "M2"
+      ],
+      "user_stories": [
+        "U1"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "AUTH-08",
+      "category": "身份与任职",
+      "title": "仅编修不能发布",
+      "trigger": "DRAFT_ONLY Agent 调用 native publish",
+      "expected": "403；草稿保留，可由有权管理者另行发布",
+      "work_packages": [
+        "M2",
+        "M4"
+      ],
+      "user_stories": [
+        "U4"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "AUTH-09",
+      "category": "身份与任职",
+      "title": "AUTO 授权交集",
+      "trigger": "岗位可自动发布但本 job 为 MANUAL",
+      "expected": "Agent 不能发布；管理者显式发布可成功",
+      "work_packages": [
+        "M2",
+        "M4"
+      ],
+      "user_stories": [
+        "U4",
+        "U5"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "AUTH-10",
+      "category": "身份与任职",
+      "title": "书目范围",
+      "trigger": "EXPLICIT_WORKS 任职尝试新建别书或改另一本",
+      "expected": "拒绝且无跨 work 数据变化",
+      "work_packages": [
+        "M2",
+        "M4"
+      ],
+      "user_stories": [
+        "U7"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "AUTH-11",
+      "category": "身份与任职",
+      "title": "全维度隔离",
+      "trigger": "分别更换 tenant/client/owner/agent/runtime/job/source",
+      "expected": "均不可跨范围读取草稿或写入，不泄露资源存在性",
+      "work_packages": [
+        "M2",
+        "M4"
+      ],
+      "user_stories": [
+        "U7"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "AUTH-12",
+      "category": "身份与任职",
+      "title": "管理权限撤销",
+      "trigger": "发起者书库授权撤销后后台准备发布",
+      "expected": "原授权不再允许发布；有权管理者可新授权接管",
+      "work_packages": [
+        "M2",
+        "M4"
+      ],
+      "user_stories": [
+        "U7"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "NATIVE-01",
+      "category": "原生通道与工具",
+      "title": "native 精确路由",
+      "trigger": "逐个验证新增方法/路径及相邻非法路径",
+      "expected": "仅合同路径可用，Controller/filter 均覆盖",
+      "work_packages": [
+        "M2",
+        "M6"
+      ],
+      "user_stories": [
+        "U3"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "NATIVE-02",
+      "category": "原生通道与工具",
+      "title": "认证通道不能混用",
+      "trigger": "用户 JWT 调 native，runtime 凭据调 admin/me",
+      "expected": "拒绝；不提升为另一种 principal",
+      "work_packages": [
+        "M2"
+      ],
+      "user_stories": [
+        "U7"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "NATIVE-03",
+      "category": "原生通道与工具",
+      "title": "头与路径歧义",
+      "trigger": "重复 Authorization/Agent header、编码分隔符、Origin",
+      "expected": "失败关闭，不绕过白名单或落入 OAuth 通道",
+      "work_packages": [
+        "M2"
+      ],
+      "user_stories": [
+        "U7"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "NATIVE-04",
+      "category": "原生通道与工具",
+      "title": "请求主体伪造权限",
+      "trigger": "正文加入 owner/tenant/permissions/其他 draftId",
+      "expected": "拒绝未知或冲突字段，无权限升级",
+      "work_packages": [
+        "M2",
+        "M4"
+      ],
+      "user_stories": [
+        "U7"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "NATIVE-05",
+      "category": "原生通道与工具",
+      "title": "可信协调上下文",
+      "trigger": "从普通会话或伪造 persona 调宋江工具",
+      "expected": "服务端不接受模型声称的 coordinator 身份",
+      "work_packages": [
+        "M7"
+      ],
+      "user_stories": [
+        "U2",
+        "U9"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "NATIVE-06",
+      "category": "原生通道与工具",
+      "title": "旁路工具隔离",
+      "trigger": "在典籍协调请求尝试 shell/SQL/任意 URL 工具",
+      "expected": "请求工具集合不提供旁路，业务服务再次鉴权",
+      "work_packages": [
+        "M7"
+      ],
+      "user_stories": [
+        "U7"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "NATIVE-07",
+      "category": "原生通道与工具",
+      "title": "正文提示注入",
+      "trigger": "来源正文要求调用发布、读密钥或改任职",
+      "expected": "视为纯文本；无越权调用、外泄或隐藏副作用",
+      "work_packages": [
+        "M5",
+        "M6",
+        "M7"
+      ],
+      "user_stories": [
+        "U3"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "NATIVE-08",
+      "category": "原生通道与工具",
+      "title": "凭据不进模型",
+      "trigger": "捕获 prompt/tool result/manifest/日志/UI 回执",
+      "expected": "无 JWT/runtime secret/DB credential，bridge 固定 origin",
+      "work_packages": [
+        "M6",
+        "M7"
+      ],
+      "user_stories": [
+        "U3"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "SKILL-01",
+      "category": "平台技能与执行资格",
+      "title": "abilities 不等于安装",
+      "trigger": "runtime 上报 archive-maintainer 字符串但无安装事实",
+      "expected": "WAITING_SKILL，不派发或执行写操作",
+      "work_packages": [
+        "M3",
+        "M4"
+      ],
+      "user_stories": [
+        "U1"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "SKILL-02",
+      "category": "平台技能与执行资格",
+      "title": "平台配置不收费",
+      "trigger": "关闭技能市场资金操作后安装平台技能",
+      "expected": "安装回执有效；钱包/订单/资金流水均无变化",
+      "work_packages": [
+        "M3"
+      ],
+      "user_stories": [
+        "U1"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "SKILL-03",
+      "category": "平台技能与执行资格",
+      "title": "包/版本篡改",
+      "trigger": "下载包或回执的摘要/version/Agent/command 不匹配",
+      "expected": "不能激活安装事实，不触发任职扩大",
+      "work_packages": [
+        "M3",
+        "M6"
+      ],
+      "user_stories": [
+        "U1"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "SKILL-04",
+      "category": "平台技能与执行资格",
+      "title": "安装回执伪造/重放",
+      "trigger": "普通 HTTP 声称成功，或重放其他 runtime/origin 回执",
+      "expected": "拒绝；同一真实回执重放仅返回原结果",
+      "work_packages": [
+        "M3"
+      ],
+      "user_stories": [
+        "U1",
+        "U8"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "SKILL-05",
+      "category": "平台技能与执行资格",
+      "title": "安装器文件安全",
+      "trigger": "测试穿越/符号链接/执行文件伪装/损坏归档",
+      "expected": "不写出授权安装范围；失败归因不伪造退款/成功",
+      "work_packages": [
+        "M3"
+      ],
+      "user_stories": [
+        "U1"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "SKILL-06",
+      "category": "平台技能与执行资格",
+      "title": "在途技能升级/撤销",
+      "trigger": "任务运行中安装新版本或撤销已绑定版本",
+      "expected": "升级不替换在途包；撤销暂停依赖任务",
+      "work_packages": [
+        "M3",
+        "M6"
+      ],
+      "user_stories": [
+        "U7"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "SKILL-07",
+      "category": "平台技能与执行资格",
+      "title": "老客户端协议不支持",
+      "trigger": "client 不支持新 archive 命令",
+      "expected": "明确待更新，不降级成自由 shell 或普通文件执行",
+      "work_packages": [
+        "M3",
+        "M6"
+      ],
+      "user_stories": [
+        "U1"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "CONTENT-01",
+      "category": "内容、来源与版本",
+      "title": "非 120 回 / 无序言",
+      "trigger": "使用明确合法小 fixture，不满足旧种子形状",
+      "expected": "正常导入并读回，数据库与服务都不硬编码 120",
+      "work_packages": [
+        "M1",
+        "M5"
+      ],
+      "user_stories": [
+        "U3"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "CONTENT-02",
+      "category": "内容、来源与版本",
+      "title": "来源固定与权利声明",
+      "trigger": "缺来源摘要/固定版本或必要权利说明",
+      "expected": "WAITING_INPUT/校验失败，不擅自选现代底本",
+      "work_packages": [
+        "M5"
+      ],
+      "user_stories": [
+        "U2",
+        "U3"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "CONTENT-03",
+      "category": "内容、来源与版本",
+      "title": "不臆造原著",
+      "trigger": "底本缺章，Agent 生成看似合理章节补上",
+      "expected": "来源映射/目录校验不通过，不上架",
+      "work_packages": [
+        "M5",
+        "M6"
+      ],
+      "user_stories": [
+        "U3"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "CONTENT-04",
+      "category": "内容、来源与版本",
+      "title": "跨语言摘要向量",
+      "trigger": "Java/Node 对中文、罕见字、换行、JSON 键顺序处理",
+      "expected": "规范化结果/摘要一致，非法 Unicode/重复键拒绝",
+      "work_packages": [
+        "M1",
+        "M5",
+        "M6"
+      ],
+      "user_stories": [
+        "U3"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "CONTENT-05",
+      "category": "内容、来源与版本",
+      "title": "持久化内容再校验",
+      "trigger": "上传声明摘要正确但存储实际字节损坏",
+      "expected": "发布前读回失败，READY/发布不伪造",
+      "work_packages": [
+        "M1",
+        "M4",
+        "M5"
+      ],
+      "user_stories": [
+        "U3"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "CONTENT-06",
+      "category": "内容、来源与版本",
+      "title": "章节目录完整性",
+      "trigger": "缺章/重复/乱序/实际目录与冻结来源不同",
+      "expected": "定位具体块与来源差异；真实不完整阻止发布",
+      "work_packages": [
+        "M5"
+      ],
+      "user_stories": [
+        "U3"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "CONTENT-07",
+      "category": "内容、来源与版本",
+      "title": "草稿 CAS 与校验失效",
+      "trigger": "两个编辑写同 revision，或校验后再改正文",
+      "expected": "冲突不覆盖；改动后旧 validation 不可发布",
+      "work_packages": [
+        "M4",
+        "M5"
+      ],
+      "user_stories": [
+        "U6"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "CONTENT-08",
+      "category": "内容、来源与版本",
+      "title": "READY 不公开",
+      "trigger": "把成功导入但未发布 editionId 交给读者",
+      "expected": "正文/目录/提问/私人数据新锚点入口均不泄露",
+      "work_packages": [
+        "M1",
+        "M4"
+      ],
+      "user_stories": [
+        "U4"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "CONTENT-09",
+      "category": "内容、来源与版本",
+      "title": "原子激活",
+      "trigger": "发布事务中注入失败与重启",
+      "expected": "active/publication/job/outbox 全提交或全不提交",
+      "work_packages": [
+        "M4"
+      ],
+      "user_stories": [
+        "U5",
+        "U8"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "CONTENT-10",
+      "category": "内容、来源与版本",
+      "title": "新版本不覆盖旧锚点",
+      "trigger": "已给旧版建立进度/书签/手札后发布勘误",
+      "expected": "新 editionId；旧文本/ID/hash 和旧私人数据不变且仍可读",
+      "work_packages": [
+        "M1",
+        "M4",
+        "M8"
+      ],
+      "user_stories": [
+        "U6"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "CONTENT-11",
+      "category": "内容、来源与版本",
+      "title": "下架与默认版选择",
+      "trigger": "管理者明确下架当前版，不指定替代版",
+      "expected": "active 置空、正文有权请求410；不自动退旧版，私人笔记保留",
+      "work_packages": [
+        "M1",
+        "M4",
+        "M8"
+      ],
+      "user_stories": [
+        "U6"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "CONTENT-12",
+      "category": "内容、来源与版本",
+      "title": "同标题/重复新增",
+      "trigger": "不同 turn 再请求相同标题，含相同/不同 canonicalKey",
+      "expected": "提示可能已有作品；唯一 key 不重复，不能自动覆盖不同作品",
+      "work_packages": [
+        "M4",
+        "M7"
+      ],
+      "user_stories": [
+        "U2",
+        "U8"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "CONTENT-13",
+      "category": "内容、来源与版本",
+      "title": "固定来源/网络出口",
+      "trigger": "传入任意 URL、重定向内网或读非授权文件版本",
+      "expected": "来源适配拒绝；不向外部 origin 附带凭据",
+      "work_packages": [
+        "M5",
+        "M6"
+      ],
+      "user_stories": [
+        "U3"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "CONTENT-14",
+      "category": "内容、来源与版本",
+      "title": "XSS/正文指令数据化",
+      "trigger": "正文含 HTML/script/危险链接",
+      "expected": "阅读纯文本或受控净化，不执行脚本/隐式抓取",
+      "work_packages": [
+        "M5",
+        "M8"
+      ],
+      "user_stories": [
+        "U3"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "RECOVERY-01",
+      "category": "可靠性与故障恢复",
+      "title": "章节提交响应丢失",
+      "trigger": "DB 已提交，客户端网络断开",
+      "expected": "按同 key 或 draft digest 恢复，仅一个有效章节",
+      "work_packages": [
+        "M4",
+        "M6"
+      ],
+      "user_stories": [
+        "U8"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "RECOVERY-02",
+      "category": "可靠性与故障恢复",
+      "title": "同 key 不同请求",
+      "trigger": "复用 Idempotency-Key 修改 body/path/候选",
+      "expected": "409，不静默覆盖或生成新操作",
+      "work_packages": [
+        "M4"
+      ],
+      "user_stories": [
+        "U8"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "RECOVERY-03",
+      "category": "可靠性与故障恢复",
+      "title": "未知状态不能当未受理",
+      "trigger": "POST 仍在途时查询 key 得404",
+      "expected": "UI/Agent 仍保留原 key，不能断言失败并另起作业",
+      "work_packages": [
+        "M4",
+        "M6",
+        "M8"
+      ],
+      "user_stories": [
+        "U8"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "RECOVERY-04",
+      "category": "可靠性与故障恢复",
+      "title": "命令重复/乱序",
+      "trigger": "重复 delivery 或旧 epoch start/write/result",
+      "expected": "同执行幂等；旧 epoch 拒绝；ACK 不置 PUBLISHED",
+      "work_packages": [
+        "M4",
+        "M6"
+      ],
+      "user_stories": [
+        "U8"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "RECOVERY-05",
+      "category": "可靠性与故障恢复",
+      "title": "离线和慢处理",
+      "trigger": "断连/长时解析/性能超过历史 SLO",
+      "expected": "作业等待/继续；不因预算不足取消或跳过后续步骤",
+      "work_packages": [
+        "M4",
+        "M6",
+        "M8"
+      ],
+      "user_stories": [
+        "U3",
+        "U8"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "RECOVERY-06",
+      "category": "可靠性与故障恢复",
+      "title": "同实例重连/新实例恢复",
+      "trigger": "分别断线同 runtime 和换 runtime",
+      "expected": "同实例可恢复；新实例须正式恢复并隔离旧 epoch",
+      "work_packages": [
+        "M2",
+        "M4",
+        "M6"
+      ],
+      "user_stories": [
+        "U8"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "RECOVERY-07",
+      "category": "可靠性与故障恢复",
+      "title": "临时对象写入后崩溃",
+      "trigger": "对象成功但 DB 引用未提交",
+      "expected": "原操作恢复或清理本命名空间孤儿，不影响其他任务",
+      "work_packages": [
+        "M4"
+      ],
+      "user_stories": [
+        "U8"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "RECOVERY-08",
+      "category": "可靠性与故障恢复",
+      "title": "READY 后激活前崩溃",
+      "trigger": "正文完整 READY 但无 publication",
+      "expected": "有权同 operation 恢复，读者此前不可见",
+      "work_packages": [
+        "M4"
+      ],
+      "user_stories": [
+        "U8"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "RECOVERY-09",
+      "category": "可靠性与故障恢复",
+      "title": "发布后通知丢失",
+      "trigger": "publication 提交后 outbox 暂时失败",
+      "expected": "job/result 可查询；投影最终收敛，不重复发布",
+      "work_packages": [
+        "M4",
+        "M7",
+        "M8"
+      ],
+      "user_stories": [
+        "U5",
+        "U8"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "RECOVERY-10",
+      "category": "可靠性与故障恢复",
+      "title": "并发版本发布",
+      "trigger": "两个 job 指向同 (expectedWorkRevision, expectedActiveEditionId)，另测 active A→B→A",
+      "expected": "只有一个成功，另一个明确 CAS 冲突，不后写覆盖",
+      "work_packages": [
+        "M4"
+      ],
+      "user_stories": [
+        "U6",
+        "U8"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "RECOVERY-11",
+      "category": "可靠性与故障恢复",
+      "title": "显式取消/移交",
+      "trigger": "在运行时由有权管理者取消或移交",
+      "expected": "旧执行后续写拒绝，草稿/历史保留；不操作 foreign 进程",
+      "work_packages": [
+        "M2",
+        "M4",
+        "M6"
+      ],
+      "user_stories": [
+        "U7"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "RECOVERY-12",
+      "category": "可靠性与故障恢复",
+      "title": "事件恢复与游标",
+      "trigger": "重复乱序事件及过期 cursor",
+      "expected": "按 sequence 幂等；返回 RESYNC_REQUIRED 并取真实快照",
+      "work_packages": [
+        "M4",
+        "M8"
+      ],
+      "user_stories": [
+        "U8"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "RECOVERY-13",
+      "category": "可靠性与故障恢复",
+      "title": "根因有界重试",
+      "trigger": "同输入相同错误连续两次",
+      "expected": "blocked_root_cause；修复后才新 attempt，历史失败保留",
+      "work_packages": [
+        "M4",
+        "M6"
+      ],
+      "user_stories": [
+        "U8"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "UX-01",
+      "category": "用户闭环与兼容迁移",
+      "title": "旧水浒启动不夺指针",
+      "trigger": "已有后续合法版本时重启 archive bootstrap",
+      "expected": "不切回种子版，不重写原文/摘要",
+      "work_packages": [
+        "M1"
+      ],
+      "user_stories": [
+        "U6"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "UX-02",
+      "category": "用户闭环与兼容迁移",
+      "title": "新旧 schema 桥接",
+      "trigger": "空库、旧库、已迁移库及中断迁移恢复",
+      "expected": "初始化/schema 校验兼容，步骤可恢复，无误删个人数据",
+      "work_packages": [
+        "M1"
+      ],
+      "user_stories": [
+        "U3",
+        "U6"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "UX-03",
+      "category": "用户闭环与兼容迁移",
+      "title": "旧 API shape 不变",
+      "trigger": "旧客户端使用 /archive/v1/catalog 和原 question 入口",
+      "expected": "原返回结构/旧锚点解释兼容，不把 catalog 突变数组",
+      "work_packages": [
+        "M1"
+      ],
+      "user_stories": [
+        "U6"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "UX-04",
+      "category": "用户闭环与兼容迁移",
+      "title": "新增书阅读全链路",
+      "trigger": "选择新增书，阅读、续读、书签、手札、选文提问",
+      "expected": "全按新 edition/manifest 验证和 owner 持久化，不回落水浒",
+      "work_packages": [
+        "M1",
+        "M8"
+      ],
+      "user_stories": [
+        "U3",
+        "U5"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "UX-05",
+      "category": "用户闭环与兼容迁移",
+      "title": "进度初始化顺序",
+      "trigger": "已有后段进度，从书架进入/刷新 reader",
+      "expected": "先读进度再开章；自动保存不覆盖为卷首",
+      "work_packages": [
+        "M8"
+      ],
+      "user_stories": [
+        "U3"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "UX-06",
+      "category": "用户闭环与兼容迁移",
+      "title": "跨书/跨身份缓存",
+      "trigger": "切换书、版本、账号并模拟旧响应晚到",
+      "expected": "不会错书/泄露进度手札草稿，身份变更取消旧请求",
+      "work_packages": [
+        "M8"
+      ],
+      "user_stories": [
+        "U6",
+        "U7"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "UX-07",
+      "category": "用户闭环与兼容迁移",
+      "title": "真实 HTTP/CORS",
+      "trigger": "真实 createApi→fetch，带幂等/If-Match/JWT；可信/不可信 Origin",
+      "expected": "合法预检/ETag读取正确，非授权跨域不放行",
+      "work_packages": [
+        "M2",
+        "M8"
+      ],
+      "user_stories": [
+        "U3"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "UX-08",
+      "category": "用户闭环与兼容迁移",
+      "title": "首次任命用户路径",
+      "trigger": "无任职，对宋江要求新增书",
+      "expected": "引导明确任命；不自行给任意吴用赋公共维护权",
+      "work_packages": [
+        "M7",
+        "M8"
+      ],
+      "user_stories": [
+        "U1",
+        "U2"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "UX-09",
+      "category": "用户闭环与兼容迁移",
+      "title": "缺来源/待技能/离线",
+      "trigger": "分别触发三种真实阻碍",
+      "expected": "显示准确下一步；不把三者均称执行失败",
+      "work_packages": [
+        "M7",
+        "M8"
+      ],
+      "user_stories": [
+        "U1",
+        "U2"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "UX-10",
+      "category": "用户闭环与兼容迁移",
+      "title": "普通读者建议",
+      "trigger": "普通读者对宋江要求新增公共书",
+      "expected": "明确提示需要书库管理者且未创建维护单，不形成收费执行、建议队列或越权写内容",
+      "work_packages": [
+        "M7",
+        "M8"
+      ],
+      "user_stories": [
+        "U9"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "UX-11",
+      "category": "用户闭环与兼容迁移",
+      "title": "端到端 DRAFT_ONLY",
+      "trigger": "已任命吴用仅编修，对宋江要求新增固定来源书",
+      "expected": "返回待发布草稿及真实校验，有权管理者可手动发布",
+      "work_packages": [
+        "M1",
+        "M2",
+        "M3",
+        "M4",
+        "M5",
+        "M6",
+        "M7",
+        "M8"
+      ],
+      "user_stories": [
+        "U2",
+        "U3",
+        "U4"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "UX-12",
+      "category": "用户闭环与兼容迁移",
+      "title": "端到端 AUTO 三国演义",
+      "trigger": "明确授权的真实底本/任职/AUTO，经宋江交办",
+      "expected": "真实 Agent 完成；服务端publication + 新书读回 + 正确汇报",
+      "work_packages": [
+        "M1",
+        "M2",
+        "M3",
+        "M4",
+        "M5",
+        "M6",
+        "M7",
+        "M8"
+      ],
+      "user_stories": [
+        "U2",
+        "U3",
+        "U5"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "UX-13",
+      "category": "用户闭环与兼容迁移",
+      "title": "读回失败不重发发布",
+      "trigger": "publication 已提交，但阅读探测暂时失败",
+      "expected": "报告已提交但读回异常，不重复激活/假报完全成功",
+      "work_packages": [
+        "M4",
+        "M7",
+        "M8"
+      ],
+      "user_stories": [
+        "U5",
+        "U8"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "UX-14",
+      "category": "用户闭环与兼容迁移",
+      "title": "移动/横竖屏/返回",
+      "trigger": "真实浏览器视口与键盘缩高、深层返回、焦点",
+      "expected": "关键操作可见，正文/手札有界滚动，回到正确书架/作业",
+      "work_packages": [
+        "M8"
+      ],
+      "user_stories": [
+        "U2",
+        "U3"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "UX-15",
+      "category": "用户闭环与兼容迁移",
+      "title": "权限撤销后前端",
+      "trigger": "页面仍持旧 capabilities，后台撤任/撤管理授权",
+      "expected": "服务端拒绝，前端清理敏感写状态；不依赖隐藏按钮",
+      "work_packages": [
+        "M2",
+        "M8"
+      ],
+      "user_stories": [
+        "U7"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "UX-16",
+      "category": "用户闭环与兼容迁移",
+      "title": "部署事实不混淆",
+      "trigger": "核对制品、版本、初始化、runtime、真实内容回执",
+      "expected": "有完整 exact source/test/artifact/online 证据；没有 Flow Run 则不伪造",
+      "work_packages": [
+        "M9",
+        "M10"
+      ],
+      "user_stories": [
+        "U5"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "D2-01",
+      "category": "D2 兼容与共享边界",
+      "title": "旧办事台不扩类型",
+      "trigger": "打开维护单及原 hall overview/items/marks",
+      "expected": "典籍只走独立面板/会话卡，旧 ItemRef 枚举、分区、游标和动作保持兼容",
+      "work_packages": [
+        "M4",
+        "M8"
+      ],
+      "user_stories": [
+        "U2",
+        "U8"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "D2-02",
+      "category": "D2 兼容与共享边界",
+      "title": "直达与宋江边界",
+      "trigger": "分别向宋江和已任职吴用交办；另用密议",
+      "expected": "双入口同一授权用例；直达不经宋江，宋江不获得密议读取权",
+      "work_packages": [
+        "M2",
+        "M7",
+        "M8"
+      ],
+      "user_stories": [
+        "U2",
+        "U9"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "D2-03",
+      "category": "D2 兼容与共享边界",
+      "title": "跨入口重放",
+      "trigger": "原 requestIntentId 从断线重试和会话卡恢复",
+      "expected": "只有一个 job/当前执行，异内容同 key 冲突；不能从 chat/task 重复派发",
+      "work_packages": [
+        "M4",
+        "M6",
+        "M7"
+      ],
+      "user_stories": [
+        "U2",
+        "U8"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "D2-04",
+      "category": "D2 兼容与共享边界",
+      "title": "唯一执行权威",
+      "trigger": "业务 outbox 投递响应丢失后恢复",
+      "expected": "重用同 dispatchKey/command/executionRef，不建第二套调度或 archive 命令轮询",
+      "work_packages": [
+        "M4",
+        "M6"
+      ],
+      "user_stories": [
+        "U3",
+        "U8"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "D2-05",
+      "category": "D2 兼容与共享边界",
+      "title": "两套 Runtime 隔离",
+      "trigger": "仅 heartbeat/ACK 的 Runtime v1 和 legacy 客户端混用",
+      "expected": "按目标实际能力投递；不支持者待就绪，不混用凭据/profile/state，不强制切换其他 Agent",
+      "work_packages": [
+        "M2",
+        "M6"
+      ],
+      "user_stories": [
+        "U1",
+        "U8"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "D2-06",
+      "category": "D2 兼容与共享边界",
+      "title": "逐目标能力变更",
+      "trigger": "受理后目标撤销命令能力或更换绑定",
+      "expected": "分发前重新校验，不发送不支持协议，不偷偷 fallback 重跑",
+      "work_packages": [
+        "M2",
+        "M6"
+      ],
+      "user_stories": [
+        "U7",
+        "U8"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "D2-07",
+      "category": "D2 兼容与共享边界",
+      "title": "共享安装适配",
+      "trigger": "平台来源与商业来源安装同 key 技能，且仅标 deliverable 标签",
+      "expected": "来源分别核验，不伪造订单或扣费；标签不能提供安装事实/ACL/正式验收证据",
+      "work_packages": [
+        "M3",
+        "M6"
+      ],
+      "user_stories": [
+        "U1",
+        "U9"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "D2-08",
+      "category": "D2 兼容与共享边界",
+      "title": "私人来源公开用途",
+      "trigger": "仅授 READ 的私人文件尝试 AUTO 或管理员发布",
+      "expected": "无 PUBLICATION_USE 时拒绝发布；有精确来源/书库/用途授权后才可继续",
+      "work_packages": [
+        "M2",
+        "M4",
+        "M5"
+      ],
+      "user_stories": [
+        "U3",
+        "U5",
+        "U9"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "D2-09",
+      "category": "D2 兼容与共享边界",
+      "title": "公开投影脱敏",
+      "trigger": "普通读者查询 capabilities 与会话维护卡",
+      "expected": "不返回他人 owner/agentId/binding/runtime/endpoint 或私人 source storageRef",
+      "work_packages": [
+        "M2",
+        "M8"
+      ],
+      "user_stories": [
+        "U1",
+        "U9"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "D2-10",
+      "category": "D2 兼容与共享边界",
+      "title": "冷线程与工具隔离",
+      "trigger": "更换模型线程后继续修订，另打开普通聊天",
+      "expected": "服务端注入已授权历史与精确来源；典籍工具限制不改变其他会话能力",
+      "work_packages": [
+        "M7",
+        "M8"
+      ],
+      "user_stories": [
+        "U2",
+        "U6"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "D2-11",
+      "category": "D2 兼容与共享边界",
+      "title": "业务等待不占 lease",
+      "trigger": "草稿完成后等待人工发布并保持会话打开",
+      "expected": "释放执行 lease，保留 job；管理员用新的有效授权发布，不复用过期 producer 凭据",
+      "work_packages": [
+        "M4",
+        "M6"
+      ],
+      "user_stories": [
+        "U4",
+        "U8"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "D2-12",
+      "category": "D2 兼容与共享边界",
+      "title": "共享存储不新增文件系统",
+      "trigger": "从私人来源导入草稿并封存正文",
+      "expected": "来源/草稿使用既有受控对象，正文落 archive；不迁移旧目录，不自动保存或正式验收",
+      "work_packages": [
+        "M1",
+        "M4",
+        "M5"
+      ],
+      "user_stories": [
+        "U3",
+        "U5"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "D2-13",
+      "category": "D2 兼容与共享边界",
+      "title": "严格身份与内容迁移",
+      "trigger": "迁移前后以 tenant=0 与旧 tenant=owner 请求",
+      "expected": "内容兼容不恢复旧身份；owner/client 私人数据隔离不变",
+      "work_packages": [
+        "M1",
+        "M2",
+        "M9"
+      ],
+      "user_stories": [
+        "U6",
+        "U9"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "D2-14",
+      "category": "D2 兼容与共享边界",
+      "title": "业务完成不混同",
+      "trigger": "分别产生草稿完成、publicaton 提交、读回失败和成功",
+      "expected": "状态分别可见，不把文件 manifest/技能安装/正式验收当典籍发布，读回失败不重复激活",
+      "work_packages": [
+        "M4",
+        "M8",
+        "M9"
+      ],
+      "user_stories": [
+        "U4",
+        "U5",
+        "U8"
+      ],
+      "status": "not_run",
+      "evidence": null
+    }
+  ]
+}

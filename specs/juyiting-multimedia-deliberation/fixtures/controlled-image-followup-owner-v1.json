@@ -1,0 +1,233 @@
+{
+  "schemaVersion": 1,
+  "feature": "juyiting-multimedia-deliberation",
+  "contract": "controlled-image-followup-owner-contract-v1.md",
+  "state": "NOT_RUN",
+  "note": "Fictional offline shape/digest vectors; no scope/authority/account/data fixture exists. Static digest consistency is not API or product acceptance.",
+  "goldenIntents": [
+    {
+      "id": "OF01",
+      "operation": "EDIT_IMAGE",
+      "intent": {
+        "schemaVersion": 3,
+        "interactionKind": "EXECUTE",
+        "taskId": "task_fixture",
+        "expectedConversationGeneration": "7",
+        "expectedTaskVersion": "0",
+        "expectedAssignmentRevision": "0",
+        "expectedGrantVersion": "1",
+        "requirementRevision": "1",
+        "targetAgentId": "agent_fixture",
+        "content": "把上一稿中的天空调整为黄昏",
+        "actionProposal": {
+          "kind": "edit_image"
+        },
+        "inputRefs": [
+          {
+            "kind": "CURRENT_CONVERSATION_ASSET",
+            "assetRef": {
+              "assetId": "ast_fixture",
+              "revision": "1"
+            }
+          }
+        ],
+        "replyTo": null,
+        "continuationOf": {
+          "requestId": "producer_fixture",
+          "stepId": "producer_step_fixture"
+        }
+      },
+      "canonicalUtf8": "{\"actionProposal\":{\"kind\":\"edit_image\"},\"content\":\"把上一稿中的天空调整为黄昏\",\"continuationOf\":{\"requestId\":\"producer_fixture\",\"stepId\":\"producer_step_fixture\"},\"expectedAssignmentRevision\":\"0\",\"expectedConversationGeneration\":\"7\",\"expectedGrantVersion\":\"1\",\"expectedTaskVersion\":\"0\",\"inputRefs\":[{\"assetRef\":{\"assetId\":\"ast_fixture\",\"revision\":\"1\"},\"kind\":\"CURRENT_CONVERSATION_ASSET\"}],\"interactionKind\":\"EXECUTE\",\"replyTo\":null,\"requirementRevision\":\"1\",\"schemaVersion\":3,\"targetAgentId\":\"agent_fixture\",\"taskId\":\"task_fixture\"}",
+      "ownerPayloadSha256": "98ee7a28e4f53077da15acad40f2ff2412f9181c592d2f4159ffece49db3f2de",
+      "instructionSha256": "fa5c2743611f5114c1cf98b7bc9af7b48e1364b6b46746ae1098744d6f688b36"
+    },
+    {
+      "id": "OF02",
+      "operation": "GENERATE_IMAGE",
+      "intent": {
+        "schemaVersion": 3,
+        "interactionKind": "EXECUTE",
+        "taskId": "task_fixture",
+        "expectedConversationGeneration": "7",
+        "expectedTaskVersion": "0",
+        "expectedAssignmentRevision": "0",
+        "expectedGrantVersion": "1",
+        "requirementRevision": "1",
+        "targetAgentId": "agent_fixture",
+        "content": "画一只鸟",
+        "actionProposal": {
+          "kind": "generate_image"
+        },
+        "inputRefs": [],
+        "replyTo": null,
+        "continuationOf": null
+      },
+      "canonicalUtf8": "{\"actionProposal\":{\"kind\":\"generate_image\"},\"content\":\"画一只鸟\",\"continuationOf\":null,\"expectedAssignmentRevision\":\"0\",\"expectedConversationGeneration\":\"7\",\"expectedGrantVersion\":\"1\",\"expectedTaskVersion\":\"0\",\"inputRefs\":[],\"interactionKind\":\"EXECUTE\",\"replyTo\":null,\"requirementRevision\":\"1\",\"schemaVersion\":3,\"targetAgentId\":\"agent_fixture\",\"taskId\":\"task_fixture\"}",
+      "ownerPayloadSha256": "a1bc6c4f6fe85e618614aac70aab869d106a6ac0dff3fa1802930fa207aa1182",
+      "instructionSha256": "43f8efcde07d41b7a8ce228352ddaea9cff9d8576a84cbef5d13fb1ca029318f"
+    }
+  ],
+  "requiredCases": [
+    {
+      "id": "OF03",
+      "case": "invalid unknown extra top-level field",
+      "expectedStatus": "400",
+      "requiredEvidence": "zero writes",
+      "state": "NOT_RUN"
+    },
+    {
+      "id": "OF04",
+      "case": "numeric rather than string long field",
+      "expectedStatus": "400",
+      "requiredEvidence": "zero writes",
+      "state": "NOT_RUN"
+    },
+    {
+      "id": "OF05",
+      "case": "zero taskVersion and assignmentRevision exact current domain",
+      "expectedStatus": "202",
+      "requiredEvidence": "current authorized fixture only",
+      "state": "NOT_RUN"
+    },
+    {
+      "id": "OF06",
+      "case": "conversation generation zero",
+      "expectedStatus": "400",
+      "requiredEvidence": "zero writes",
+      "state": "NOT_RUN"
+    },
+    {
+      "id": "OF07",
+      "case": "flat asset source instead of assetRef",
+      "expectedStatus": "400",
+      "requiredEvidence": "zero writes",
+      "state": "NOT_RUN"
+    },
+    {
+      "id": "OF08",
+      "case": "EDIT missing continuationOf",
+      "expectedStatus": "400",
+      "requiredEvidence": "zero writes",
+      "state": "NOT_RUN"
+    },
+    {
+      "id": "OF09",
+      "case": "EDIT parent does not match asset producer",
+      "expectedStatus": "409",
+      "requiredEvidence": "zero authority/execution/chat writes",
+      "state": "NOT_RUN"
+    },
+    {
+      "id": "OF10",
+      "case": "same binding epoch but changed model since preview",
+      "expectedStatus": "409",
+      "requiredEvidence": "zero consent/opgrant writes",
+      "state": "NOT_RUN"
+    },
+    {
+      "id": "OF11",
+      "case": "same binding epoch but changed custody or policyRevision",
+      "expectedStatus": "409",
+      "requiredEvidence": "zero consent/opgrant writes",
+      "state": "NOT_RUN"
+    },
+    {
+      "id": "OF12",
+      "case": "source or instruction or payload digest drift since preview",
+      "expectedStatus": "409",
+      "requiredEvidence": "zero consent/opgrant writes",
+      "state": "NOT_RUN"
+    },
+    {
+      "id": "OF13",
+      "case": "consent alone cannot grant EDIT",
+      "expectedStatus": "409",
+      "requiredEvidence": "zero execution/START/fetch",
+      "state": "NOT_RUN"
+    },
+    {
+      "id": "OF14",
+      "case": "baseline GENERATE only cannot grant EDIT without per-intent authority",
+      "expectedStatus": "409",
+      "requiredEvidence": "baseline unchanged; zero execution/START/fetch",
+      "state": "NOT_RUN"
+    },
+    {
+      "id": "OF15",
+      "case": "initial grant version/operations/locator unchanged after valid EDIT",
+      "expectedStatus": "202",
+      "requiredEvidence": "byte-exact baseline; independent new intent/run/asset",
+      "state": "NOT_RUN"
+    },
+    {
+      "id": "OF16",
+      "case": "same issue key altered expectedPreview or intent",
+      "expectedStatus": "409",
+      "requiredEvidence": "no second authority",
+      "state": "NOT_RUN"
+    },
+    {
+      "id": "OF17",
+      "case": "same admit key changed asset/revision/parent/authority",
+      "expectedStatus": "409",
+      "requiredEvidence": "no second request/execution",
+      "state": "NOT_RUN"
+    },
+    {
+      "id": "OF18",
+      "case": "original-key GET/recovery including absent prior POST",
+      "expectedStatus": "200_or_404",
+      "requiredEvidence": "zero inserts/updates/outbox/Provider",
+      "state": "NOT_RUN"
+    },
+    {
+      "id": "OF19",
+      "case": "late Chat/source check fails in root-first transaction",
+      "expectedStatus": "409",
+      "requiredEvidence": "all Agent authority/reservation/execution and Chat rows rolled back",
+      "state": "NOT_RUN"
+    },
+    {
+      "id": "OF20",
+      "case": "concurrent issue/admit/START duplicates",
+      "expectedStatus": "single_winner",
+      "requiredEvidence": "one per-intent authority/run/START; repeated START409 zero fetch",
+      "state": "NOT_RUN"
+    },
+    {
+      "id": "OF21",
+      "case": "old consumed consent or UNKNOWN same command cannot call again",
+      "expectedStatus": "409",
+      "requiredEvidence": "zero additional Provider fetch",
+      "state": "NOT_RUN"
+    },
+    {
+      "id": "OF22",
+      "case": "foreign owner/client/task/asset or stale generation/reassignment/revoke",
+      "expectedStatus": "404_or_409",
+      "requiredEvidence": "owner-safe reject; no leaked source bytes",
+      "state": "NOT_RUN"
+    },
+    {
+      "id": "OF23",
+      "case": "17th GENERATE input",
+      "expectedStatus": "400",
+      "requiredEvidence": "no truncation/download/START/fetch",
+      "state": "NOT_RUN"
+    },
+    {
+      "id": "OF24",
+      "case": "schema2/initial v1v2 bytes and method semantics",
+      "expectedStatus": "unchanged",
+      "requiredEvidence": "old fixtures byte-exact",
+      "state": "NOT_RUN"
+    },
+    {
+      "id": "OF25",
+      "case": "new and old controllers registered together",
+      "expectedStatus": "mapping_success",
+      "requiredEvidence": "single interactions POST mapping; new routes present",
+      "state": "NOT_RUN"
+    }
+  ]
+}

@@ -1,0 +1,310 @@
+{
+  "schema_version": 1,
+  "feature_id": "architecture-convergence",
+  "status": "candidate_implemented_formal_verification_pending",
+  "owner": "current_session_single_agent",
+  "baseline": {
+    "root": {
+      "commit": "472a256c90ef19675b57c28c0c2dbc6be88ca4e4",
+      "tree": "799f8438d3ed9a9e167d6597c5f7b0695460618f"
+    },
+    "api": {
+      "commit": "e7e6f7e3b90bbe8f7d00abc85f5dcaec3bc33de3",
+      "tree": "21ee90d0eeb0a8c31ad7b97d7478482df23e766b"
+    },
+    "web": {
+      "commit": "075c0c28a7cf7410d915dc15ca5eb5ff50ace01d",
+      "tree": "752e9bccdf3e2bda5506f28424e6e214e8010518"
+    },
+    "runtime": {
+      "commit": "c4688cf792a2a24668b601fab6e5cea624df7e0c",
+      "tree": "f550488e1cfeb1a344e579d5622c3a48896bda5f"
+    }
+  },
+  "path_rules": {
+    "repository_relative": true,
+    "glob": "** only for this feature documentation; production paths exact",
+    "allowlist_is_not_symbol_authorization": true,
+    "candidate_conflicts": "report and revise design; never overwrite shared dirty workspace",
+    "new_paths_are_planned_not_implemented": true
+  },
+  "batches": [
+    {
+      "id": "B0",
+      "requirements": [
+        "AC-05",
+        "AC-06"
+      ],
+      "depends_on": [],
+      "allowed": {
+        "root": [
+          "specs/architecture-convergence/**",
+          "specs/INDEX.md"
+        ],
+        "api": [
+          "build.gradle",
+          "docs/architecture-boundary-baseline.json"
+        ]
+      },
+      "new_paths": {
+        "api": [
+          "docs/architecture-boundary-baseline.json"
+        ]
+      },
+      "symbols": [
+        "validateLayering"
+      ],
+      "remove": []
+    },
+    {
+      "id": "B1",
+      "requirements": [
+        "AC-01"
+      ],
+      "depends_on": [
+        "B0"
+      ],
+      "allowed": {
+        "api": [
+          "agent/jia-agent-api/src/main/java/cn/jia/agent/service/TaskSkillPolicyService.java",
+          "agent/jia-agent-service/src/main/java/cn/jia/agent/service/impl/TaskSkillPolicyServiceImpl.java",
+          "agent/jia-agent-service/src/main/java/cn/jia/agent/service/impl/PersonalWorkspaceExecutionServiceImpl.java",
+          "chat/jia-chat-service/src/main/java/cn/jia/chat/service/ChatActionExecutionService.java",
+          "chat/jia-chat-service/src/main/java/cn/jia/chat/service/ChatActionCapabilityService.java",
+          "chat/jia-chat-service/src/main/java/cn/jia/chat/service/ChatActionDispatchService.java",
+          "chat/jia-chat-service/src/main/java/cn/jia/chat/service/ChatDeliberationOutboxRelay.java",
+          "agent/jia-agent-service/src/test/java/cn/jia/agent/skill/TaskSkillPolicyServiceTest.java",
+          "agent/jia-agent-service/src/test/java/cn/jia/agent/skill/SkillExecutionServiceTest.java",
+          "chat/jia-chat-service/src/test/java/cn/jia/chat/service/ChatActionCapabilityServiceTest.java",
+          "chat/jia-chat-service/src/test/java/cn/jia/chat/service/ChatActionDispatchReviewGuardTest.java"
+        ]
+      },
+      "new_paths": {},
+      "symbols": [
+        "Snapshot.decision",
+        "TaskSkillPolicyServiceImpl.read",
+        "ChatActionExecutionService.requireAvailablePolicy",
+        "ChatActionExecutionService.prepare",
+        "ChatActionDispatchService.Unavailable",
+        "ChatActionCapabilityService.taskCatalog/available",
+        "PersonalWorkspaceExecutionServiceImpl: skillPolicy consumers",
+        "ChatDeliberationOutboxRelay: diagnostic only"
+      ],
+      "remove": [
+        "migrated consumers branching on raw policy.reasonCode for recoverability"
+      ]
+    },
+    {
+      "id": "B2",
+      "requirements": [
+        "AC-02"
+      ],
+      "depends_on": [
+        "B1"
+      ],
+      "allowed": {
+        "api": [
+          "agent/jia-agent-api/src/main/java/cn/jia/agent/service/TaskLinkedMaterialReader.java",
+          "agent/jia-agent-service/src/main/java/cn/jia/agent/service/impl/TaskLinkedMaterialReaderImpl.java",
+          "agent/jia-agent-mapper/src/main/java/cn/jia/agent/dao/PersonalWorkspaceTaskLinkDao.java",
+          "agent/jia-agent-mapper/src/main/java/cn/jia/agent/dao/impl/PersonalWorkspaceTaskLinkDaoImpl.java",
+          "agent/jia-agent-mapper/src/main/java/cn/jia/agent/mapper/PersonalWorkspaceTaskFileLinkMapper.java",
+          "chat/jia-chat-service/src/main/java/cn/jia/chat/service/ChatTypedDeliberationContextService.java",
+          "chat/jia-chat-service/src/main/java/cn/jia/chat/service/ChatSkillSourceAccessService.java",
+          "docs/architecture-boundary-baseline.json",
+          "agent/jia-agent-service/src/test/java/cn/jia/agent/service/impl/TaskLinkedMaterialReaderTest.java",
+          "agent/jia-agent-service/src/test/java/cn/jia/agent/service/impl/TaskLinkedMaterialReaderMySqlTest.java",
+          "agent/jia-agent-service/src/test/java/cn/jia/agent/service/impl/PersonalWorkspaceTaskLinkServiceImplTest.java",
+          "agent/jia-agent-mapper/src/test/java/cn/jia/agent/dao/PersonalWorkspaceTaskFileLinkMapperContractTest.java",
+          "chat/jia-chat-service/src/test/java/cn/jia/chat/service/ChatRetainedOutputSourcesTest.java"
+        ]
+      },
+      "new_paths": {
+        "api": [
+          "agent/jia-agent-api/src/main/java/cn/jia/agent/service/TaskLinkedMaterialReader.java",
+          "agent/jia-agent-service/src/main/java/cn/jia/agent/service/impl/TaskLinkedMaterialReaderImpl.java",
+          "agent/jia-agent-service/src/test/java/cn/jia/agent/service/impl/TaskLinkedMaterialReaderTest.java",
+          "agent/jia-agent-service/src/test/java/cn/jia/agent/service/impl/TaskLinkedMaterialReaderMySqlTest.java"
+        ]
+      },
+      "symbols": [
+        "findActiveMaterial/selectActiveMaterial",
+        "ChatTypedDeliberationContextService.workspace",
+        "ChatSkillSourceAccessService.workspace/read/requireAuthorized: workspace branch only",
+        "ChatRetainedOutputSourcesTest: exact workspace source port consumer regression"
+      ],
+      "remove": [
+        "ordinary workspace query in two named consumers",
+        "storage_uri access in ChatSkillSourceAccessService workspace branch"
+      ],
+      "preserve": [
+        "effectiveSelectors",
+        "ChatInspectionAuthorityService.workspaceRow FOR UPDATE",
+        "ChatTypedInspectionContextService.workspace",
+        "all non-workspace source kinds"
+      ]
+    },
+    {
+      "id": "B3",
+      "requirements": [
+        "AC-03"
+      ],
+      "depends_on": [
+        "B2"
+      ],
+      "allowed": {
+        "web": [
+          "src/composables/juyiting/hallRequestReadbackScheduler.js",
+          "src/composables/juyiting/useHallConversation.js",
+          "tests/juyiting-hall-conversation.test.js",
+          "eslint.config.js",
+          "package.json",
+          "package-lock.json"
+        ]
+      },
+      "new_paths": {
+        "web": [
+          "src/composables/juyiting/hallRequestReadbackScheduler.js"
+        ]
+      },
+      "symbols": [
+        "requestReadbackJobs/requestReadbackInflight",
+        "recoverUnknownRequest scheduling wrapper",
+        "runScheduledRequestReadback",
+        "scheduleAuthoritativeRequestReadback",
+        "resetDurableState/dispose",
+        "roundCloseout inflight query"
+      ],
+      "remove": [
+        "duplicate scheduler Maps and old scheduling implementation in useHallConversation"
+      ],
+      "preserve": [
+        "useHallTypedDeliberation submit decisions",
+        "SSE/reply polling",
+        "guard/version checks",
+        "UI/prototype"
+      ]
+    },
+    {
+      "id": "B4",
+      "requirements": [
+        "AC-04"
+      ],
+      "depends_on": [
+        "B3"
+      ],
+      "allowed": {
+        "runtime": [
+          "conf/codex-ws-agent/skill-conversation.mjs",
+          "conf/codex-ws-agent/agent-client.mjs",
+          "conf/codex-ws-agent/test/skill-conversation.test.mjs",
+          "conf/codex-ws-agent/test/agent-client.test.mjs",
+          "conf/codex-ws-agent/package.json",
+          "conf/codex-ws-agent/package-lock.json",
+          "conf/cyf-agent-runtime-v1/package.json"
+        ]
+      },
+      "new_paths": {},
+      "symbols": [
+        "SkillConversationLane.poll",
+        "startNativeConversationPoller: returned report/diagnostic",
+        "version metadata only when preparing release"
+      ],
+      "remove": [
+        "throwing command-local firstError as lane-wide failure"
+      ],
+      "preserve": [
+        "shared-error throw",
+        "Provider/effect execution",
+        "UNKNOWN backoff",
+        "installation and wire"
+      ]
+    },
+    {
+      "id": "B5",
+      "requirements": [
+        "AC-01",
+        "AC-02",
+        "AC-03",
+        "AC-04",
+        "AC-05",
+        "AC-06"
+      ],
+      "depends_on": [
+        "B4"
+      ],
+      "allowed": {
+        "root": [
+          "specs/architecture-convergence/**",
+          "ops/ci/aliyun-flow/backend-ci-policy.json",
+          "ops/orchestration/cyf_orchestrator.py",
+          "ops/ci/aliyun-flow/backend-ci-run.sh"
+        ]
+      },
+      "new_paths": {},
+      "symbols": [
+        "exact test-selector additions only",
+        "acceptance/integration evidence",
+        "flow_ci_context: add only this task candidate branch to existing exact CI policy; no bypass or deployment authority",
+        "existing checkout/export CI branch lists: this candidate branch only; all same-Run artifact/source checks retained"
+      ],
+      "remove": [],
+      "release_authorization": "separate; not granted by this design"
+    }
+  ],
+  "forbidden": [
+    "new HTTP/WS protocol",
+    "DDL/data migration",
+    "new runtime dependency",
+    "new workflow/validation framework",
+    "Provider retries on UNKNOWN",
+    "automatic deployment",
+    "unrelated formatting/refactor",
+    "restoring cancelled limits"
+  ],
+  "policy_classification": {
+    "ALLOWED": "allowed==true with existing construction invariants",
+    "TEMPORARILY_UNAVAILABLE": [
+      "RUNTIME_UNAVAILABLE"
+    ],
+    "DENIED": [
+      "TASK_NOT_ASSIGNED",
+      "TASK_GRANT_MISSING",
+      "TASK_GRANT_STALE",
+      "ASSIGNMENT_EPOCH_UNPROVEN",
+      "REQUIREMENT_STALE",
+      "SKILL_BASELINE_REQUIRED",
+      "RUNTIME_FENCED"
+    ],
+    "INDETERMINATE": "unknown or null reason when allowed==false; no authorization and no permanent reject"
+  },
+  "required_evidence": [
+    "spec_clause",
+    "base_commit_tree",
+    "candidate_commit_tree",
+    "changed_paths_symbols",
+    "removed_old_paths",
+    "test_selectors_and_actual_counts",
+    "skipped_unverified",
+    "flow_artifact_install_business_separate"
+  ],
+  "execution_timebox": {
+    "timezone": "Asia/Shanghai",
+    "starts_at": "2026-10-26T00:19:00+08:00",
+    "deadline_at": "2026-10-26T09:00:00+08:00",
+    "wall_clock_minutes": 521,
+    "waits_and_rework_included": true,
+    "scope_reduced": false,
+    "on_incomplete": "abandon_entire_optimization_preserve_evidence_and_safely_revert_only_owned_changes",
+    "automatic_timer_installed": false,
+    "batch_minutes": {
+      "B0": 41,
+      "B1": 70,
+      "B2": 110,
+      "B3": 65,
+      "B4": 40,
+      "B5": 135,
+      "buffer": 60
+    }
+  }
+}

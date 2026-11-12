@@ -1,0 +1,501 @@
+{
+  "release": "1.10.0",
+  "status": "design_cases_only_not_executed",
+  "implementation_plan": "v1-10-implementation-plan.md",
+  "cases": [
+    {
+      "id": "V110-01",
+      "name": "入口与诚实范围",
+      "given": "授权测试身份、隔离样本与所列前置状态已准备；对应实现尚未完成",
+      "when": "登录用户经个人中心进入空间，并由聚义厅现有入口往返",
+      "then": "无需悬赏或Agent；页面不把未接入的历史成果标成已汇总，不出现假的Agent执行按钮",
+      "verification_layer": "browser",
+      "task_ids": [
+        "W00",
+        "W07"
+      ],
+      "related_contract_cases": [],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "V110-02",
+      "name": "无悬赏真实上传",
+      "given": "授权测试身份、隔离样本与所列前置状态已准备；对应实现尚未完成",
+      "when": "无任务用户逐一上传声明支持的PNG/JPEG/text/docx/xlsx/pptx/pdf",
+      "then": "得到本人fileId/v1；无伪taskId，无Agent/模型调用；操作提交后可查",
+      "verification_layer": "api+browser",
+      "task_ids": [
+        "W02",
+        "W03",
+        "W07"
+      ],
+      "related_contract_cases": [
+        "CW01",
+        "CW07"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "V110-03",
+      "name": "持久找回",
+      "given": "授权测试身份、隔离样本与所列前置状态已准备；对应实现尚未完成",
+      "when": "上传成功后刷新、退出重登录并下载",
+      "then": "同一fileId/version，下载hash与输入一致，不依赖浏览器缓存或运行中Agent",
+      "verification_layer": "api+browser",
+      "task_ids": [
+        "W02",
+        "W03",
+        "W07"
+      ],
+      "related_contract_cases": [
+        "CW01"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "V110-04",
+      "name": "列表搜索筛选分页",
+      "given": "授权测试身份、隔离样本与所列前置状态已准备；对应实现尚未完成",
+      "when": "建立名称/类型不同的本人样本，分页并切换条件",
+      "then": "仅当前owner条目，正确顺序/类型；cursor绑定身份和条件；不存在搜索结果显示空态",
+      "verification_layer": "api+browser",
+      "task_ids": [
+        "W04",
+        "W07"
+      ],
+      "related_contract_cases": [],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "V110-05",
+      "name": "重命名不改内容",
+      "given": "授权测试身份、隔离样本与所列前置状态已准备；对应实现尚未完成",
+      "when": "修改显示名后查看版本并下载",
+      "then": "metadataRevision变化；内容version/hash和原始文件名不变；不伪装扩展名",
+      "verification_layer": "api+browser",
+      "task_ids": [
+        "W04",
+        "W07"
+      ],
+      "related_contract_cases": [
+        "CW05"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "V110-06",
+      "name": "显式追加版本",
+      "given": "授权测试身份、隔离样本与所列前置状态已准备；对应实现尚未完成",
+      "when": "对指定上传条目提交新内容，再分别读取v1/v2",
+      "then": "只追加v2，旧版本字节不变，不静默覆盖同名其他条目",
+      "verification_layer": "api+browser",
+      "task_ids": [
+        "W03",
+        "W07"
+      ],
+      "related_contract_cases": [
+        "CW06"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "V110-07",
+      "name": "精确版本下载",
+      "given": "授权测试身份、隔离样本与所列前置状态已准备；对应实现尚未完成",
+      "when": "最新为v2时选择v1；验证中文及恶意文件名",
+      "then": "返回所选版本hash，名称安全且扩展名符合内容；不回落到latest",
+      "verification_layer": "api+browser",
+      "task_ids": [
+        "W03",
+        "W05",
+        "W07"
+      ],
+      "related_contract_cases": [],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "V110-08",
+      "name": "图片文本预览",
+      "given": "授权测试身份、隔离样本与所列前置状态已准备；对应实现尚未完成",
+      "when": "预览两个版本的PNG/JPEG和带脚本字样的纯文本",
+      "then": "预览绑定fileId/version，文字转义、图片可解码，不执行脚本；切换不留旧内容",
+      "verification_layer": "api+browser",
+      "task_ids": [
+        "W05",
+        "W07"
+      ],
+      "related_contract_cases": [],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "V110-09",
+      "name": "Office/PDF能力分离",
+      "given": "授权测试身份、隔离样本与所列前置状态已准备；对应实现尚未完成",
+      "when": "查看已存docx/xlsx/pptx/pdf的能力与操作",
+      "then": "下载可用；编辑未开放，预览UNSUPPORTED/未开放，不以上传成功宣称已能读改",
+      "verification_layer": "api+browser",
+      "task_ids": [
+        "W05",
+        "W07"
+      ],
+      "related_contract_cases": [
+        "CW07"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "V110-10",
+      "name": "回收与恢复",
+      "given": "授权测试身份、隔离样本与所列前置状态已准备；对应实现尚未完成",
+      "when": "读取当前usage/ETag后移入回收站，再恢复",
+      "then": "普通列表隐藏；回收站可下载历史；恢复保留字节/版本；不永久删除",
+      "verification_layer": "api+browser",
+      "task_ids": [
+        "W04",
+        "W07"
+      ],
+      "related_contract_cases": [],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "V110-11",
+      "name": "过期回收操作",
+      "given": "授权测试身份、隔离样本与所列前置状态已准备；对应实现尚未完成",
+      "when": "两页面并发改名/回收/恢复，旧页面用过期条件提交",
+      "then": "缺If-Match为428、旧ETag为412，不静默改状态；新授权竞态不在本版假装通过",
+      "verification_layer": "api+browser",
+      "task_ids": [
+        "W04",
+        "W07"
+      ],
+      "related_contract_cases": [
+        "CW05"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "V110-12",
+      "name": "同key上传重放",
+      "given": "授权测试身份、隔离样本与所列前置状态已准备；对应实现尚未完成",
+      "when": "同key同内容并发/响应丢失后再次上传",
+      "then": "只创建一个逻辑文件/版本；处理中复用operation，已完成复用回执且重新鉴权",
+      "verification_layer": "api+database",
+      "task_ids": [
+        "W01",
+        "W03",
+        "W06"
+      ],
+      "related_contract_cases": [
+        "CW03",
+        "CW08"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "V110-13",
+      "name": "异请求key冲突",
+      "given": "授权测试身份、隔离样本与所列前置状态已准备；对应实现尚未完成",
+      "when": "同key改内容或目标再次提交",
+      "then": "409 IDEMPOTENCY_CONFLICT，不覆盖、不重复创建；新业务请求才用新key",
+      "verification_layer": "api+database",
+      "task_ids": [
+        "W01",
+        "W03",
+        "W06"
+      ],
+      "related_contract_cases": [
+        "CW04"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "V110-14",
+      "name": "元数据并发",
+      "given": "授权测试身份、隔离样本与所列前置状态已准备；对应实现尚未完成",
+      "when": "两次请求读取同ETag后重命名",
+      "then": "只允许先提交者成功，后者412；内容版本与hash不变",
+      "verification_layer": "api+database",
+      "task_ids": [
+        "W01",
+        "W03",
+        "W04"
+      ],
+      "related_contract_cases": [
+        "CW05"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "V110-15",
+      "name": "版本CAS并发",
+      "given": "授权测试身份、隔离样本与所列前置状态已准备；对应实现尚未完成",
+      "when": "两个不同内容请求都以v1为前版追加",
+      "then": "仅一个v2，另一个409 FILE_VERSION_CONFLICT；两个请求均不覆盖v1",
+      "verification_layer": "api+database",
+      "task_ids": [
+        "W01",
+        "W03"
+      ],
+      "related_contract_cases": [
+        "CW06"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "V110-16",
+      "name": "断线与取消后的未知结果",
+      "given": "授权测试身份、隔离样本与所列前置状态已准备；对应实现尚未完成",
+      "when": "在服务端提交前后分别断开/取消客户端，再刷新恢复",
+      "then": "不伪报取消即回滚；持有operationId时查询，否则使用原key重放/提示重选原文件；不换key偷偷重复创建",
+      "verification_layer": "api+browser",
+      "task_ids": [
+        "W02",
+        "W03",
+        "W06"
+      ],
+      "related_contract_cases": [
+        "CW08"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "V110-17",
+      "name": "存储和DB分段故障",
+      "given": "授权测试身份、隔离样本与所列前置状态已准备；对应实现尚未完成",
+      "when": "分别注入暂存失败、对象已存但DB提交失败、提交成功但响应丢失",
+      "then": "不存在READY但字节缺失；旧数据完整；恢复同一操作而非新版本；孤儿可识别且不自动删别的目录",
+      "verification_layer": "api+database+filesystem",
+      "task_ids": [
+        "W02",
+        "W03"
+      ],
+      "related_contract_cases": [
+        "CW08"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "V110-18",
+      "name": "预览失败与下载分离",
+      "given": "授权测试身份、隔离样本与所列前置状态已准备；对应实现尚未完成",
+      "when": "已保存且原件有效时注入预览解码/读取失败",
+      "then": "preview为FAILED并可重试/下载，不能显示伪预览；下载的成功仍单独校验",
+      "verification_layer": "api+browser",
+      "task_ids": [
+        "W05",
+        "W06"
+      ],
+      "related_contract_cases": [
+        "CW26"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "V110-19",
+      "name": "跨owner逐入口隔离",
+      "given": "授权测试身份、隔离样本与所列前置状态已准备；对应实现尚未完成",
+      "when": "身份B猜测A的file/version/part/operation及cursor，读取或写入",
+      "then": "列表不含A；对象与不存在一致404；无名称/hash/字节泄露；覆盖改名、追加、回收、恢复和回执",
+      "verification_layer": "api+browser",
+      "task_ids": [
+        "W04",
+        "W08"
+      ],
+      "related_contract_cases": [
+        "CW02"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "V110-20",
+      "name": "client与伪scope隔离",
+      "given": "授权测试身份、隔离样本与所列前置状态已准备；对应实现尚未完成",
+      "when": "同owner不同合法client，以及body/query伪造owner/client/tenant",
+      "then": "不能合并或越权；scope来自认证principal，拒绝伪造身份参数",
+      "verification_layer": "api",
+      "task_ids": [
+        "W04",
+        "W08"
+      ],
+      "related_contract_cases": [
+        "CW02"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "V110-21",
+      "name": "认证与缓存响应头",
+      "given": "授权测试身份、隔离样本与所列前置状态已准备；对应实现尚未完成",
+      "when": "匿名、失效JWT、runtime凭据请求个人空间；检查实际跨域OPTIONS和响应",
+      "then": "拒绝非用户身份；private/no-store、nosniff；合法前端可用If-Match/幂等头并读取必要ETag/下载头；不放开任意origin",
+      "verification_layer": "api+browser",
+      "task_ids": [
+        "W05",
+        "W06",
+        "W08"
+      ],
+      "related_contract_cases": [],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "V110-22",
+      "name": "错误不泄露对象存在性",
+      "given": "授权测试身份、隔离样本与所列前置状态已准备；对应实现尚未完成",
+      "when": "以外国fileId配合非法version/类型或过期ETag请求",
+      "then": "先对象授权，表现与不存在相同；不泄露内部路径、凭据和其他用户数据",
+      "verification_layer": "api",
+      "task_ids": [
+        "W04",
+        "W08"
+      ],
+      "related_contract_cases": [
+        "CW02"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "V110-23",
+      "name": "身份切换迟到响应",
+      "given": "授权测试身份、隔离样本与所列前置状态已准备；对应实现尚未完成",
+      "when": "A上传/预览/列表请求延迟，退出或切换B后返回A结果",
+      "then": "取消A请求、释放Blob URL/选择与操作缓存，旧结果不能覆盖B；A不丢服务端已保存版本",
+      "verification_layer": "browser",
+      "task_ids": [
+        "W06",
+        "W07"
+      ],
+      "related_contract_cases": [
+        "CW28"
+      ],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "V110-24",
+      "name": "真实传输边界",
+      "given": "授权测试身份、隔离样本与所列前置状态已准备；对应实现尚未完成",
+      "when": "经createApi/useHttp发送FormData、下载Blob与查询回执",
+      "then": "不手写错误multipart boundary，不base64扩增；精确版本/字节与回执匹配，不仅mock adapter通过",
+      "verification_layer": "web-integration",
+      "task_ids": [
+        "W06",
+        "W08"
+      ],
+      "related_contract_cases": [],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "V110-25",
+      "name": "文件内容与路径安全",
+      "given": "授权测试身份、隔离样本与所列前置状态已准备；对应实现尚未完成",
+      "when": "伪MIME/损坏图片、路径穿越、符号链接替换、主动HTML/SVG、普通Office附件",
+      "then": "按已确定格式规则拒绝或仅作为不执行的附件；不取任意路径/URL，不执行脚本/宏，不照搬无依据尺寸上限",
+      "verification_layer": "api+filesystem+browser",
+      "task_ids": [
+        "W02",
+        "W05"
+      ],
+      "related_contract_cases": [],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "V110-26",
+      "name": "边界与同名文件体验",
+      "given": "授权测试身份、隔离样本与所列前置状态已准备；对应实现尚未完成",
+      "when": "上传两个同名或同hash文件；空列表、错误后重试、小屏键盘操作；请求未开放task筛选",
+      "then": "独立条目不合并；状态可理解；常用操作可达；未支持筛选明确拒绝而非忽略",
+      "verification_layer": "api+browser",
+      "task_ids": [
+        "W04",
+        "W07"
+      ],
+      "related_contract_cases": [],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "V110-27",
+      "name": "旧接口兼容",
+      "given": "授权测试身份、隔离样本与所列前置状态已准备；对应实现尚未完成",
+      "when": "运行旧artifact存取、正式交付、task workspace与导航相关回归",
+      "then": "旧scope/URI、actor/owner鉴权、正式交付语义、map/roster分流不变",
+      "verification_layer": "regression",
+      "task_ids": [
+        "W01",
+        "W08"
+      ],
+      "related_contract_cases": [],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "V110-28",
+      "name": "增量迁移与恢复",
+      "given": "授权测试身份、隔离样本与所列前置状态已准备；对应实现尚未完成",
+      "when": "在授权隔离目标引擎从基线迁移，重复应用并验证事务；演练安装失败恢复",
+      "then": "schema增量兼容、唯一键/CAS有效；不搬旧字节、不损历史表；恢复不清除已上传内容；记录fixture digest",
+      "verification_layer": "database+installation",
+      "task_ids": [
+        "W00",
+        "W01",
+        "W08",
+        "W09"
+      ],
+      "related_contract_cases": [],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "V110-29",
+      "name": "发布来源可追溯",
+      "given": "授权测试身份、隔离样本与所列前置状态已准备；对应实现尚未完成",
+      "when": "未来完成正式测试构建、安装与健康验证后记录发布证据",
+      "then": "exact API/Web SHA/tree、测试结果、制品hash、构建来源、安装及健康可追溯；本地授权不冒充Flow成功",
+      "verification_layer": "release",
+      "task_ids": [
+        "W09"
+      ],
+      "related_contract_cases": [],
+      "status": "not_run",
+      "evidence": null
+    },
+    {
+      "id": "V110-30",
+      "name": "上线业务回读与反馈",
+      "given": "授权测试身份、隔离样本与所列前置状态已准备；对应实现尚未完成",
+      "when": "未来在明确授权的测试空间由用户上传→版本→预览/下载→回收恢复并反馈",
+      "then": "无需终端搬文件，刷新后可找回，下载hash一致；技术通过与用户验收分列，不编造节省时间",
+      "verification_layer": "browser+user",
+      "task_ids": [
+        "W09"
+      ],
+      "related_contract_cases": [],
+      "status": "not_run",
+      "evidence": null
+    }
+  ]
+}

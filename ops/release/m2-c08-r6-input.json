@@ -1,0 +1,43 @@
+{
+  "schema": "cyf-m2-c08-release-input-v1",
+  "releaseId": "m2-c08-r6",
+  "minimumFreeBytes": 5368709120,
+  "artifactRoot": "/home/isp/wsps/cyf/deliverables/releases/m2-c08-r6",
+  "api": {
+    "repo": "/home/isp/wsps/cyf/.worktrees/m2-api-base",
+    "ref": "feat/m2-api-base-20260803",
+    "head": "e45ba398f116a210091c892abb9fbc8111dcc411",
+    "tree": "8b80bf35c418b2ca0cead919f805db5bb70166eb",
+    "gradleTask": ":starter:bootJar",
+    "jarRelativePath": "starter/build/libs/starter-1.1.2-SNAPSHOT.jar",
+    "deploy": {
+      "liveJar": "/home/isp/hosts/cyf/api/cyf-api-kit.jar",
+      "pidFile": "/home/isp/hosts/cyf/api/cyf-api-kit.pid",
+      "workDir": "/home/isp/hosts/cyf/api",
+      "backupRoot": "/home/isp/baks/legacy-api/releases",
+      "recordRoot": "/home/isp/baks/legacy-api/release-records",
+      "healthUrl": "http://127.0.0.1:10018/actuator/health",
+      "healthExpectedRegex": "\"status\"[[:space:]]*:[[:space:]]*(\"UP\"|[{][^}]*\"code\"[[:space:]]*:[[:space:]]*\"UP\"[^}]*[}])",
+      "stopTimeoutSeconds": 60,
+      "healthTimeoutSeconds": 90
+    }
+  },
+  "web": {
+    "repo": "/home/isp/wsps/cyf/.worktrees/m2-web-base",
+    "ref": "feat/m2-web-base-20260803",
+    "head": "266583f2e59d5f1362ed4d653f58d02b78a0e6b5",
+    "tree": "ba7ed4f167c43b3af8a7f07d34d626308496cd36",
+    "npmBin": "/home/isp/apps/node/bin/npm",
+    "distRelativePath": "dist",
+    "deploy": {
+      "liveDir": "/home/isp/hosts/cyf/web/kit",
+      "backupRoot": "/home/isp/baks/legacy-web",
+      "recordRoot": "/home/isp/baks/legacy-web/release-records",
+      "healthUrls": [
+        "https://kit.chaoyoufan.cn/",
+        "https://kit.chaoyoufan.cn/juyiting"
+      ],
+      "healthTimeoutSeconds": 60
+    }
+  }
+}
