@@ -13,6 +13,10 @@
 
 原型及验收范围见 [本次交接](../../docs/implementation/handoffs/JUYIAI-DEMO-WORKBENCH-20261112.md)。源码完成、构建、公开分支推送与线上部署分别记录。
 
+### 品牌文案（2026-11-12）
+
+前端可见名称、页面标题与安装应用名统一为“聚义”，英文名 JuyiAI；既有 juyiting 路由、内部标识、接口和存储键不改名。部署与验收见[品牌发布记录](../../docs/implementation/handoffs/JUYIAI-BRAND-RELEASE-20261112.md)。
+
 ### 责任与业务流程
 Owner按特性范围核对安全/功能/运维证据；既有发布工具负责安装事务。
 
