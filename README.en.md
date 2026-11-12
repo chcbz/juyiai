@@ -51,7 +51,7 @@ The demo includes research, content production, and project collaboration templa
 
 </details>
 
-Screenshots were captured from the **locally verified Web 1.16.135 candidate** in a fresh, signed-out browser on November 12, 2026. They show the updated workbench demo, not evidence of deployment. The online demo will change only after a separate release. The four workbench tabs, synthetic reservation, discussion, acceptance and cancellation are interactive; no business APIs or model calls are made. Signing in carries only the chosen template, not local edits or messages.
+Screenshots were captured from the **deployed Web 1.16.136 public pages** in a fresh, signed-out browser on November 12, 2026. The updated workbench demo is now online. The four workbench tabs, synthetic reservation, discussion, acceptance and cancellation are interactive; no business APIs or model calls are made. Signing in carries only the chosen template, not local edits or messages.
 
 ## Real-task workflow
 
