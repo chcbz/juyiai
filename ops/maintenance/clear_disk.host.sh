@@ -79,6 +79,14 @@ state- and deployment-lock-guarded Python helper.
 USAGE
 }
 
+# Automatic retention must yield to builds and serving traffic on the shared host.
+# Only this cleanup shell and its future descendants are affected, never a PID
+# found by the process scanner or an already running cleanup invocation.
+background_cleanup_priority() {
+  renice -n 19 -p "$BASHPID" >/dev/null || return 1
+  ionice -c 3 -p "$BASHPID" || return 1
+}
+
 free_bytes() { df -PB1 / | awk 'NR == 2 {print $4}'; }
 human_bytes() { numfmt --to=iec-i --suffix=B "$1" 2>/dev/null || printf '%sB' "$1"; }
 threshold_bytes() { printf '%s' "$(( $1 * 1024 * 1024 * 1024 ))"; }
@@ -596,6 +604,7 @@ main() {
       install -d -m 0755 /run/lock
       exec 9>"$LOCK_FILE"
       flock -n 9 || { echo 'Another host cleanup is running; exit'; exit 0; }
+      background_cleanup_priority || { echo 'Cannot lower cleanup scheduling priority; no retention started.' >&2; return 4; }
       # Do not let a recursive diagnostic du delay low-space recovery or hold
       # the cleanup lock for minutes before the retention stages even start.
       echo '== Filesystem before retention =='

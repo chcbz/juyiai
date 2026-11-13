@@ -45,3 +45,9 @@ Web/Runtime 使用对应 component，不需 API payload 参数；可同时用既
 ## 2026-11-07目录归位更新
 
 完成包显式基目录增加`/home/isp/pkgs/cyf`、`/home/isp/state/cyf-local-build/tasks`，移除`/home/isp/wsps/private-maintenance`；现有共享worktrees仅作历史兼容，不作为新工作树默认根。三个镜像的登记路径已随原子迁移更新，完成时间/摘要/身份不变。baks/private-maintenance是历史维护档案，不纳入最终包扫描。此为目录整理，不改变24h/最近两批/当前回退/进程/锁保护。详见`HOST_DIRECTORY_LAYOUT.md`。
+
+## 后台调度优先级（2026-11-13）
+
+完整主机入口 `clear_disk.host.sh` 在取得原cleanup锁后、启动任何清理阶段前，仅降低自身及后续子进程的CPU优先级（nice19）和I/O优先级（idle）。原因是两核主机低于既有5GiB触发线时，半小时清理会与构建及服务争用CPU。设置失败返回4，不伪报成功或继续高优先级扫描。目录/保留期限/身份/状态/摘要/全部锁及5→8GiB回收规则均不变，不扫描或修改其他进程优先级，不中止在途清理。繁忙主机上的回收会更慢；这是后台维护让出资源，不是磁盘空间充足或任意构建必在600秒内结束的保证。最小兼容入口与cron计划本次不变。
+
+验证：`bash ops/maintenance/tests/test_clear_disk.sh ops/maintenance/clear_disk.host.sh`（仅隔离fixture）。主机安装与单独子进程优先级回读见 `RUNTIME-LEASE-SEPARATION-20261112` handoff；不能把对新入口的验证当作已改变旧进程。

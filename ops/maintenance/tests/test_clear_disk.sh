@@ -13,6 +13,22 @@ ACTIVE_PATHS=()
 PASS=0
 ok() { PASS=$((PASS + 1)); printf 'PASS %s\n' "$1"; }
 fail() { echo "FAIL $1" >&2; exit 1; }
+# Verify scheduling on an isolated child, without changing the test runner or a
+# production process. The remaining fixture tests use an inert scheduling hook.
+(
+  renice() { [[ "$1 $2 $3" == '-n 19 -p' && "$4" == "$BASHPID" ]] || exit 1; echo cpu >>"$FIXTURE/priority"; }
+  ionice() { [[ "$1 $2 $3" == '-c 3 -p' && "$4" == "$BASHPID" ]] || exit 1; echo io >>"$FIXTURE/priority"; }
+  background_cleanup_priority
+)
+[[ $(cat "$FIXTURE/priority") == $'cpu\nio' ]] || fail 'cleanup scheduling did not target itself'
+ok 'cleanup lowers only its own CPU and IO priority before spawning work'
+(
+  renice() { return 1; }
+  ionice() { fail 'IO change ran after CPU scheduling failure'; }
+  if background_cleanup_priority; then fail 'priority failure hidden'; fi
+)
+ok 'cleanup priority failure remains an error'
+background_cleanup_priority() { :; }
 old_file() {
   mkdir -p -- "${1%/*}"
   printf 'fixture\n' > "$1"

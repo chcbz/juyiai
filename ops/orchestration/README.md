@@ -106,6 +106,7 @@ python3 -B -m unittest discover -s ops/orchestration/tests -p 'test_preflight.py
 ### 固定源码验证沿用构建入口（2026-11-13）
 
 - API候选验证与打包均使用下方现有 `local_build.py`；通过 `--regression-arg` 原样追加业务任务和 `--tests`，不要为每次重试复制 `run.py` 再手拼Gradle参数。该入口保留 `--parallel --max-workers=2 --build-cache`、compile-only缓存政策、当批测试/分层检查/fresh JAR；只设置依赖缓存目录不等于启用编译产物缓存。
+- 包含真实Unix socket的测试应选短的普通磁盘批次路径（如`/home/isp/state/cyf-build/<批次>`）；临时目录仍是该批次的`tmp/`。路径过长会导致socket绑定失败，不是构建超时，不能通过删除测试或放宽身份检查处理。
 - 单独构建仍在任务专属 `systemd-run --wait --pipe --collect --property=RuntimeMaxSec=600 --property=KillMode=control-group` 内运行；不是生产服务的执行容器。`local_build.py` 不安装，不因构建成功自动发布。
 - 定向测试筛选不缩小生产依赖图；维护测试引用starter主输出时确实需要编译应用图，不能靠去掉任务/必要检查凑600秒。内容匹配的JavaCompile结果可复用，测试结果和最终JAR不能借缓存跳过。
 - orchestrator输出 `GRADLE_LOCK_WAIT`、含`wait_seconds`的 `GRADLE_LOCK_ACQUIRED`，结束输出`GRADLE_EXECUTION_TIMING`的 `lock_wait_seconds`、`elapsed_seconds`（Gradle执行）、`invocation_seconds`（含前置和等待）。锁等待仍计入原600秒；超时保留原结果，不移动计时起点。任务阶段看现有 `CYF_GRADLE_PHASE` / `CYF_TASK_TIMING`，归因时加`--regression-arg=--info`可区分FROM-CACHE、重编原因和实际测试。
