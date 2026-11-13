@@ -403,7 +403,7 @@ def publish(output, data, before_publish):
         temporary = Path(stage) / 'package.tgz'
         with temporary.open('xb') as handle:
             os.fchmod(handle.fileno(), 0o600)
-            with tarfile.open(fileobj=handle, mode='w:gz', format=tarfile.USTAR_FORMAT) as archive:
+            with tarfile.open(fileobj=handle, mode='w:gz', format=tarfile.USTAR_FORMAT, compresslevel=1) as archive:
                 for name in MEMBERS:
                     info = tarfile.TarInfo(name)
                     info.size, info.mode, info.mtime = len(data[name]), 0o600, 0

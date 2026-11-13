@@ -356,6 +356,15 @@ class LocalPackageTest(unittest.TestCase):
         self.assertEqual(caught.exception.code, 'OUTPUT_EXISTS')
         self.assertEqual(output.read_bytes(), b'prior')
 
+    def test_publish_fast_gzip_retains_exact_members(self):
+        output = Path(self.f.args().output)
+        data = {name: (name.encode() + b'\0') * 50 for name in m.MEMBERS}
+        with mock.patch.object(m.tarfile, 'open', wraps=tarfile.open) as opening:
+            m.publish(output, data, lambda: None)
+        self.assertEqual(opening.call_args.kwargs['compresslevel'], 1)
+        with tarfile.open(output, 'r:gz') as archive:
+            self.assertEqual({row.name: archive.extractfile(row).read() for row in archive}, data)
+
     def test_atomic_publish_rechecks_before_publication_and_cleans_stage(self):
         def fail():
             raise m.Rejected('SOURCE_DIRTY')
