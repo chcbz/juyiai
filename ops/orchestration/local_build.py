@@ -67,9 +67,10 @@ def fixed_source(source):
 def build_command(source, output, home, jdk, identity, task_id, regressions=(), offline=False):
     gradle = [str(GRADLE), '--no-daemon', '--max-workers=2', '--parallel', '--build-cache',
               '--console=plain', '--stacktrace',
-              # The build JVM also runs javac/annotation processors and AST scans.
-              # Keep normal tiered JIT here; C1-only remains scoped to short tests.
-              '-Dorg.gradle.jvmargs=-Xmx768m -XX:MaxMetaspaceSize=384m -XX:ActiveProcessorCount=2',
+              # Restore the original short-lived build profile: the full-tiered
+              # experiment spent substantial CPU in C2 and did not meet the cap.
+              # Retain fixed heap/workers; a new full run must validate this profile.
+              '-Dorg.gradle.jvmargs=-Xmx768m -XX:MaxMetaspaceSize=384m -XX:ActiveProcessorCount=2 -XX:TieredStopAtLevel=1',
               '--init-script', str(LOCAL_INIT), '--init-script', str(METADATA_INIT),
               '--project-cache-dir', str(home / 'project-cache')]
     if offline:

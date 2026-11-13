@@ -79,7 +79,7 @@ class LocalBuildTest(unittest.TestCase):
         jvmargs = next(x for x in command if x.startswith('-Dorg.gradle.jvmargs='))
         self.assertIn('-Xmx768m', jvmargs)
         self.assertIn('-XX:ActiveProcessorCount=2', jvmargs)
-        self.assertNotIn('TieredStopAtLevel', jvmargs)
+        self.assertIn('-XX:TieredStopAtLevel=1', jvmargs)
         self.assertNotIn('-XX:-TieredCompilation', jvmargs)
 
     def test_local_api_package_has_uncompressed_tar_name(self):
@@ -101,7 +101,7 @@ class LocalBuildTest(unittest.TestCase):
         self.assertEqual(extra, command[offset:offset + len(extra)])
         self.assertLess(offset, command.index(':starter:bootJar'))
 
-    def test_flow_test_c1_is_only_applied_to_test_tasks(self):
+    def test_init_script_c1_remains_scoped_to_test_tasks(self):
         text = M.LOCAL_INIT.read_text()
         self.assertNotIn('CYF_FLOW_GRADLE_ACTIVE', text)
         self.assertIn("CYF_LOCAL_GRADLE_ACTIVE", text)
