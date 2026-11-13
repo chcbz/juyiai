@@ -76,7 +76,11 @@ class LocalBuildTest(unittest.TestCase):
         command = self.command()
         self.assertIn('--max-workers=2', command)
         self.assertIn('--parallel', command)
-        self.assertTrue(any(x.startswith('-Dorg.gradle.jvmargs=') and '-XX:TieredStopAtLevel=1' in x for x in command))
+        jvmargs = next(x for x in command if x.startswith('-Dorg.gradle.jvmargs='))
+        self.assertIn('-Xmx768m', jvmargs)
+        self.assertIn('-XX:ActiveProcessorCount=2', jvmargs)
+        self.assertNotIn('TieredStopAtLevel', jvmargs)
+        self.assertNotIn('-XX:-TieredCompilation', jvmargs)
 
     def test_local_api_package_has_uncompressed_tar_name(self):
         text = Path(M.__file__).read_text()

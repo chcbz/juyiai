@@ -67,7 +67,9 @@ def fixed_source(source):
 def build_command(source, output, home, jdk, identity, task_id, regressions=(), offline=False):
     gradle = [str(GRADLE), '--no-daemon', '--max-workers=2', '--parallel', '--build-cache',
               '--console=plain', '--stacktrace',
-              '-Dorg.gradle.jvmargs=-Xmx768m -XX:MaxMetaspaceSize=384m -XX:ActiveProcessorCount=2 -XX:TieredStopAtLevel=1',
+              # The build JVM also runs javac/annotation processors and AST scans.
+              # Keep normal tiered JIT here; C1-only remains scoped to short tests.
+              '-Dorg.gradle.jvmargs=-Xmx768m -XX:MaxMetaspaceSize=384m -XX:ActiveProcessorCount=2',
               '--init-script', str(LOCAL_INIT), '--init-script', str(METADATA_INIT),
               '--project-cache-dir', str(home / 'project-cache')]
     if offline:
