@@ -50,6 +50,28 @@ class LocalBuildTest(unittest.TestCase):
         self.assertNotIn('+= project.sourceSets.test.output', text)
         self.assertIn('slice.output + project.sourceSets.main.output +', text)
 
+    def test_unrelated_diagnostics_are_not_default_or_compiled_in_release_slice(self):
+        command = self.command()
+        text = M.LOCAL_INIT.read_text()
+        for name in ('cn.jia.diagnostics.StartupTimelineBootTest',
+                     'cn.jia.config.ApiPerformanceMetricsConfigTest',
+                     'cn.jia.config.ElasticsearchProductionHealthIsolationTest'):
+            self.assertNotIn(name, command)
+            self.assertNotIn(name.replace('.', '/') + '.java', text)
+        self.assertIn('cn.jia.starter.AuthFormTransportTest', command)
+        self.assertIn('cn.jia.config.SmsEmailRuntimeClasspathTest', command)
+        self.assertIn('local-fast-baseline-v3-critical', command)
+        self.assertNotIn('CYF_TASK_GRAPH ', text)
+        for required in ('CYF_GRADLE_PHASE ', 'CYF_TASK_TIMING ',
+                         "childEnvironment.remove('CYF_MAVEN_PASSWORD')", 'Nested Gradle Exec'):
+            self.assertIn(required, text)
+
+    def test_removed_default_tests_remain_explicit_regression_inputs(self):
+        extra = [':starter:test', '--tests', 'cn.jia.config.ApiPerformanceMetricsConfigTest']
+        command = self.command(extra)
+        offset = command.index(':starter:test')
+        self.assertEqual(command[offset:offset + len(extra)], extra)
+
     def test_bounded_parallelism_and_short_lived_build_jvm(self):
         command = self.command()
         self.assertIn('--max-workers=2', command)

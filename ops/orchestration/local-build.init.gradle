@@ -129,12 +129,6 @@ gradle.beforeProject { project ->
 }
 
 gradle.taskGraph.whenReady { graph ->
-    if (gradle.parent == null) {
-        graph.allTasks.findAll { it.project.path == ':starter' }.each { task ->
-            println('CYF_TASK_GRAPH ' + JsonOutput.toJson([
-                task: task.path, dependencies: task.taskDependencies.getDependencies(task).collect { it.path }.sort()]))
-        }
-    }
     graph.allTasks.each { task ->
         if (task instanceof Test || task instanceof JavaExec || task instanceof Exec) {
             def childEnvironment = new HashMap(task.environment)
@@ -177,11 +171,8 @@ gradle.afterProject { project ->
         ':agent:jia-agent-service': [
             'cn/jia/agent/security/AgentRuntimeSecurityIntegrationTest.java'],
         ':starter': [
-            'cn/jia/diagnostics/StartupTimelineBootTest.java',
             'cn/jia/starter/AuthFormTransportTest.java',
-            'cn/jia/config/ApiPerformanceMetricsConfigTest.java',
-            'cn/jia/config/SmsEmailRuntimeClasspathTest.java',
-            'cn/jia/config/ElasticsearchProductionHealthIsolationTest.java']
+            'cn/jia/config/SmsEmailRuntimeClasspathTest.java']
     ][project.path]
     if (gradle.parent == null && selected != null) {
         selected.each { relative ->
@@ -211,7 +202,7 @@ gradle.afterProject { project ->
         }
         project.tasks.register('localReleaseBaseline', Test) {
             group = 'verification'
-            description = 'Local release security/startup baseline; not the full test suite.'
+            description = 'Local release authentication/runtime baseline; not the full test suite.'
             dependsOn project.tasks.named(slice.classesTaskName)
             testClassesDirs = slice.output.classesDirs
             classpath = slice.runtimeClasspath

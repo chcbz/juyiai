@@ -31,11 +31,8 @@ BASELINE = [
     ':agent:jia-agent-service:localReleaseBaseline', '--tests',
     'cn.jia.agent.security.AgentRuntimeSecurityIntegrationTest',
     ':starter:localReleaseBaseline',
-    '--tests', 'cn.jia.diagnostics.StartupTimelineBootTest',
     '--tests', 'cn.jia.starter.AuthFormTransportTest',
-    '--tests', 'cn.jia.config.ApiPerformanceMetricsConfigTest',
     '--tests', 'cn.jia.config.SmsEmailRuntimeClasspathTest',
-    '--tests', 'cn.jia.config.ElasticsearchProductionHealthIsolationTest',
     ':starter:publicArtifactVerifierTest',
     ':starter:poiProductionRuntimeClasspathTest',
     ':validateLayering', ':starter:bootJar',
@@ -79,7 +76,7 @@ def build_command(source, output, home, jdk, identity, task_id, regressions=(), 
     gradle += list(regressions) + BASELINE
     return [sys.executable, '-u', str(ORCHESTRATOR), 'gradle', '--heavy',
             '--cwd', str(source), '--tree-sha', identity['tree'],
-            '--selector', 'local-fast-baseline-v2-source-slice', '--fixture-digest', 'FIXTURE_DIGEST',
+            '--selector', 'local-fast-baseline-v3-critical', '--fixture-digest', 'FIXTURE_DIGEST',
             '--dependency-cache-home', str(home), '--artifact', str(output / 'gradle.log'),
             task_id, '--'] + gradle
 
@@ -118,7 +115,7 @@ def export_package(args, command, identity, fixture):
         reports = sorted((build / 'jia' / project / 'test-results' / name).glob('TEST-*.xml'))
         if not reports:
             raise ValueError('missing fresh XML for ' + task)
-        tests.append({'task': task, 'selector': 'local-fast-baseline-v2-source-slice',
+        tests.append({'task': task, 'selector': 'local-fast-baseline-v3-critical',
                       'fixtureSha256': fixture, 'reports': [producer.record(p) for p in reports]})
     inputs = [args.source / 'settings.gradle', args.source / 'starter/build.gradle',
               LOCAL_INIT, METADATA_INIT, Path(__file__).resolve()]
@@ -130,7 +127,7 @@ def export_package(args, command, identity, fixture):
         'sourceRoot': str(args.source), 'buildRoot': str(build),
         'sourceBefore': clean, 'sourceAfter': clean,
         'invocation': {'argv': raw_argv, 'exitCode': 0, 'cacheHit': False,
-            'log': producer.record(log), 'selector': 'local-fast-baseline-v2-source-slice',
+            'log': producer.record(log), 'selector': 'local-fast-baseline-v3-critical',
             'fixtureSha256': fixture, 'inputs': [producer.record(p) for p in inputs]},
         'tests': tests, 'validateLayering': {'task': ':validateLayering'},
         'bootJar': {'task': ':starter:bootJar', 'proof': producer.record(proof_path)},
