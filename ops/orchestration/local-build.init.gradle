@@ -175,7 +175,7 @@ allprojects {
  tasks.withType(org.gradle.api.tasks.testing.Test).configureEach {
   // Match Flow's short-lived verification profile; never production/JavaCompile.
   maxParallelForks=1; maxHeapSize='384m'; jvmArgs '-XX:ActiveProcessorCount=2','-XX:+UseSerialGC','-XX:TieredStopAtLevel=1'
-  outputs.upToDateWhen { false }
+  doNotTrackState('Local release tests always execute in a fresh batch')
  }
 }
 

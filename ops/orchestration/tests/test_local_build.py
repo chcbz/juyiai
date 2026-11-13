@@ -138,6 +138,17 @@ class LocalBuildTest(unittest.TestCase):
         self.assertIn('--build-cache', self.command())
         self.assertIn('fresh per-batch output is required', Path(M.__file__).read_text())
 
+    def test_mandatory_fresh_tasks_skip_only_unused_state_snapshots(self):
+        local = M.LOCAL_INIT.read_text()
+        metadata = M.METADATA_INIT.read_text()
+        self.assertIn("doNotTrackState('Local release tests always execute in a fresh batch')", local)
+        self.assertIn("candidate instanceof org.gradle.api.tasks.testing.Test", metadata)
+        self.assertIn("candidate.doNotTrackState('Local release tests always execute in a fresh batch')", metadata)
+        self.assertIn("task.doNotTrackState('Local release bootJar must be created and verified fresh')", metadata)
+        self.assertIn('new java.security.DigestInputStream(stream, hash).transferTo', metadata)
+        self.assertIn("publicArtifactVerifier: 'bootJar-original-doLast-completed'", metadata)
+        self.assertIn('CYF_LOCAL_RELEASE_BUILD_NOT_FRESH', metadata)
+
     def test_fixed_source_rejects_dirty_tree_and_binds_full_commit_tree(self):
         with tempfile.TemporaryDirectory(prefix='cyf-local-build-unit-') as temporary:
             source = Path(temporary)

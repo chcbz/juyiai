@@ -79,9 +79,7 @@ def cleanState = {
 def digest = { File file ->
     def hash = MessageDigest.getInstance('SHA-256')
     file.withInputStream { stream ->
-        byte[] buffer = new byte[65536]
-        int count
-        while ((count = stream.read(buffer)) != -1) hash.update(buffer, 0, count)
+        new java.security.DigestInputStream(stream, hash).transferTo(OutputStream.nullOutputStream())
     }
     hash.digest().encodeHex().toString()
 }
@@ -107,7 +105,9 @@ gradle.beforeProject { project ->
             candidate.outputs.cacheIf { false }
         }
         if (candidate instanceof org.gradle.api.tasks.testing.Test) {
-            candidate.outputs.upToDateWhen { false }
+            // Tests are mandatory fresh executions. Unlike upToDateWhen(false),
+            // untracked tasks also avoid unused runtime-classpath/output snapshots.
+            candidate.doNotTrackState('Local release tests always execute in a fresh batch')
         }
     }
 }
@@ -133,7 +133,9 @@ gradle.projectsEvaluated {
     task.mustRunAfter(gradle.rootProject.tasks.named('validateLayering'))
     task.inputs.properties(metadata)
     task.manifest.attributes(metadata) // leave Implementation-Version entirely untouched
-    task.outputs.upToDateWhen { false }
+    // No state snapshot can be reused for this fresh, identity-bound final JAR.
+    // Dependency wiring, original archive action and security verifier stay intact.
+    task.doNotTrackState('Local release bootJar must be created and verified fresh')
     task.outputs.cacheIf { false }
     def sourceBefore = null
     task.doFirst {
