@@ -124,6 +124,13 @@ gradle.projectsEvaluated {
     if (!realBootJar || task.path != ':starter:bootJar') {
         throw new GradleException('CYF_LOCAL_RELEASE_BOOTJAR_MISSING')
     }
+    // Finish selected verification before the final source snapshot and JAR. Tests
+    // may briefly create attach files in their working directory; do not weaken
+    // cleanState or whitelist transient files. mustRunAfter adds no test tasks.
+    gradle.rootProject.allprojects.each { project ->
+        task.mustRunAfter(project.tasks.withType(org.gradle.api.tasks.testing.Test))
+    }
+    task.mustRunAfter(gradle.rootProject.tasks.named('validateLayering'))
     task.inputs.properties(metadata)
     task.manifest.attributes(metadata) // leave Implementation-Version entirely untouched
     task.outputs.upToDateWhen { false }
