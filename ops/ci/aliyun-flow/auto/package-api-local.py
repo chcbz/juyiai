@@ -261,6 +261,7 @@ def validate_argv(argv, required_tasks, inputs):
     require(Path(argv[0]).name in ('gradle', 'gradlew'))
     # Public grammar only. Preserve exact task/filter ordering; never execute argv.
     simple = {'--no-daemon', '--no-build-cache', '--build-cache', '--rerun-tasks', '--console=plain', '--stacktrace', '--info', '--parallel', '--no-parallel', '--offline', '--max-workers=2',
+              '-Dorg.gradle.jvmargs=-Xmx768m -XX:MaxMetaspaceSize=384m -XX:ActiveProcessorCount=2',
               '-Dorg.gradle.jvmargs=-Xmx768m -XX:MaxMetaspaceSize=384m -XX:ActiveProcessorCount=2 -XX:TieredStopAtLevel=1',
               '-Dorg.gradle.jvmargs=-Xmx512m -XX:+UseSerialGC -XX:MaxMetaspaceSize=384m -XX:ActiveProcessorCount=2 -XX:TieredStopAtLevel=1'}
     task = re.compile(r':[A-Za-z0-9_:-]+\Z')

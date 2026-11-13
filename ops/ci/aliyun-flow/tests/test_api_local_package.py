@@ -494,6 +494,13 @@ class LocalPackageTest(unittest.TestCase):
             with self.assertRaises(m.Rejected):
                 m.validate_argv(argv + [extra], {':starter:bootJar'}, [{'path': '/safe/local-release-metadata.init.gradle'}])
 
+    def test_normal_tiered_build_profile_is_packaged_without_rewriting_argv(self):
+        argv = self.f.ev['invocation']['argv']
+        argv.insert(1, '-Dorg.gradle.jvmargs=-Xmx768m -XX:MaxMetaspaceSize=384m -XX:ActiveProcessorCount=2')
+        original = list(argv)
+        self.run_fixture()
+        self.assertEqual(argv, original)
+
     def test_serial_low_memory_build_keeps_exact_argv_and_rejects_unsafe_jvm_options(self):
         argv = ['./gradlew', '--console=plain', '--no-daemon', '--parallel', '--no-parallel',
                 '--max-workers=2',
