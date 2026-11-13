@@ -22,9 +22,15 @@ def diagnostic_database(path):
     # Name alone never authorizes omission. Unknown schema is recovery data.
     if path.name != 'logs_2.sqlite' or path.is_symlink() or not path.is_file():
         return False
+    # A readonly WAL connection can still create -wal/-shm and change the
+    # source directory during snapshot selection. Never mutate the source.
+    # Without replaying a nonempty WAL we cannot prove its schema, so retain it.
+    wal = path.with_name(path.name + '-wal')
+    if wal.exists() and (wal.is_symlink() or wal.stat().st_size):
+        return False
     connection = None
     try:
-        connection = sqlite3.connect(path.as_uri() + '?mode=ro', uri=True, timeout=0)
+        connection = sqlite3.connect(path.as_uri() + '?mode=ro&immutable=1', uri=True, timeout=0)
         tables = {row[0] for row in connection.execute("SELECT name FROM sqlite_master WHERE type='table'")}
         columns = {row[1] for row in connection.execute('PRAGMA table_info(logs)')}
         views = list(connection.execute("SELECT name FROM sqlite_master WHERE type='view'"))

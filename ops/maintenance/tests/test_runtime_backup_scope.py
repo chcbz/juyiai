@@ -37,10 +37,32 @@ class ScopeTests(unittest.TestCase):
         return path
 
     def test_omit_schema_confirmed_diagnostics_and_companions(self):
-        self.log(); self.put(self.home / 'logs_2.sqlite-wal'); self.put(self.home / 'logs_2.sqlite-shm')
+        self.log(); self.put(self.home / 'logs_2.sqlite-wal', ''); self.put(self.home / 'logs_2.sqlite-shm', '')
         result = m.plan([self.root])
         self.assertEqual(len(result['excluded']), 3)
         self.assertTrue(all(x['reason'] == 'schema-confirmed-diagnostic-log' for x in result['excluded']))
+
+    def test_closed_wal_database_inspection_does_not_create_sidecars_or_change_directory(self):
+        db = self.log()
+        c = sqlite3.connect(str(db)); c.execute('PRAGMA journal_mode=WAL'); c.close()
+        before = m.signature(self.home)
+        names = sorted(p.name for p in self.home.iterdir())
+        first = m.plan([self.root]); second = m.plan([self.root])
+        self.assertEqual(first, second)
+        self.assertEqual(before, m.signature(self.home))
+        self.assertEqual(names, sorted(p.name for p in self.home.iterdir()))
+        self.assertEqual(len(first['excluded']), 1)
+
+    def test_nonempty_wal_is_retained_without_guessing_main_database_schema(self):
+        db = self.log()
+        c = sqlite3.connect(str(db)); c.execute('PRAGMA journal_mode=WAL')
+        c.execute('CREATE TABLE recovery (id TEXT)'); c.commit()
+        try:
+            self.assertGreater((self.home / 'logs_2.sqlite-wal').stat().st_size, 0)
+            self.assertFalse(m.diagnostic_database(db))
+            self.assertFalse(m.plan([self.root])['excluded'])
+        finally:
+            c.close()
 
     def test_never_infer_unknown_sqlite_is_disposable(self):
         db = self.log(); c = sqlite3.connect(str(db)); c.execute('CREATE TABLE recovery (id TEXT)'); c.commit(); c.close()
