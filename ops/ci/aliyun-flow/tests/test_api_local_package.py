@@ -175,6 +175,70 @@ class LocalPackageTest(unittest.TestCase):
         self.assertNotIn(result['package']['sha256'].encode(), b''.join(data.values()))
         self.assertFalse(list(self.f.output.glob('.cyf-local-package-*')))
 
+    def test_structural_validation_runs_once_before_digest_only_readback(self):
+        with mock.patch.object(m, 'verify_evidence', wraps=m.verify_evidence) as verify, \
+                mock.patch.object(m, 'manifest', wraps=m.manifest) as manifest, \
+                mock.patch.object(m, 'mail_runtime', wraps=m.mail_runtime) as mail, \
+                mock.patch.object(m, 'xml_summary', wraps=m.xml_summary) as xml:
+            self.run_fixture()
+        self.assertEqual(verify.call_count, 1)
+        self.assertEqual(manifest.call_count, 1)
+        self.assertEqual(mail.call_count, 1)
+        self.assertEqual(xml.call_count, len(self.f.reports))
+
+    def test_all_verified_files_are_rechecked_before_publication(self):
+        paths = [self.f.log_path, *self.f.reports, self.f.proof_path, self.f.jar,
+                 self.f.prov_path, self.f.dependency, self.f.init,
+                 self.f.source / 'settings.gradle', self.f.source / 'starter/build.gradle',
+                 self.f.evidence_path]
+        publish = m.publish
+        for path in paths:
+            with self.subTest(path=path.name):
+                before = path.read_bytes()
+                def mutate_then_publish(*args):
+                    path.write_bytes(before + b'changed during packaging')
+                    return publish(*args)
+                try:
+                    with mock.patch.object(m, 'publish', mutate_then_publish):
+                        self.rejected(self.run_fixture)
+                    self.assertFalse(list(self.f.output.glob('.cyf-local-package-*')))
+                finally:
+                    path.write_bytes(before)
+
+    def test_record_streams_blocks_instead_of_loading_entire_file(self):
+        path = self.f.build / 'large-synthetic.bin'
+        path.write_bytes(b'x' * (2 * 1024 * 1024 + 17))
+        read = io.BufferedReader.read
+        sizes = []
+        class BoundedReader(io.BufferedReader):
+            def read(self, size=-1):
+                sizes.append(size)
+                self_size = 1024 * 1024
+                if not 0 < size <= self_size:
+                    raise AssertionError('record must use bounded reads')
+                return read(self, size)
+        with mock.patch.object(m.os, 'fdopen', lambda fd, mode: BoundedReader(io.FileIO(fd, mode))):
+            result = m.record(path)
+        self.assertEqual(result['sha256'], m.sha(path.read_bytes()))
+        self.assertEqual(result['size'], path.stat().st_size)
+        self.assertGreater(len(sizes), 2)
+
+    def test_stable_reader_rejects_write_and_same_content_path_replacement(self):
+        path = self.f.build / 'mutable-input'
+        path.write_bytes(b'original')
+        for replace in (False, True):
+            with self.subTest(replace=replace):
+                with self.assertRaises(m.Rejected) as caught:
+                    with m.stable_reader(path) as handle:
+                        data = handle.read()
+                        if replace:
+                            replacement = path.with_suffix('.new')
+                            replacement.write_bytes(data)
+                            os.replace(replacement, path)
+                        else:
+                            path.write_bytes(data + b'changed')
+                self.assertEqual(caught.exception.code, 'EVIDENCE_TAMPERED')
+
     def test_real_pin_and_helper_unchanged(self):
         self.assertEqual(m.OPENCV_SHA, '323d40119548134b0966d3735e97a78d1edbc79bd91e7fb1074e5152392095f4')
         self.assertEqual(m.OPENCV_SIZE, 722802)

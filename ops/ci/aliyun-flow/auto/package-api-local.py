@@ -5,6 +5,7 @@ Evidence/hashes are cross-checked consistency inputs, NOT build authentication.
 A later trusted root admission must authenticate the build and authorize release.
 """
 import argparse
+from contextlib import contextmanager
 import hashlib
 import importlib.util
 import io
@@ -105,23 +106,33 @@ def disjoint(*roots):
             require(root != other and root not in other.parents and other not in root.parents, 'PATH_UNSAFE')
 
 
-def read_stable(path):
+@contextmanager
+def stable_reader(path):
     path = physical(str(path))
     fd = os.open(str(path), os.O_RDONLY | os.O_NOFOLLOW)
     with os.fdopen(fd, 'rb') as handle:
         before = os.fstat(handle.fileno())
         require(stat.S_ISREG(before.st_mode) and before.st_nlink == 1, 'PATH_UNSAFE')
-        data = handle.read()
+        yield handle
         after = os.fstat(handle.fileno())
     current = path.stat()
     identity = lambda s: (s.st_dev, s.st_ino, s.st_size, s.st_mtime_ns, s.st_ctime_ns, s.st_nlink)
     require(identity(before) == identity(after) == identity(current), 'EVIDENCE_TAMPERED')
-    return data
+
+
+def read_stable(path):
+    with stable_reader(path) as handle:
+        return handle.read()
 
 
 def record(path):
-    data = read_stable(path)
-    return {'path': str(path), 'sha256': sha(data), 'size': len(data)}
+    digest = hashlib.sha256()
+    size = 0
+    with stable_reader(path) as handle:
+        for block in iter(lambda: handle.read(1024 * 1024), b''):
+            digest.update(block)
+            size += len(block)
+    return {'path': str(path), 'sha256': digest.hexdigest(), 'size': size}
 
 
 def checked_record(obj, root=None):
@@ -360,7 +371,7 @@ def verify_evidence(evidence_data, identity, source, build):
     require(all(mf.get(key) == value for key, value in metadata.items()), 'JAR_INVALID')
     require(mf.get('Implementation-Version') == proof['implementationVersion'], 'JAR_INVALID')
     runtime = mail_runtime(jar)
-    require(sha(read_stable(jar)) == sha(jar_bytes), 'EVIDENCE_TAMPERED')
+    require(record(jar) == proof['jar'], 'EVIDENCE_TAMPERED')
     provenance_path, provenance_bytes = checked_record(ev['opencv'], build)
     provenance = strict_json(provenance_bytes)
     exact(provenance, ('coordinate', 'jar_sha256', 'jar_size', 'resolved_file'))
@@ -370,6 +381,19 @@ def verify_evidence(evidence_data, identity, source, build):
     dependency = read_stable(physical(provenance['resolved_file']))
     require(sha(dependency) == OPENCV_SHA and len(dependency) == OPENCV_SIZE, 'PROVENANCE_INVALID')
     return ev, proof, jar_bytes, provenance_bytes, runtime, tests
+
+
+def recheck_verified_files(verified):
+    # Structural checks already passed on captured bytes. Rehash every external
+    # input before publication; unchanged bytes need no second ZIP/XML scan.
+    ev, proof, unused_jar, provenance_bytes, unused_runtime, unused_tests = verified
+    refs = [ev['invocation']['log'], *ev['invocation']['inputs'],
+            ev['bootJar']['proof'], proof['jar'], ev['opencv']]
+    refs.extend(report for test in ev['tests'] for report in test['reports'])
+    provenance = strict_json(provenance_bytes)
+    refs.append({'path': provenance['resolved_file'], 'sha256': OPENCV_SHA, 'size': OPENCV_SIZE})
+    for ref in refs:
+        require(record(ref['path']) == ref, 'EVIDENCE_TAMPERED')
 
 
 def payloads(identity, evidence_data, verified):
@@ -452,7 +476,7 @@ def produce(args):
     def final_readback():
         source_state(source, identity)
         require(read_stable(evidence_path) == evidence_data, 'EVIDENCE_TAMPERED')
-        verify_evidence(evidence_data, identity, source, build)
+        recheck_verified_files(verified)
     package = publish(Path(args.output), data, final_readback)
     return {'format': 'cyf-api-local-package-v1', 'identity': identity, 'package': package,
             'receiptSha256': sha(data['receipt.json']), 'applicationJarSha256': sha(data['application.jar']),
