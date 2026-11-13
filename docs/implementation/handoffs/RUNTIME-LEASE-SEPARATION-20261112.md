@@ -366,3 +366,11 @@ API/Web安装descriptor已按真实候选和当前生产前代摘要准备在 `f
 - 吴用旧会话RECOVERY_STATE_MISSING、旧命令SKILL_COMMAND_INVALID仍为独立遗留，未重放/删journal。磁盘紧张仍保留风险；只清本任务已结束合成数据库与构建中间产物，日志/报告/制品保留。真实回归未结束，不宣称环境全正常或全部验收完成。
 
 23:53补记：669网页复验已真实RESULT_COMMITTED，截图可辨认robots.txt；JSON空title/正确URL/HTTP200，预览/下载及取消后摘要一致。随后跨轮读取旧JSON出现PROTOCOL_INVALID_RESPONSE，不能算JYT-05通过；已经UI取消669，钱包3486/held1/version59，无本轮扣费。根因是RuntimeV1Client.nativeFetch按application/json一概验证R信封，误判合法JSON文件。修复仅在传输责任层按精确materials/inspection内容路由、成功GET200区分原字节；非成功响应、普通JSON接口、会话身份切换仍执行原保护，不猜测JSON内容、不放宽资料ACL/摘要校验。Runtime提交630d178fd8376699b51fe50a8ec970be767c8873/treefe98f006452e8c4d18a0d2ded80de4c54141603c，升至1.3.109、bridge仍1.1.72。固定本地批次rt-json-material-01：196测试全部通过、0跳过，测试/打包123.113秒；制品SHA3dd5a011941c41109be47ebfc030e4eb74f7d92258323877e3ddde49e50aa863。原安装工具按无配置变更模式适配，依赖及整包闭包校验、发布锁、停止writer核验、备份保留；正在受控安装，尚未宣称修复已在线复验或CORE17全通过。
+
+## 2026-11-14 00:05 +08 JSON传输修复安装阻塞与重试
+
+第一次安装在停止writer并备份后报STATE_CHANGED_DURING_BACKUP，327.328秒失败，尚未切换程序。已启动仍未变更的原1.3.108服务PID232251恢复可用性，不是回退已安装的新版本。独立合成复现：SQLite数据库处于WAL模式但关闭后无sidecar时，旧备份helper的mode=ro查询会新建-wal/-shm，改变源目录时间，导致自身快照前后不一致。根修复2e6d0440：无非空WAL时immutable只读检测schema；非空WAL保守保留数据库及辅助文件，不猜测未回放的schema。24项工具测试通过；最初默认/tmp被原安全检查拒绝3失败/1错误，改为私有普通磁盘TMPDIR后通过，未放宽校验。host helper已备份并按发布锁安装摘要一致的新版本，随后复用原630d178制品重新受控安装，未重跑构建。
+
+磁盘曾降到45MiB：仅回收本任务已核验为Git原字节的可重建Web构建副本tests/public（后续复用须从固定Git恢复），并记录SHA/大小后回收一致性失败的本任务备份副本；原业务状态未删、其他任务及有效备份未动。外部挂载归档尝试无完成回执，未当有效备份，所属tar已发TERM但处于CIFS D态等待内核返回，未杀共享进程。原失败状态、日志及回收回执均在B/runtime-json-fix。此时仍未完成新制品线上复验，CORE17不得宣称全过。
+
+00:10补记（当前阻塞）：第二次安装停旧Runtime时MainPID已退出，但3个该unit的bwrap子进程233252/234038/234766处于D态，stack为rwsem_down_write_slowpath→do_reconfigure_mnt；systemd仍deactivating/final-sigterm，不能越过writer退出保护。共享/mnt/Workspace的CIFS会话卡住，本任务先前归档tar231383也在smb2_reconnect/cifs_flush D态，已发TERM但内核尚未返回。实际配置端口1445 TCP可连；445非实际配置端口，不据其失败认定服务器宕机。扫描/proc cwd/root/fd未发现其他打开共享路径的用户进程，不代表内核没有其他脏页。未强制卸载共享盘、未杀其他任务/生产服务、未关闭沙箱；需要明确共享挂载恢复范围才能继续。新1.3.109程序仍未替换，不能宣称已上线或环境正常。安装session43996仍等待正常stop结束，浏览器session32995仍保留；钱包最新3486/held1，新测试预占已全部释放。详细事实B/runtime-json-fix/cifs-blocker.json，状态B/regression-status.json；真实CORE17当前有失败/未测，非全过。
