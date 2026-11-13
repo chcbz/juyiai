@@ -110,6 +110,24 @@ class LocalBuildTest(unittest.TestCase):
         self.assertIn('verifyOpenCv(artifact)', text)
         self.assertIn("childEnvironment.remove('CYF_MAVEN_PASSWORD')", text)
 
+    def test_pin_hook_resolves_only_opencv_artifacts_not_entire_dependency_graph(self):
+        text = M.LOCAL_INIT.read_text()
+        hook = text.split('configuration.incoming.afterResolve { incoming ->', 1)[1].split(
+            '// These properties', 1)[0]
+        self.assertIn('incoming.artifactView {', hook)
+        self.assertIn('componentFilter { component ->', hook)
+        self.assertIn('component instanceof ModuleComponentIdentifier', hook)
+        self.assertIn("component.group == 'org.opencv' && component.module == 'opencv'", hook)
+        self.assertNotIn('component.version', hook)
+        self.assertNotIn('incoming.artifacts.artifacts', hook)
+        self.assertNotIn('lenient', hook)
+        self.assertIn('verifyOpenCv(artifact)', hook)
+        # Filtering artifacts must not remove pin, provenance, or receipt guards.
+        for required in ("component.version != '4.5.5'", 'pinnedOpenCvSha256',
+                         'jar.length() != pinnedOpenCvSize', 'opencv-resolved.json',
+                         "excludeModule('org.opencv', 'opencv')"):
+            self.assertIn(required, text)
+
     def test_fixed_source_rejects_dirty_tree_and_binds_full_commit_tree(self):
         with tempfile.TemporaryDirectory(prefix='cyf-local-build-unit-') as temporary:
             source = Path(temporary)

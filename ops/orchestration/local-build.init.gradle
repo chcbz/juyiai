@@ -115,7 +115,16 @@ gradle.beforeProject { project ->
     consumerRepositories(project.repositories, false)
     project.configurations.configureEach { configuration ->
         configuration.incoming.afterResolve { incoming ->
-            incoming.artifacts.artifacts.each { artifact -> verifyOpenCv(artifact) }
+            // Only the pinned external module needs artifact resolution here.
+            // Resolving every artifact also materializes unrelated project JARs
+            // and transforms while callers may only be inspecting the graph.
+            // Do not filter on version: drift must reach verifyOpenCv and fail.
+            incoming.artifactView {
+                componentFilter { component ->
+                    component instanceof ModuleComponentIdentifier &&
+                            component.group == 'org.opencv' && component.module == 'opencv'
+                }
+            }.artifacts.artifacts.each { artifact -> verifyOpenCv(artifact) }
         }
     }
     // These properties belong to the pinned source's publishing DSL, NOT

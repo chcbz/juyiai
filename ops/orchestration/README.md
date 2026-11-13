@@ -159,3 +159,7 @@ python3 -B -m unittest discover -s ops/orchestration/tests -p 'test_preflight.py
 ### LOCAL 发布涉及不兼容数据迁移（2026-11-07核验补充）
 
 原API schema4 LOCAL descriptor可选`rollback_policy`，省略或`compatible`沿用原程序回退；显式`forward-only`用于已执行不兼容数据迁移的候选。该字段参与不可变binding并写入安装record，故障恢复从同一descriptor读取，不依赖一次性环境变量。启动失败保留候选和证据，不自动启动旧schema不兼容JAR；只有完成明确的数据恢复/兼容评估后才可另行回退。此能力不执行或授权迁移，也不恢复旧schema3准入框架。来源/摘要/备份/锁/健康保护不变；定向回归`ops/ci/aliyun-flow/tests/test_native_local_api.py`覆盖旧descriptor、forward-only失败及同源恢复。CYF当前主机已适配，源码与现行安装目录差异按任务handoff保留，不整文件覆盖旧修复。
+
+### 2026-11-13 本地OpenCV解析范围
+
+`local-build.init.gradle` 的 afterResolve 校验只通过 artifactView/componentFilter 读取 org.opencv:opencv 的实际 artifact，不为校验单一模块而强制物化整套第三方/项目 artifact。版本不参与过滤，仍拒绝非4.5.5版本及 SHA-256/size 漂移；原始来源仓库限制、消费前检查与来源回执保持。不启用 lenient，不缓存/跳过校验结果。此变更本身不证明完整构建达标，耗时以固定批次实测为准。
