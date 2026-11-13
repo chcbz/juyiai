@@ -323,3 +323,34 @@ API/Web安装descriptor已按真实候选和当前生产前代摘要准备在 `f
 - 吴用 `TYPED_INSPECTION_RECOVERY_ERROR`/缺失inputPolicyDigest在**本次切换前**已出现，切换后仍可见；取证 F/wuyong-preexisting-recovery-error.log。未自动重放/清理相关未知历史任务，也未顺手扩成本任务外的typed-inspection整改。全环境无故障不成立。
 - 本机磁盘仍紧张。仅在确认安装成功、精确JAR摘要一致、所有维护JVM退出后，移除本任务已打入最终包的冗余独立build JAR，释放251582454字节；最终包、测试/日志、前代及状态备份保留。F/redundant-build-jar-cleanup.json绑定真实事实。后续维护应使用当前精确JAR或从保留包按摘要取出，旧build JAR路径不再存在。
 - 实际安装耗时与600秒构建分别记录：本机Runtime安装/状态备份/核验970.955秒，Eva122.209秒；API实际冷启动约10分钟，期间共享主机load约20。没有再次构建、没有强杀生产或其他任务、没有为了赶时限删除完整性/备份保护。原构建超时与本次Web证书失败均保留，不能宣称整个耗时问题已彻底解决。
+
+## 2026-11-13 19:23 +08 继续验收（进行中，不改写上轮结果）
+
+未重新安装/回退，无生产扣费、解绑或修改到期。API仍为d6d9102、Runtime仍为3ddc90d，源码均干净。19:16只读生产租约再次与16:58证据比较，李逵/扈三娘身份、金额、精确账期一致；API health.status.code=UP，本机与Eva Runtime分别PID49390/107266、active/NRestarts=0。证据F/rent-recheck-1916.tsv、F/api-health-1919.json。
+
+真实MySQL集成沿原编排器串行重跑四类：HostingOutboundMySqlTest、HostingRentRenewalMySqlTest、HostingPersonaModelDatabaseMySqlTest、HostingRentCutoverMySqlTest及validateLayering。仅测试自有隔离MySQL，不连接生产资金。原lease-int1失败包含旧Node fixture路径，现候选已修；lease-int2按此前用户要求停止优先上线，不算失败后自动重试。19:10 lease-int3因共享Gradle缓存缺失immutable metadata在9.38秒失败；保留原共享目录不修改。lease-int4因新私有缓存根权限0755被原入口拒绝，改本任务缓存根0700后新lease-int5执行。该批是明确的真实MySQL/Runtime联合回归，不打包/发布；按根规则独立记录耗时，不伪造600秒构建通过。仍在执行，最终状态看`/home/isp/state/cyf-build/lease-int5/result.json`及本节后续记录。执行脚本在`host-integration-03/04`，未覆盖历史runner/失败回执。
+
+真实bwrap Shell、Node两项隔离探针在受限测试用户isp下通过（后续systemd核对：本机线上unit用户为root，并非isp；Eva为chc），0skip。仅合成资产、无模型调用，读写授权输出成功，只读输入/工具配置及宿主秘密不可访问；不冒称真实两用户业务攻击验收。证据F/native-isolation-acceptance-1914.json。原root运行Node受isp上层目录信任约束拒绝，随后isp在root cwd启动子进程被拒；换成实际用户与可访问cwd成功，未放宽工具链/目录权限或修改生产配置。
+
+吴用旧恢复问题定位：26条RECOVERY_REQUIRED中5条材料会话有engine thread、无finalPrepared且缺engineStateBinding。当前recoverMaterialsChat回退调用materialsEngineBinding，而后者直接访问null contractReadback.inputPolicyDigest，符合原错误；证据F/wuyong-recovery-shape-20261113.json仅记录结构布尔值，不复制内容/凭据。它属于旧材料会话恢复，不是租约续费/主机管理通道；未伪造绑定、删除journal、重放模型或把简单加空判断称为恢复成功。
+
+### 20:13追加：测试卡死归因与已完成原生执行验收
+
+- lease-int5原批次**失败且不可整体验收**，3060.342秒，未伪称600秒通过。原始3个完整类回执：HostingOutboundMySqlTest 33/0/0、HostingPersonaModelDatabaseMySqlTest 3/0/0、HostingRentCutoverMySqlTest 1/0/0（依次tests/failures/skips）；Renewal类只完成部分，27项含1中止skip，不能算该类通过。原生Node→真实Java MVC/MySQL及lost ACK探针1通过。validateLayering通过。所有XML已复制包外至lease-int5/test-results，原失败日志保留。
+- 真实卡死点不是续费或生产Runtime：selfHosted测试在断网场景把测试UDS改名offline.sock，完成业务断言后未还原；fixture的所有权检查关闭原路径失败，捕获SIGTERM后仍保留listener；Java finally的destroy后无界waitFor永久阻塞。线程栈、Node方法日志和精确干预在lease-int5/{test-thread-2000.log,intervention.json,tmp/runtime-lifecycle-agent-self-hosted-node.log}。归属核对后仅终止测试worker124422及其synthetic Node131132/MySQL129588，未动生产或他人进程。最初按Java主线程children检查没有匹配，预检停止且未发信号；之后以实际PPid/命令/隔离datadir重新核对。
+- API测试修复commit **416e841c2da3fa5377edaf2a59ee64dcb33fbe1a** / tree **1f6dac8e643bc9dbee8bfc282b812db00c8ef989**：离线断言完整执行后finally只恢复自有测试socket；EOF关闭最多等原有10秒，超时强制结束**自有合成fixture**并令测试失败，拒绝无界等待；Java HTTP server无论断言/子进程失败都关闭。只改HostingRentRenewalMySqlTest，应用源码、已装JAR/租约/真实Agent均未改变。lease-int6复用原独立编译输出/私有缓存，完整重跑受影响Renewal类及layering，原37项完整未受影响类回执按原精确源码单独保留，不重标整个旧批次成功。
+- Native测试原sandbox_mode断言与当前已实现命名permissions不一致。仅修断言为default_permissions=native-execution，Runtime测试commit **b3b8f99**，不改生产权限或执行代码。29个普通用例通过，5个opt-in skip不计通过；两机真实Shell/Node隔离各2项通过，实际native engine打开/凭据去除/空技能与精确授权技能目录/受限网络/嵌套文件写入各1项通过，均无模型计费调用。证据F/native-engine-final-acceptance.json与F/eva-evidence/native-current-contract-acceptance.json。
+- 额外失败均保留：本机误用受限isp身份探测真实engine会因/proc子进程exe EACCES拒绝（线上unit实际root），用实际root和安装Node后身份核验通过；Eva缺省/usr/local/bin/codex不存在，明确用现有配置的ARM固定路径后通过；原断言失败；本机修正断言后与重编译并行时第二engine initialize超时，待编译结束后同权限/同RPC时限重验成功58.93秒，未延长生产超时、未削弱验证。Eva同一修正测试21.93秒通过。
+- Runtime测试commit因该仓未配Git作者先失败，后沿API仓已有作者配置完成**仅本次命令**提交，未改全局身份。lease-int6开始配置时文件字节已固定，随后测试执行前补完此测试-only提交；捕获的所有Runtime文件SHA未变化，原baseline与最终内容commit映射见lease-int6/runtime-content-proof.json。不冒称部署过测试-only新版本。
+- Eva仅移除了本任务candidate-attempt3内与生产逐项摘要/模式一致的node与node_modules冗余暂存目录，沿原发布锁并确认没有活进程引用；**原目录含硬链接，实际只释放299008字节**，不可报成释放154MB。生产/身份/状态/包/备份均保留，根盘仍约214MB风险未解决。F/eva-evidence/redundant-stage-cleanup.json。
+
+## 2026-11-13 20:35 +08 主线可交用户验收
+
+**当前结论：租约与Runtime接入主线已部署，补充回归结束，可交用户验收。** 覆盖前文“全套集成尚未完成”的当前状态，不改写任何失败历史；不等于用户已验收或全站零故障。
+
+- `lease-int6/result.json` exitCode=0，总计1167.918秒；真实MySQL/Runtime联合回归按根规则单独计时，不是600秒构建发布批次。Renewal完整66项，0失败/0错误/0跳过；`validateLayering`通过。托管、自部署真实Node fixture均达到SERVICE_READY，测试已验证子进程正常退出，原无界等待已消除；没有给生产请求增加deadline。
+- 原`lease-int5`整体仍为失败，保留日志和干预记录。其中三个已完整结束、源码未变的类分别33/3/1项通过，与本次66项合计**103项通过、0失败、0跳过**，按分批证据汇总，不能称int5整批通过。汇总及每份XML SHA-256：`F/final-integration-acceptance.json`。两机Shell/Node/native隔离另见`F/native-engine-final-acceptance.json`；普通Runtime用例29通过/5个opt-in skip不计通过。
+- 本轮API唯一变更为Renewal测试；Runtime唯一变更为native测试旧断言。生产应用代码与已装制品未变，没有重复构建/安装。20:34再次核对生产JAR SHA-256仍为`8046c5a64215f197d947da77c32cfaa779b2af24ec13334dd9cb9cf911afa51f`；API health.status.code=UP。两台Runtime均active/NRestarts=0，PID仍49390/107266。生产租约、host、CONTROL授权只读结果与20:16完全一致：`F/rent-recheck-final.tsv`、`F/api-health-final.json`。
+- 扈三娘月费补登记已生效：50文/30天，本期2026-11-13 16:01:57.380至2026-12-13 16:01:57.380（+08）；李逵原账未改。离线不暂停租期、有余额自动续费、自部署解绑不等待远端清理的业务路径由隔离MySQL与合成资产回归覆盖。没有为验收实际扣减用户余额、退款、解绑真实Agent或提前修改生产到期日；这些操作不冒称已在线实测。
+- 保留两项独立已知问题：吴用旧材料会话恢复缺少绑定/读取null inputPolicyDigest；Eva磁盘可用204652544字节（约195MiB），本机1046597632字节（约998MiB）。未删除用户资产、未知状态或其他任务数据；不宣称冷启动/所有长耗时已彻底解决。
+- 当前摘要为`F/final-release-summary.json`，状态`READY_FOR_USER_ACCEPTANCE`；原摘要保存为`F/final-release-summary.before-final-acceptance.json`。按用户“可验收时停止”停止扩展开发，等待用户验收；不继续变更既定方案。
