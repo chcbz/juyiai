@@ -103,7 +103,58 @@ python3 -B -m unittest discover -s ops/orchestration/tests -p 'test_preflight.py
 
 ## 本地快速构建与受控发布（2026-11-07）
 
-### 固定源码验证沿用构建入口（2026-11-13）
+<a id="api-local-build-baseline"></a>
+### 后端本地构建默认执行基线（2026-11-13）
+
+执行要求见[根规范](../../AGENTS.md#api-local-build-policy)。本节维护可执行参数；后续API任务默认沿用，不复制新的构建runner。目标为同批必要测试、构建、打包及锁等待≤300秒，既有单次600秒受控停止不变。Web/Runtime不机械继承本节参数。
+
+| 项目 | 默认执行方式 | 不得退回/混淆 |
+| --- | --- | --- |
+| 入口与状态 | Python3.11运行 `local_build.py --package`，委托原编排器和Gradle锁；任务为本Owner可用的 `targeted_verification` 或 `verifying` 状态，commit/tree与干净源码一致 | 裸跑Gradle、绕锁、手改任务登记、从生产目录编译 |
+| 工具链 | 现行入口的Gradle9.3.1、Dragonwell21.0.11；构建JVM为C1-only、堆768m/Metaspace384m/ActiveProcessorCount2；`--no-daemon --parallel --max-workers=2 --build-cache` | 为凑时限增加worker/堆、默认恢复完整分层JIT、修改生产JVM；新参数先定向验证和完整实测 |
+| 输出与缓存 | 新批次独立普通磁盘buildDir，显式传入已核验的持久cache-home；仅JavaCompile复用标准内容寻址结果 | 清缓存作为常规步骤、复用旧测试/分层/JAR、无输入绑定借用class文件 |
+| 编译分析 | 仅本地init设置 `JavaCompile.options.incremental=false`，cache miss仍正常javac/注解处理 | 把关闭一次性增量分析误当关闭build-cache；改普通项目开发构建 |
+| 状态快照 | Test及最终bootJar使用 `doNotTrackState`，保留原依赖连线及动作，均当批新执行 | 仅设 `upToDateWhen(false)` 后继续维护不可复用快照；跳过真实测试/原制品安全扫描 |
+| 依赖完整性 | OpenCV用artifactView/componentFilter只取目标模块；仍校验4.5.5、SHA-256、大小、来源、消费前拒绝和回执 | 为单个pin物化全图、按期望版本过滤导致漏检、lenient或跳过校验 |
+| 最小必要验证 | 原 `local-fast-baseline-v3-critical`：Agent认证/权限、Auth表单、生产邮件、制品安全及POI检查，另执行validateLayering和fresh bootJar；业务相关用例显式追加 | 将95项当永恒固定数量；删必要测试、默认编译无关诊断或整个历史test树 |
+| 包与检查 | 普通 `api.tar`；结构验证一次，发布前再核对源/证据及外部输入SHA/大小；流式摘要；正式包/证据fsync和原子发布保留 | 外层重复gzip、反复ZIP/XML/邮件扫描、对可丢弃扫描副本逐个fsync；删除正式完整性检查 |
+
+#### 执行前与失败处理
+
+1. 从根规范进入当前任务，核对Owner、源码完整commit/tree、允许验证的任务状态、相关build.gradle及缓存来源。`--plan-only`只检查输入和生成计划，不是构建成功；不要等进入Gradle后才修正任务状态。
+2. 先观察普通磁盘可用空间、已有构建、CPU负载与缓存完整性，沿现有串行锁安排；不得停生产/他人进程、开付费Flow、升配或改积分模式。空间不足时只按原保留规则处理本任务明确失效临时副本，先保存唯一证据，不清全局缓存。
+3. 选择已有且已核验的 `--cache-home`；**不要盲用历史示例的 `gradle-home` 目录**。本机2026-11-13原home曾损坏，成功批次使用独立恢复home；当前选择以实际目录、同版输入及完整性核验为准，不以目录名/mtime判断。依赖齐全时用 `--offline`，缺依赖明确失败；新依赖另按真实解析需要处理，不静默退回联网或伪造命中。
+4. 用同一入口完成必要测试→分层→fresh JAR→打包，按实际依赖允许内部并行，**整体只计时一次**。保留inputs/result/log、XML、proof和包内证据原字节，核对外部/包内JAR及包SHA。不同源码或缓存/CPU条件不能当受控A/B；全编译命中必须如实说明，不能外推冷构建保证。
+5. 总时长超过300秒记录目标未达；超过600秒按原受控停止及例外规则处理。保留失败结果并分段归因；同根因同输入连续失败两次按原编排器停止盲重试，有真实修复再继续。不拆单测/打包改名规避计时。
+6. 构建通过后不自动安装；只有精确输入及有效证据匹配才复用包执行另获授权的受控部署。结束时保存包外证据并按下方现有 `mark-complete` 登记，不重新压缩或为安装重试重建同一包。
+
+#### API单组件调用模板（替换所有占位符，不直接照抄旧批次）
+
+```bash
+set -euo pipefail
+cd /home/isp/wsps/cyf
+PYTHON=/root/.local/bin/python3.11
+TASK=EXISTING_TASK_ID
+BATCH=NEW_BATCH_ID
+SOURCE=/ABS/CLEAN/API
+CACHE_HOME=/ABS/VERIFIED/GRADLE_HOME
+BATCH_ROOT="/home/isp/state/cyf-local-build/tasks/cyf-${BATCH}"
+mkdir -m700 "$BATCH_ROOT"
+args=(--task-id "$TASK" --source "$SOURCE" --output "$BATCH_ROOT/api"
+  --cache-home "$CACHE_HOME" --jdk /home/isp/apps/dragonwell-21.0.11.0.11+10-GA
+  --version ACTUAL_API_VERSION --batch-id "$BATCH" --package --offline
+  --regression-arg=--info)
+# 按真实变更在args追加 --regression-arg=:模块:任务、--regression-arg=--tests 等。
+"$PYTHON" ops/orchestration/local_build.py "${args[@]}" --plan-only > "$BATCH_ROOT/plan.json"
+systemd-run --unit="cyf-${BATCH}" --wait --pipe --collect \
+  --property=RuntimeMaxSec=600 --property=KillMode=control-group \
+  --property=WorkingDirectory=/home/isp/wsps/cyf \
+  "$PYTHON" /home/isp/wsps/cyf/ops/orchestration/local_build.py "${args[@]}" \
+  2>&1 | tee "$BATCH_ROOT/build-unit.log"
+```
+
+本模板不会自动创建授权或任务Owner。执行前通过现有 `cyf_orchestrator.py transition` 核对/更新本任务验证状态及完整commit/tree；不能强占他人任务。冷缓存或缺依赖时不要直接承诺300秒。正常复用编译缓存的实测：工具候选`6fae56721ee1378b73fd102126a3055dd57c31f8`、API `80618640d6dd48f23ae668b59ea88778d9e57bdf`；批次`api-build-5min-20261113-02`总141.108秒，95测试0失败/0错误/0跳过，75项编译缓存复用。原始证据在 `/home/isp/state/cyf-local-build/tasks/cyf-api-build-5min-20261113-02/measurement.json`，这是历史固定输入实测，不是未来批次的成功回执。
+
 
 - API候选验证与打包均使用下方现有 `local_build.py`；通过 `--regression-arg` 原样追加业务任务和 `--tests`，不要为每次重试复制 `run.py` 再手拼Gradle参数。该入口保留 `--parallel --max-workers=2 --build-cache`、compile-only缓存政策、当批测试/分层检查/fresh JAR；只设置依赖缓存目录不等于启用编译产物缓存。
 - 包含真实Unix socket的测试应选短的普通磁盘批次路径（如`/home/isp/state/cyf-build/<批次>`）；临时目录仍是该批次的`tmp/`。路径过长会导致socket绑定失败，不是构建超时，不能通过删除测试或放宽身份检查处理。
@@ -119,7 +170,6 @@ python3 -B -m unittest discover -s ops/orchestration/tests -p 'test_preflight.py
 - API 热缓存仅复用已验证工具/依赖及 JavaCompile 产物；测试、validateLayering、fresh bootJar 均当批新执行。构建采用 Dragonwell21、C1-only与 workers2/内部 parallel（2026-11-13：完整tiered JIT试验未达标且观察到大量C2启动CPU消耗，恢复原构建参数回测；不能把恢复参数本身当作达标），不改生产 Temurin/JVM 参数，不带 `CYF_API_STARTUP_DIAGNOSTICS`。公共 artifact/POI 与认证/生产邮件类路径检查保留；2026-11-13默认不再编译/运行启动计时、性能指标及Elasticsearch健康隔离三组测试（上次批次共10项），不沿用旧105项作为当前数量。相关功能变更时通过现有 `--regression-arg=:starter:test --regression-arg=--tests --regression-arg=完整测试类名` 加入；默认选择器为 `local-fast-baseline-v3-critical`。去掉逐任务依赖图打印，保留阶段/任务耗时、凭据移除和禁止嵌套Gradle。不是全功能回归。`--plan-only` 可查完整输入/实际命令而不构建。
 - Web 保留生产 Vite 配置，public 原样流式打包而非复制两份；gzip1 和归档后释放自有 dist 控制峰值，逐文件验证完整包。基线47通过、2 pending，不能说全量测试通过。两端改业务仍须通过 `--api-regression-arg` / `--web-regression-test` 加入实际受影响回归；已知失败候选不能仅凭快速基线发布。
 - **2026-11-13：API 本地部署包取消外层压缩。** `local_build.py` 默认生成 `package/api.tar`（普通 USTAR），仅归档原应用 JAR、版本、来源和校验材料；不再额外 gzip。安装器按内容识别，兼容历史 gzip 包；原签名/摘要、ACL、锁、备份及恢复不变。内部 incoming/package.tgz 为历史固定暂存文件名，不代表新包仍经 gzip。本条不改变 Web 的压缩方式。
-- **2026-11-13：一次性输出不维护无用状态。** 本地 init 的 JavaCompile 关闭跨批无法复用的增量分析，但仍使用标准内容寻址编译缓存；必须当批运行的 Test 和身份绑定 bootJar 使用 `doNotTrackState`，跳过不可复用的输入/输出状态快照，不跳过测试、依赖连线、原归档/安全校验或正式摘要。普通项目开发构建不受影响。本轮正常复用编译缓存的完整95测试/分层/fresh JAR/打包实测141.108秒，不代表全冷构建保证；来源为 `docs/implementation/handoffs/HERO-MODEL-HOSTING-20261112.md` 的五分钟批次证据。
 - API 打包只执行一次完整 ZIP/XML/邮件类路径验证；发布前仍检查源码/证据未变，并对日志、输入、报告、JAR、来源记录和固定依赖重新计算 SHA-256。摘要采用分块读取，保留同一文件描述符及路径身份/修改检测。公共制品扫描的临时嵌套 JAR 随扫随删，不做逐文件强制落盘；正式包及目录 fsync、原子发布和安装保护不变。此优化不取消 Gradle 配置或分层检查。
 - API 正式 LOCAL producer/receipt 与 Web LOCAL v2 manifest 绑定来源、工具、测试报告和逐文件摘要；原 API/Web helper 已适配 LOCAL，保留旧 Flow 来源兼容、锁、原件备份与恢复。安装路径仍是固定实体目录。原始失败、取消和历史诊断均保留，不重标成功。
 - 实测与可复用命令见 `docs/implementation/handoffs/LOCAL-BUILD-TIMING-20261106.md`；包外证据在 `docs/implementation/evidence/local-release-fast-20261106/`。热缓存实测不是冷构建或未来每次的时间保证。`/dev/shm` 输出是临时内存盘，不是持久归档；当前/回退绑定制品不能为腾空间直接删除。
@@ -133,7 +183,7 @@ python3 -B -m unittest discover -s ops/orchestration/tests -p 'test_preflight.py
   --expected-api-commit FULL_API_COMMIT --expected-web-commit FULL_WEB_COMMIT \
   --api-version VERSION \
   --jdk /home/isp/apps/dragonwell-21.0.11.0.11+10-GA \
-  --cache-home /home/isp/state/cyf-local-build/gradle-home \
+  --cache-home /ABS/VERIFIED/GRADLE_HOME \
   --output /home/isp/state/cyf-local-build/tasks/cyf-NEW_BATCH --evidence-dir /ABS/NEW/EVIDENCE --install
 ```
 

@@ -40,7 +40,7 @@
 | 账号、权限、租户隔离 | [账号安全](../specs/account-security-foundation/spec.md) · [环境租户](../specs/full-tenant-gray/spec.md) | 以责任层、实际部署和权限证据为准 |
 | 任务调度/公共议事/团队协作 | [调度](../specs/task-scheduling/spec.md) · [协作](../specs/juyiting-task-collaboration/spec.md) | 设计中、开关关闭和未实现能力不冒充已上线 |
 | 执行历史专项诊断 | [原工具操作说明](../specs/juyiting-execution-recovery/contract-pilot/README.md) | 只服务执行历史；不是全站、身份或发布通过证明 |
-| 测试/构建/安装/恢复 | [部署指南](DEPLOYMENT.md) | [执行工具及参数](../ops/orchestration/README.md)、[构建策略](aliyun-flow-cicd-strategy.md)；默认本地，不自动启Flow |
+| 测试/构建/安装/恢复 | [部署指南](DEPLOYMENT.md) | [执行工具及参数](../ops/orchestration/README.md)、[API默认构建基线](../AGENTS.md#api-local-build-policy)、[构建策略](aliyun-flow-cicd-strategy.md)；默认本地，不自动启Flow |
 | 包保留和磁盘清理 | [现行保留策略](../ops/maintenance/LOCAL_ARTIFACT_RETENTION.md) | 历史Flow清理报告不作为当前清理范围或删除授权 |
 | 发布安排与检查边界 | [发布安排](aliyun-flow-release-scheduling.md) · [检查职责](aliyun-flow-gate-policy.md) | 规则归根AGENTS，不从旧Flow计划获得授权 |
 | 旧bridge协议参考 | [历史/局部基线](codex-ws-agent.md) | 只用于定位，现行原生执行以技能主spec指定合同和实际源码为准 |

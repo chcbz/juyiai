@@ -1,6 +1,6 @@
 # CYF 部署与恢复指南
 
-现行规则入口核对：2026-11-10。唯一执行规则为[根AGENTS](../AGENTS.md)，具体参数和实现限制为[现有工具说明](../ops/orchestration/README.md)。本文不硬编码当前线上版本、磁盘余量或旧Run作为发布输入。
+现行规则入口核对：2026-11-13。唯一执行规则为[根AGENTS](../AGENTS.md)，具体参数和实现限制为[现有工具说明](../ops/orchestration/README.md)。本文不硬编码当前线上版本、磁盘余量或旧Run作为发布输入。
 
 ## 正式交付路径
 
@@ -15,7 +15,7 @@
 | 范围 | 权威工具/说明 |
 | --- | --- |
 | Web/API本地组合构建发布 | [编排说明](../ops/orchestration/README.md)，核对`local_release.py`及其实际参数/限制 |
-| 后端Gradle | 先读相关build.gradle，经既有`cyf_orchestrator.py gradle`串行入口；保留定向回归、分层检查、fresh最终JAR |
+| 后端本地构建 | 默认按[API构建基线](../AGENTS.md#api-local-build-policy)使用原 `local_build.py --package`，经编排器串行Gradle；[参数与单组件模板](../ops/orchestration/README.md#api-local-build-baseline)维护唯一调用方式，保留必要测试/分层/fresh JAR |
 | Web依赖与构建 | 同说明的共享不可变依赖集合、本地Web构建；不能对共享链接运行npm install/ci |
 | Runtime/bridge | [项目固定目录规则](../AGENTS.md)、[自托管合同](../specs/runtime-self-host-onboarding/spec.md)及本任务固定外部Runtime源码/安装说明；不把Web/API组合入口当Runtime安装器 |
 | 历史包/磁盘回收 | [LOCAL_ARTIFACT_RETENTION](../ops/maintenance/LOCAL_ARTIFACT_RETENTION.md)；仅明确登记且核验允许的包 |
@@ -24,6 +24,8 @@
 ## 计时规则
 
 单次构建发布时限与例外以[根AGENTS](../AGENTS.md)§单次构建发布时限为唯一口径，此处不重复。联合/集成回归、真实UI回归和业务验收单独计时，不受该上限。执行前按本次入口核实旧工具是否适配，不以规则写入冒充。
+
+后端性能目标及缓存/快照/打包优化统一见上述API基线；5分钟是正常复用编译缓存时的同批构建目标，不是新的生产请求deadline或全冷保证。纯规范/文档更新只做必要文档检查，不为本次文档修改重新构建、安装或触发Flow。
 
 ## 固定目录与恢复边界
 
