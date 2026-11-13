@@ -58,6 +58,8 @@ try:
   tests+=args.regression_test
   run('tests',['node','--import','tsx','./node_modules/mocha/bin/mocha.js','--no-config','--require','./tests/setup.js','--timeout','10000','--exit','--reporter','mochawesome','--reporter-options','reportDir='+str(B/'test-reports')+',reportFilename=mochawesome.json,consoleReporter=dot',*[f'tests/{n}.test.js' for n in tests]])
   run('build',['node',D/'local-web-build.mjs',S,B/'dist'])
+  R['runtimeConfigSha256']=sha(B/'runtime-config.json')
+  R['scope']+='; runtimeConfigSha256='+R['runtimeConfigSha256']
   verify_dependencies(P(R['dependencies']['path']),R['dependencies']['inputs'])
   changed=git('diff','--name-only').splitlines();assert set(changed)<=set(['src/components.d.ts','src/auto-imports.d.ts']),changed
   if changed:
