@@ -354,3 +354,15 @@ API/Web安装descriptor已按真实候选和当前生产前代摘要准备在 `f
 - 扈三娘月费补登记已生效：50文/30天，本期2026-11-13 16:01:57.380至2026-12-13 16:01:57.380（+08）；李逵原账未改。离线不暂停租期、有余额自动续费、自部署解绑不等待远端清理的业务路径由隔离MySQL与合成资产回归覆盖。没有为验收实际扣减用户余额、退款、解绑真实Agent或提前修改生产到期日；这些操作不冒称已在线实测。
 - 保留两项独立已知问题：吴用旧材料会话恢复缺少绑定/读取null inputPolicyDigest；Eva磁盘可用204652544字节（约195MiB），本机1046597632字节（约998MiB）。未删除用户资产、未知状态或其他任务数据；不宣称冷启动/所有长耗时已彻底解决。
 - 当前摘要为`F/final-release-summary.json`，状态`READY_FOR_USER_ACCEPTANCE`；原摘要保存为`F/final-release-summary.before-final-acceptance.json`。按用户“可验收时停止”停止扩展开发，等待用户验收；不继续变更既定方案。
+
+## 2026-11-13 23:39 +08 用户追加真实事项流程回归（进行中，不是全量通过）
+
+用户明确要求事项流程而非健康冒烟。上节租约/接入联合回归结论仅限原范围，不能覆盖新浏览器登录及真实技能执行。本轮按现行全局手册执行CORE17；FULL119未执行，任何未测/失败不得补算PASS。证据批次B：`/home/isp/state/cyf-runtime-lease-separation-20261112/task-ui-20261113-224052/`，逐项状态见B/regression-status.json；失败原样保留。
+
+- 新浏览器发现Web公开源码迁移后部署环境未注入，API base为空、OAuth client未定义，旧token只读冒烟未覆盖。现有本地构建器增加外部必需配置预检及配置摘要，根提交7d0508de、测试提交f7fbd4a8；私有部署值不回填公共默认。首批lease-web-auth因自有稀疏副本缺miniprogram静态文件失败566.855秒（其中冷依赖安装505秒），保留失败；修正源码副本后lease-web-auth02构建194.24秒、112测试通过/2pending，应用源码仍6ce64429/1.16.140。原受控安装35.216秒、613文件闭包、256线上资源摘要通过；正式buildId runtime-lease-web-auth02-20261113。全新浏览器真实OAuth登录、返回工作台已通过。
+- 新事项667首次执行因carrier证据绑定旧工具链/策略摘要拒绝，非凭据故障。沿现有认证脚本真实验证10种资料载体、一次模型轮，林冲/吴用分别measure contractReady=true；新证据SHA b0ab927053d7ea14db7c5abd92b8a80349044eaa610e4b0baf87dcd1eed65d81。原锁/备份/精确writer归属核验后仅替换两profile的证据指针，正常重启Runtime，PID215425；应用3ddc90d未变。首次激活预检因旧helper要求已退役socket路径失败、未动生产；随后适配outbound视图后成功，原失败保留。667经UI取消，新增预占释放。
+- 新事项668在Runtime启动完成后真实推荐、确认承办、首次技能目录4项正常，产生截图和JSON并可预览下载；但内容为about:blank/httpStatus=null，网页访问用例FAIL，不能因有文件就通过。真实command绑定browser-workbench安装si_d8e9d1531aa24018ac62c9121f3a7149，现有私有安装配置缺该项，未获得目标origin许可。按原配置机制仅补授权测试站点https://kit.chaoyoufan.cn，保留0600/归属/原值备份/发布锁/原子写/readback；不开放通配出口、不关闭沙箱、不重启服务、不重放失败执行。668经UI取消，截图/JSON取消后200且SHA不变。
+- 已创建669作为配置修正后的独立真实复验事项，尚待网页执行及后续多轮/文档/图片/验收用例。累计预算仍100文、历史已报告8文不重置；本轮初始钱包3486/held1，旧held1不属本轮，不清他人预占；667/668各新增1文已取消释放，669新增预占待最终核对。
+- 吴用旧会话RECOVERY_STATE_MISSING、旧命令SKILL_COMMAND_INVALID仍为独立遗留，未重放/删journal。磁盘紧张仍保留风险；只清本任务已结束合成数据库与构建中间产物，日志/报告/制品保留。真实回归未结束，不宣称环境全正常或全部验收完成。
+
+23:53补记：669网页复验已真实RESULT_COMMITTED，截图可辨认robots.txt；JSON空title/正确URL/HTTP200，预览/下载及取消后摘要一致。随后跨轮读取旧JSON出现PROTOCOL_INVALID_RESPONSE，不能算JYT-05通过；已经UI取消669，钱包3486/held1/version59，无本轮扣费。根因是RuntimeV1Client.nativeFetch按application/json一概验证R信封，误判合法JSON文件。修复仅在传输责任层按精确materials/inspection内容路由、成功GET200区分原字节；非成功响应、普通JSON接口、会话身份切换仍执行原保护，不猜测JSON内容、不放宽资料ACL/摘要校验。Runtime提交630d178fd8376699b51fe50a8ec970be767c8873/treefe98f006452e8c4d18a0d2ded80de4c54141603c，升至1.3.109、bridge仍1.1.72。固定本地批次rt-json-material-01：196测试全部通过、0跳过，测试/打包123.113秒；制品SHA3dd5a011941c41109be47ebfc030e4eb74f7d92258323877e3ddde49e50aa863。原安装工具按无配置变更模式适配，依赖及整包闭包校验、发布锁、停止writer核验、备份保留；正在受控安装，尚未宣称修复已在线复验或CORE17全通过。
