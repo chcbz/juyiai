@@ -292,3 +292,34 @@ API/Web安装descriptor已按真实候选和当前生产前代摘要准备在 `f
 资源：只回收本任务失败/终止批次的合成DB、generated classes/依赖副本、未发布过期候选，报告/日志/摘要保留。清理旧generated目录PID13458曾在lease12/打包时暂停，15:44已CONT并nice19/idle恢复；不接管其他任务清理。具体最终清理结果以 `/home/isp/state/cyf-build/retired-generated-cleanup-20261113.json` 为准。生产API再次health UP，磁盘约1.1GB，不宣称全环境正常或验收完成。
 
 15:46补记：本机Runtime候选已完成原validate.sh/完整manifest/未改依赖及live donor复核，`runtime-local-stage/result.json=STAGED_NOT_INSTALLED`（62.228秒），未启停服务。旧generated清理PID13458已退出，无暂停进程遗留；仍不代表业务已部署。
+
+## 2026-11-13 16:58 +08 后续授权上线与定向验收（覆盖上节“尚未安装”状态）
+
+用户补充 Eva 的 sudo 密码所在文件后，已在 Eva 本机仅取 `SUDO_PASSWORD` 经 stdin 验证/提权；没有要求管理员账号，没有输出或回传凭据。沿用户“不回退、继续上线”授权执行，未恢复旧方案、未启动 Flow、未重跑应用构建。**16:17验收目标已超时并已明确告知；不把本轮称为两小时完成或全量验收通过。**
+
+统一证据目录：`/home/isp/state/cyf-runtime-lease-separation-20261112/forward-release-20261113/`（下称 F）；Eva 原证据：`/home/chc/state/cyf-local-build/runtime-lease-20261113/`。选取的非秘密回执同步至 F/eva-evidence；不复制 auth、OAuth session、主机token或provider配置。
+
+### 已实施的发布和数据操作
+
+- **API 1.1.50-SNAPSHOT**：发布上节固定 d6d9102/tree842e2e7 制品，JAR SHA仍为 `8046c5a64215f197d947da77c32cfaa779b2af24ec13334dd9cb9cf911afa51f`；原 LOCAL 安装器、前代摘要、锁和备份保留。descriptor指定 forward-only。真实安装 PASS，PID41580，制品身份匹配，health UP；见 F/api-install.log、F/api-final-health.json 和正式 record。20项外部配置迁移在原协调器/发布锁内备份、比较前值、原子安装，没有把配置秘密写源码。
+- **Web 1.16.140**：固定6ce64429候选已发布。初次线上验证耗尽安装器600秒预算；没有回退或重装。原因定位为独立Python3.11缺省CA路径未指向系统信任库，保留失败及停止诊断回执；没有关闭TLS验证。显式使用原OS CA后，对同一已安装候选单独重验256个入口/JS/CSS，37.388秒全部摘要相符，正式record为online_verified。见 F/web-online-retry2.json；原超时不改写成成功。
+- **两个Runtime均1.3.108 / bridge1.1.72**：固定3ddc90d/tree9f9e587。本机PID49390；Eva最终配置后PID107266。分别复用自身已核验依赖，没有将x86依赖送到ARM。Eva的bridge锁文件仅根版本71→72，第三方依赖图完全相同；保留目标机器原工具链。沿各自主机原发布锁、停止writer归属核验、状态备份、固定app目录安装；原身份、状态、journal不重建。正式current.json记录限定的验证范围，不代表全功能回归。
+- **六张出站表**：固定真实catalog、mysqldump备份后显式执行精确DDL，新增六表；无DROP、CHECK、触发器、启动自动建表或原业务行覆盖。见 F/schema-result.json、F/outbound-schema.fixed.sql、F/rent-cutover-db-before.sql。
+- **扈三娘补登记**：原binding/installation/owner，维护preview→apply，TRANSITION租约 `hrl_transition_1ed745ba-4a69-3444-bd6a-a11c804c4109`，50文/2592000秒，2026-11-13 16:01:57.380→2026-12-13 16:01:57.380（+08）；没有新enroll、reserve、capture或退款。李逵原租约、版本1、金额50、2026-11-11 22:02:03.301→2026-12-11 22:02:03.301完全不变。
+- **管理通道**：登记一个server host及Eva local host；导入吴用、林冲、卢俊义、扈三娘四条精确CONTROL关系。卢俊义初次preview因错误沿用另一用户身份被既有ACL拒绝，未写入；查明其真实独立owner/payer后用新固定输入preview/apply成功，没有放宽授权。李逵旧mTLS关系未导入/重放；旧公孙胜RECOVERY_REQUIRED未清除、未双发。
+- **自动续费**：显式启用auto-renew；线上日志真实注册`hosting-rent.reconcile-user`、`hosting-rent.finish`及原provision处理器。用户到期待办保持原最早到期2026-12-11 22:02:03.301，未人为提前到期或扣费。见 F/renewal-handlers-registered.log、F/schedules-final-after-acceptance.tsv；不是只看配置键或lease存在。
+- Eva原静态配置没有新Agent准备模板。本轮在同host私有配置中复用**其既有Runtime专属**provider凭据/工具配置，未复制平台密钥；配置验证后受控重启。新Agent模板沿已用的app-server/native WebSocket模式；原扈三娘profile及HTTP poll设置不变。先前模板预检因复制静态HTTP poll选项而缺专属路径被拒，保留失败；没有放宽模板字段或修改程序。见 Eva template-configuration-result.json。
+
+### 已通过的实际线上验证（不是全部验收矩阵）
+
+1. 两台主机以各自凭据访问授权目录成功；本机分页逐页覆盖其授权；错误token返回401，本机凭据访问Eva授权返回403。普通用户访问另一用户卢俊义租约按既有隐藏资源合同返回404/NOT_FOUND_OR_FORBIDDEN；没有泄露数据。
+2. 扈三娘实际对话HTTP200、SSE正常完成，唯一预期回文以`FINAL_PERSISTED`返回；回执 F/eva-evidence/chat-acceptance.json。线上租约GET同时确认扈三娘补登记及李逵原账期。
+3. **平台托管**：新准备→真实TARGET库存→报价1000文/30天（保留另一任务已上线的关胜模型定价）→取消REVOKED；**自行部署**：复用Eva登记host，新准备→真实库存→报价50文/30天→取消REVOKED。两次均没有点击付费确认、没有实际收取租金或新增正式安装。对应exchange的capabilities/target/inventory/quote-inventory均有完成事实，不把目录ACK当ready。
+4. 两个临时setup均已取消，授权撤销；没有通过解绑真实Agent或修改真实到期时间制造测试结果。探针最初错误假设响应带authorization、非owner一定403；实际合同为authorization=null/隐藏资源404。保留原探针失败及固定请求，按源码合同用GET续查，**没有重复POST创建setup**，没有因此修产品协议。
+
+### 仍未验证/现存问题（不得隐去）
+
+- 本轮没有完成先前未通过的真实MySQL全套集成，也未在线执行实际扣费→服务安装→退款、真实解绑、断网到期、跨用户沙箱文件攻防的完整矩阵。单元/定向测试仍只采用上节固定批次真实结果；不能称全量验收完成。
+- 吴用 `TYPED_INSPECTION_RECOVERY_ERROR`/缺失inputPolicyDigest在**本次切换前**已出现，切换后仍可见；取证 F/wuyong-preexisting-recovery-error.log。未自动重放/清理相关未知历史任务，也未顺手扩成本任务外的typed-inspection整改。全环境无故障不成立。
+- 本机磁盘仍紧张。仅在确认安装成功、精确JAR摘要一致、所有维护JVM退出后，移除本任务已打入最终包的冗余独立build JAR，释放251582454字节；最终包、测试/日志、前代及状态备份保留。F/redundant-build-jar-cleanup.json绑定真实事实。后续维护应使用当前精确JAR或从保留包按摘要取出，旧build JAR路径不再存在。
+- 实际安装耗时与600秒构建分别记录：本机Runtime安装/状态备份/核验970.955秒，Eva122.209秒；API实际冷启动约10分钟，期间共享主机load约20。没有再次构建、没有强杀生产或其他任务、没有为了赶时限删除完整性/备份保护。原构建超时与本次Web证书失败均保留，不能宣称整个耗时问题已彻底解决。
