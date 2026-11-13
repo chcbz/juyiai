@@ -113,6 +113,13 @@ gradle.beforeProject { project ->
     def projectKey = project.path == ':' ? '_root' : project.path.substring(1).replace(':', '__')
     project.layout.buildDirectory.set(new File(externalBuildRoot, "${rootKey}/${projectKey}"))
     consumerRepositories(project.repositories, false)
+    project.tasks.withType(org.gradle.api.tasks.compile.JavaCompile).configureEach {
+        // Every release batch has a fresh build directory. On a cache miss javac
+        // must compile all sources anyway; do not build incremental-analysis
+        // state that the next batch cannot reuse. Standard task build-cache and
+        // the compiler/annotation-processor inputs remain unchanged.
+        options.incremental = false
+    }
     project.configurations.configureEach { configuration ->
         configuration.incoming.afterResolve { incoming ->
             // Only the pinned external module needs artifact resolution here.

@@ -128,6 +128,16 @@ class LocalBuildTest(unittest.TestCase):
                          "excludeModule('org.opencv', 'opencv')"):
             self.assertIn(required, text)
 
+    def test_fresh_outputs_skip_incremental_analysis_not_standard_compile_cache(self):
+        text = M.LOCAL_INIT.read_text()
+        hook = text.split('project.tasks.withType(org.gradle.api.tasks.compile.JavaCompile).configureEach {', 1)[1].split('project.configurations.configureEach', 1)[0]
+        self.assertIn('options.incremental = false', hook)
+        self.assertNotIn('cacheIf', hook)
+        self.assertNotIn('upToDateWhen', hook)
+        self.assertNotIn('compilerArgs', hook)
+        self.assertIn('--build-cache', self.command())
+        self.assertIn('fresh per-batch output is required', Path(M.__file__).read_text())
+
     def test_fixed_source_rejects_dirty_tree_and_binds_full_commit_tree(self):
         with tempfile.TemporaryDirectory(prefix='cyf-local-build-unit-') as temporary:
             source = Path(temporary)

@@ -163,3 +163,7 @@ python3 -B -m unittest discover -s ops/orchestration/tests -p 'test_preflight.py
 ### 2026-11-13 本地OpenCV解析范围
 
 `local-build.init.gradle` 的 afterResolve 校验只通过 artifactView/componentFilter 读取 org.opencv:opencv 的实际 artifact，不为校验单一模块而强制物化整套第三方/项目 artifact。版本不参与过滤，仍拒绝非4.5.5版本及 SHA-256/size 漂移；原始来源仓库限制、消费前检查与来源回执保持。不启用 lenient，不缓存/跳过校验结果。此变更本身不证明完整构建达标，耗时以固定批次实测为准。
+
+### 2026-11-13 全新批次不维护增量编译分析
+
+本地入口强制全新buildDir，未命中标准JavaCompile缓存时本来就需要全量javac。专用init将JavaCompile.options.incremental设为false，避免生成后续批次无法复用的增量依赖/类路径分析；不改项目开发构建、不关闭标准内容寻址build-cache，不改javac/注解处理器输入及必要测试/分层/fresh JAR。真实隔离fixture已验证原模式与新模式缓存键相同、跨新输出命中、无缓存重新编译的生成源码/class摘要及运行结果一致；这不是完整应用构建达标证明，完整批次另计。
