@@ -5,7 +5,7 @@
 ## 责任与范围
 
 - 根 AGENTS 本地执行新规则下，清理仍由主机存储适配器执行。扩展现有 `rebuildable_cache_cleanup.py` 的 `mark-complete` / `mark-active`、现有 `/home/isp/state/cyf-host-cleanup/completed-tasks.json`，不是新台账、审批或发布通道。
-- 只清理 Owner 已确认任务完成/终止、无需继续持有的**明确最终输出**。任务根沿用 `/tmp/cyf-*`、`/var/tmp/cyf-*` 及原显式 worktree bases，也支持同一显式base下`cyf-BATCH/{api,web,runtime}`的精确组件子根（逐级身份/挂载/.keep检查，不允许任意嵌套）；路径只能是任务根直接文件或 `package/`、`packages/`、`artifacts/` 下最多两层的 `.jar/.tgz/.tar.gz/.zip`。不递归猜测 source/build/state/backups/recovery/evidence，不扫描未知历史目录；deliverables/releases 仍不做通用兜底删除。
+- 只清理 Owner 已确认任务完成/终止、无需继续持有的**明确最终输出**。任务根沿用 `/tmp/cyf-*`、`/var/tmp/cyf-*` 及原显式 worktree bases，也支持同一显式base下`cyf-BATCH/{api,web,runtime}`的精确组件子根（逐级身份/挂载/.keep检查，不允许任意嵌套）；路径只能是任务根直接文件或 `package/`、`packages/`、`artifacts/` 下最多两层的 `.jar/.tar/.tgz/.tar.gz/.zip`。不递归猜测 source/build/state/backups/recovery/evidence，不扫描未知历史目录；deliverables/releases 仍不做通用兜底删除。
 - 完成声明复用既有 root Owner 控制面，不是包内字段自动授予清理权限。登记绑定组件、完整 commit/tree、文件签名/SHA-256；API 还须声明**实际 application JAR SHA-256**，用于匹配 current record 的 candidate/previous 回退摘要。Owner 从同批生产者证据取得该值，不能填压缩包摘要冒充 JAR 摘要。工具不重做构建真实性/发布审批。
 - Owner 登记前须把同批日志、测试、receipt/metadata/manifest 等追溯材料保存在包外；若包内仍有唯一证据副本，先按原格式受控保存并核对摘要，否则不登记。工具信任已有 Owner 完成声明，不另建证据准入框架。
 - 最新两个已登记构建批次**按组件分别保留**；沿用24小时完成保留期。当前记录绑定的 commit/tree、包摘要、API payload/回退摘要、Runtime 当前 backup/current.json 中前一版本源码/包绑定、显式路径引用额外保留；`.keep`（含悬空链接）、挂载、符号链接、外部硬链接、文件/任务替换、当前状态不明和进程使用均保护。只 unlink 精确登记文件，全部目录、日志、测试/receipt/manifest证据保持。

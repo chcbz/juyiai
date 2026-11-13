@@ -162,6 +162,10 @@ class ArtifactTests(unittest.TestCase):
  def test_archive_hardlink_protected(self):
   batches=self.four();os.link(batches[0][1],self.base/'alias')
   self.assertEqual([r['path'] for r in self.rows()],[str(batches[1][1])])
+ def test_uncompressed_tar_is_an_explicit_final_artifact(self):
+  task,file=self.batch(1,artifact='package/final.tar')
+  self.assertEqual(m.artifact_path(self.p,task,'package/final.tar'),file)
+
  def test_only_declared_artifacts_no_metadata_or_sources_removed(self):
   batches=self.four()
   for task,file in batches:

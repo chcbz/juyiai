@@ -142,7 +142,7 @@ def export_package(args, command, identity, fixture):
     values = argparse.Namespace(opt_in=True, version=args.version, build_id=args.batch_id,
         commit=identity['commit'], tree=identity['tree'], source_root=str(args.source),
         build_root=str(build), evidence=str(evidence_path),
-        evidence_sha256=digest(evidence_path), output=str(output / 'api.tgz'))
+        evidence_sha256=digest(evidence_path), output=str(output / 'api.tar'))
     return producer.produce(values)
 
 

@@ -35,7 +35,8 @@ class NativeLocalApiTest(unittest.TestCase):
         self.installer.write_bytes((HOST / 'cyf-api-flow-install').read_bytes()); self.installer.chmod(0o755)
         self.m = importlib.machinery.SourceFileLoader('native_unit_' + self.root.name.replace('-', '_'), str(self.host / 'cyf-api-flow-deploy')).load_module()
         self.identity = dict(version='0.0.1-synthetic', buildId='local-synthetic-1', commit='a'*40, tree='b'*40)
-        self.package = self.root / 'local-package.tgz'
+        self.package = self.root / 'local-package.tar'
+        self.archive_mode = 'w'
         self.approval_path = self.root / 'state/approval.json'
         self.jar = self.jar_bytes()
         self.provenance = dict(coordinate='org.opencv:opencv:4.5.5', jar_sha256=sha(CV), jar_size=len(CV), resolved_file='/synthetic/not-production')
@@ -76,7 +77,7 @@ class NativeLocalApiTest(unittest.TestCase):
         members = dict(self.extra_members, **{'application.jar':self.jar, 'receipt.json':receipt,
             'dependency.provenance.json':encoded(self.provenance), 'application.metadata.json':encoded(metadata),
             'application.sidecar.json':encoded(sidecar)})
-        with tarfile.open(self.package, 'w:gz') as tar:
+        with tarfile.open(self.package, self.archive_mode) as tar:
             for name,data in members.items():
                 info=tarfile.TarInfo(name);info.size=len(data);tar.addfile(info,io.BytesIO(data))
         self.package.chmod(0o600)
@@ -121,6 +122,13 @@ class NativeLocalApiTest(unittest.TestCase):
         self.jar_ref = dict(path='application.jar', sha256=sha(self.jar), size=len(self.jar))
         self.receipt['applicationJar'] = self.jar_ref
         self.seal()
+
+    def test_legacy_gzip_package_remains_installable(self):
+        self.archive_mode = 'w:gz'
+        self.seal()
+        result = self.install()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(self.f.target.read_bytes(), self.jar)
 
     def test_compile_only_opencv_need_not_be_in_production_jar(self):
         self.replace_jar(include_opencv=False)

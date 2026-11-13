@@ -124,7 +124,7 @@ class Fixture:
         return argparse.Namespace(opt_in=True, version=self.identity['version'], build_id=self.identity['buildId'],
             commit=self.identity['commit'], tree=self.identity['tree'], source_root=str(self.source), build_root=str(self.build),
             evidence=str(self.evidence_path), evidence_sha256=m.sha(self.evidence_path.read_bytes()),
-            output=str(self.output / 'synthetic-only.tgz'))
+            output=str(self.output / 'synthetic-only.tar'))
 
     def pins(self):
         # Explicit test-only replacement for full-path consistency checks. Production
@@ -146,7 +146,7 @@ class LocalPackageTest(unittest.TestCase):
             action()
         if code:
             self.assertEqual(caught.exception.code, code)
-        self.assertFalse((self.f.output / 'synthetic-only.tgz').exists())
+        self.assertFalse((self.f.output / 'synthetic-only.tar').exists())
 
     def run_fixture(self):
         self.f.save_evidence()
@@ -356,12 +356,22 @@ class LocalPackageTest(unittest.TestCase):
         self.assertEqual(caught.exception.code, 'OUTPUT_EXISTS')
         self.assertEqual(output.read_bytes(), b'prior')
 
-    def test_publish_fast_gzip_retains_exact_members(self):
+    def test_publish_uncompressed_tar_retains_exact_members(self):
         output = Path(self.f.args().output)
         data = {name: (name.encode() + b'\0') * 50 for name in m.MEMBERS}
         with mock.patch.object(m.tarfile, 'open', wraps=tarfile.open) as opening:
             m.publish(output, data, lambda: None)
-        self.assertEqual(opening.call_args.kwargs['compresslevel'], 1)
+        self.assertEqual(opening.call_args.kwargs['mode'], 'w')
+        self.assertNotIn('compresslevel', opening.call_args.kwargs)
+        self.assertNotEqual(output.read_bytes()[:2], b'\x1f\x8b')
+        with tarfile.open(output, 'r:') as archive:
+            self.assertEqual({row.name: archive.extractfile(row).read() for row in archive}, data)
+
+    def test_older_tgz_caller_keeps_gzip_compatibility(self):
+        output = self.f.output / 'older-caller.tgz'
+        data = {name: name.encode() for name in m.MEMBERS}
+        m.publish(output, data, lambda: None)
+        self.assertEqual(output.read_bytes()[:2], b'\x1f\x8b')
         with tarfile.open(output, 'r:gz') as archive:
             self.assertEqual({row.name: archive.extractfile(row).read() for row in archive}, data)
 

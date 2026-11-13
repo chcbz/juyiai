@@ -400,10 +400,14 @@ def publish(output, data, before_publish):
     parent = physical(str(output.parent), 'directory', private=True)
     identity = (parent.stat().st_dev, parent.stat().st_ino)
     with tempfile.TemporaryDirectory(prefix='.cyf-local-package-', dir=str(parent)) as stage:
-        temporary = Path(stage) / 'package.tgz'
+        temporary = Path(stage) / output.name
+        # Keep already-running/older callers compatible; the current builder uses .tar.
+        legacy_gzip = output.suffix == '.tgz'
         with temporary.open('xb') as handle:
             os.fchmod(handle.fileno(), 0o600)
-            with tarfile.open(fileobj=handle, mode='w:gz', format=tarfile.USTAR_FORMAT, compresslevel=1) as archive:
+            with tarfile.open(fileobj=handle, mode='w:gz' if legacy_gzip else 'w',
+                              format=tarfile.USTAR_FORMAT,
+                              **({'compresslevel': 1} if legacy_gzip else {})) as archive:
                 for name in MEMBERS:
                     info = tarfile.TarInfo(name)
                     info.size, info.mode, info.mtime = len(data[name]), 0o600, 0
@@ -436,7 +440,7 @@ def produce(args):
     source = physical(args.source_root, 'directory')
     build = physical(args.build_root, 'directory', private=True)
     output_parent = physical(str(Path(args.output).parent), 'directory', private=True)
-    require(Path(args.output).is_absolute() and str(Path(args.output)) == args.output and args.output.endswith('.tgz'), 'PATH_UNSAFE')
+    require(Path(args.output).is_absolute() and str(Path(args.output)) == args.output and args.output.endswith(('.tar', '.tgz')), 'PATH_UNSAFE')
     disjoint(source, build, output_parent)
     evidence_path = within(physical(args.evidence), build)
     hex_value(args.evidence_sha256, 64)

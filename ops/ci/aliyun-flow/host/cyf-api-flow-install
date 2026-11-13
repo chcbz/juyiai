@@ -331,7 +331,7 @@ try:
     info = package.stat()
     if not package.is_file() or package.is_symlink() or info.st_nlink != 1:
         raise SystemExit('unsafe package metadata')
-    with tarfile.open(package, 'r|gz') as archive:
+    with tarfile.open(package, 'r|*') as archive:
         for member in archive:
             name = member.name[2:] if member.name.startswith('./') else member.name
             if name in ('', '.') and member.isdir():
@@ -464,7 +464,7 @@ seen = set()
 report_seen = set()
 total = 0
 try:
-    with tarfile.open(package, 'r|gz') as archive:
+    with tarfile.open(package, 'r|*') as archive:
         for member in archive:
             name = member.name[2:] if member.name.startswith('./') else member.name
             if name in ('', '.') and member.isdir():

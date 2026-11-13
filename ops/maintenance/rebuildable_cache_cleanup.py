@@ -138,7 +138,7 @@ def artifact_path(paths,task,rel):
  parts=rel.split('/')
  if (not parts or any(x in ('..','.','') or x.startswith('.') for x in parts)
      or len(parts)>3 or len(parts)>1 and parts[0] not in ('package','packages','artifacts')
-     or not rel.endswith(('.jar','.tgz','.tar.gz','.zip'))
+     or not rel.endswith(('.jar','.tar','.tgz','.tar.gz','.zip'))
      or any(x in rel.lower() for x in ('backup','rollback','evidence','source','state'))):
   raise Unsafe('only explicitly declared final package/JAR outputs supported')
  p=task/rel;guard(paths,p,task)

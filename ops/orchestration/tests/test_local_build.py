@@ -56,6 +56,11 @@ class LocalBuildTest(unittest.TestCase):
         self.assertIn('--parallel', command)
         self.assertTrue(any(x.startswith('-Dorg.gradle.jvmargs=') and '-XX:TieredStopAtLevel=1' in x for x in command))
 
+    def test_local_api_package_has_uncompressed_tar_name(self):
+        text = Path(M.__file__).read_text()
+        self.assertIn("output / 'api.tar'", text)
+        self.assertNotIn("output / 'api.tgz'", text)
+
     def test_offline_is_explicit_and_cannot_silently_fallback_to_network(self):
         self.assertNotIn('--offline', self.command())
         command = M.build_command(Path('/source'), Path('/output'), Path('/private-cache'),

@@ -118,6 +118,7 @@ python3 -B -m unittest discover -s ops/orchestration/tests -p 'test_preflight.py
 - **2026-11-08时限实现：** `local_release.py`按Web/API测试、构建、打包单元累计`buildSeconds`计算600秒预算，保留剩余预算RuntimeMaxSec及失败/超时证据。安装、启动、健康、业务验收和前置检查不消耗构建预算，不向Web安装器下传剩余构建时限；安装器既有网络/恢复限制不变。`wallSeconds`仍记录完整交付墙钟，`under600Seconds`明确仅表示构建阶段。5项定向工具回归通过，尚未执行改动后完整双端发布；本任务沿原独立LOCAL安装器复用固定包。
 - API 热缓存仅复用已验证工具/依赖及 JavaCompile 产物；测试、validateLayering、fresh bootJar 均当批新执行。构建采用 Dragonwell21、C1 与 workers2/内部 parallel，不改生产 Temurin/JVM 参数，不带 `CYF_API_STARTUP_DIAGNOSTICS`。公共 artifact/POI 与认证/运行类路径/启动基线共105项，不是全功能回归。`--plan-only` 可查完整输入/实际命令而不构建。
 - Web 保留生产 Vite 配置，public 原样流式打包而非复制两份；gzip1 和归档后释放自有 dist 控制峰值，逐文件验证完整包。基线47通过、2 pending，不能说全量测试通过。两端改业务仍须通过 `--api-regression-arg` / `--web-regression-test` 加入实际受影响回归；已知失败候选不能仅凭快速基线发布。
+- **2026-11-13：API 本地部署包取消外层压缩。** `local_build.py` 默认生成 `package/api.tar`（普通 USTAR），仅归档原应用 JAR、版本、来源和校验材料；不再额外 gzip。安装器按内容识别，兼容历史 gzip 包；原签名/摘要、ACL、锁、备份及恢复不变。内部 incoming/package.tgz 为历史固定暂存文件名，不代表新包仍经 gzip。本条不改变 Web 的压缩方式。
 - API 正式 LOCAL producer/receipt 与 Web LOCAL v2 manifest 绑定来源、工具、测试报告和逐文件摘要；原 API/Web helper 已适配 LOCAL，保留旧 Flow 来源兼容、锁、原件备份与恢复。安装路径仍是固定实体目录。原始失败、取消和历史诊断均保留，不重标成功。
 - 实测与可复用命令见 `docs/implementation/handoffs/LOCAL-BUILD-TIMING-20261106.md`；包外证据在 `docs/implementation/evidence/local-release-fast-20261106/`。热缓存实测不是冷构建或未来每次的时间保证。`/dev/shm` 输出是临时内存盘，不是持久归档；当前/回退绑定制品不能为腾空间直接删除。
 
@@ -142,7 +143,7 @@ python3 -B -m unittest discover -s ops/orchestration/tests -p 'test_preflight.py
 ```bash
 /usr/bin/python3 -I -B /usr/local/libexec/cyf/rebuildable_cache_cleanup.py mark-complete \
   --task-root /home/isp/state/cyf-local-build/tasks/cyf-NEW_BATCH/api \
-  --artifact package/api.tgz --component api \
+  --artifact package/api.tar --component api \
   --source-commit FULL_API_COMMIT --source-tree FULL_API_TREE \
   --payload-sha256 ACTUAL_APPLICATION_JAR_SHA256
 # Web：使用同批 /web、package/web.tgz、component web及真实Web commit/tree，不传API payload参数。
