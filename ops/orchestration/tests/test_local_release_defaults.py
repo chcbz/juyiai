@@ -129,7 +129,7 @@ class LocalReleaseDefaultsTest(unittest.TestCase):
             stack.enter_context(patch.object(O, 'GRADLE_LOCK', Path(self.temp.name)/'gradle.lock'))
             run = stack.enter_context(patch.object(O.subprocess, 'run'))
             run.return_value.returncode = 0
-            with redirect_stdout(StringIO()) as out:
+            with patch.object(O.time, "monotonic", side_effect=[100, 101, 104, 105, 109, 110]), redirect_stdout(StringIO()) as out:
                 self.assertEqual(0, O.cmd_gradle(args))
             self.assertEqual(1, run.call_count)
             effective = run.call_args[0][0]
@@ -138,3 +138,14 @@ class LocalReleaseDefaultsTest(unittest.TestCase):
             self.assertEqual(effective, record['effective_argv'])
             self.assertTrue(record['release_cache_policy']['compile_cache'])
             self.assertNotIn('EVIDENCE_HIT', out.getvalue())
+            import json
+            lines = out.getvalue().splitlines()
+            wait = next(i for i, line in enumerate(lines) if line.startswith('GRADLE_LOCK_WAIT '))
+            acquired = next(i for i, line in enumerate(lines) if line.startswith('GRADLE_LOCK_ACQUIRED '))
+            self.assertLess(wait, acquired)
+            self.assertIn('wait_seconds=', lines[acquired])
+            timing = json.loads(next(line.split(' ', 1)[1] for line in lines
+                                     if line.startswith('GRADLE_EXECUTION_TIMING ')))
+            self.assertEqual(3, timing['lock_wait_seconds'])
+            self.assertEqual(4, timing['elapsed_seconds'])
+            self.assertEqual(10, timing['invocation_seconds'])

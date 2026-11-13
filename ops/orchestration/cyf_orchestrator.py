@@ -791,6 +791,7 @@ def dependency_cache_environment(args, command):
 
 
 def cmd_gradle(args):
+    invocation_started = time.monotonic()
     command = args.command
     if command and command[0] == "--":
         command = command[1:]
@@ -804,7 +805,12 @@ def cmd_gradle(args):
     cwd = verify_exact_worktree(args.cwd or ROOT / "api", item, args.tree_sha)
     key = evidence_key(args.tree_sha, args.selector, args.fixture_digest)
 
+    lock_started = time.monotonic()
+    print("GRADLE_LOCK_WAIT task={} pid={}".format(args.task_id, os.getpid()), flush=True)
     with exclusive_lock(GRADLE_LOCK):
+        lock_wait_seconds = time.monotonic() - lock_started
+        print("GRADLE_LOCK_ACQUIRED task={} pid={} wait_seconds={:.3f}".format(
+            args.task_id, os.getpid(), lock_wait_seconds), flush=True)
         item = gradle_context(args, command)
         cwd = verify_exact_worktree(cwd, item, args.tree_sha)
         with exclusive_lock(EVIDENCE_LOCK):
@@ -817,7 +823,6 @@ def cmd_gradle(args):
         env = dependency_cache_environment(args, command)
         if release_cache_policy is not None:
             print("GRADLE_LOCAL_RELEASE_DEFAULTS " + json.dumps(release_cache_policy, sort_keys=True), flush=True)
-        print("GRADLE_LOCK_ACQUIRED task={} pid={}".format(args.task_id, os.getpid()), flush=True)
         started = time.monotonic()
         options = {"env": env} if env is not None else {}
         result = subprocess.run(
@@ -830,6 +835,8 @@ def cmd_gradle(args):
         elapsed = time.monotonic() - started
         print("GRADLE_EXECUTION_TIMING " + json.dumps({"task_id": args.task_id,
             "elapsed_seconds": round(elapsed, 3), "exit_code": result.returncode,
+            "lock_wait_seconds": round(lock_wait_seconds, 3),
+            "invocation_seconds": round(time.monotonic() - invocation_started, 3),
             "dependency_cache_home": str(args.dependency_cache_home)
                 if getattr(args, "dependency_cache_home", None) else None}), flush=True)
         if result.returncode == 0 and not getattr(args, "flow_ci", False):

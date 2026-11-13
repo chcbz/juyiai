@@ -103,6 +103,15 @@ python3 -B -m unittest discover -s ops/orchestration/tests -p 'test_preflight.py
 
 ## 本地快速构建与受控发布（2026-11-07）
 
+### 固定源码验证沿用构建入口（2026-11-13）
+
+- API候选验证与打包均使用下方现有 `local_build.py`；通过 `--regression-arg` 原样追加业务任务和 `--tests`，不要为每次重试复制 `run.py` 再手拼Gradle参数。该入口保留 `--parallel --max-workers=2 --build-cache`、compile-only缓存政策、当批测试/分层检查/fresh JAR；只设置依赖缓存目录不等于启用编译产物缓存。
+- 单独构建仍在任务专属 `systemd-run --wait --pipe --collect --property=RuntimeMaxSec=600 --property=KillMode=control-group` 内运行；不是生产服务的执行容器。`local_build.py` 不安装，不因构建成功自动发布。
+- 定向测试筛选不缩小生产依赖图；维护测试引用starter主输出时确实需要编译应用图，不能靠去掉任务/必要检查凑600秒。内容匹配的JavaCompile结果可复用，测试结果和最终JAR不能借缓存跳过。
+- orchestrator输出 `GRADLE_LOCK_WAIT`、含`wait_seconds`的 `GRADLE_LOCK_ACQUIRED`，结束输出`GRADLE_EXECUTION_TIMING`的 `lock_wait_seconds`、`elapsed_seconds`（Gradle执行）、`invocation_seconds`（含前置和等待）。锁等待仍计入原600秒；超时保留原结果，不移动计时起点。任务阶段看现有 `CYF_GRADLE_PHASE` / `CYF_TASK_TIMING`，归因时加`--regression-arg=--info`可区分FROM-CACHE、重编原因和实际测试。
+- 按实际主机负载安排重型任务；不停止生产/其他任务，不扩大超时，不承诺共享主机任意竞争或全冷缓存必定600秒。异常必须有实质变化（源码修复、已证实缓存/负载/工具修复）才重试，不以循环重试代替归因。
+
+
 - API 构建入口 `local_build.py` 委托现有 orchestrator、跨任务锁和 Gradle；Web 构建入口 `local_web_build.py` 按锁与工具链复用完整依赖（首次 npm ci）、定向基线、原源码 Vite 配置与完整 public 打包。两个 builder **不安装**；新输出必须在干净源码和生产目录之外。
 - 完整同批入口 `local_release.py --install`：显式固定任务、两端完整 commit、版本、工具链、缓存、全新输出与包外 evidence-dir。串行 Web/API 构建，再由已安装的原 helper 执行 LOCAL 受控事务，核对前代摘要、备份、健康、签名、安全边界和全部线上入口/JS/CSS 摘要。没有伪造 Flow Run，未恢复旧准入。
 - **2026-11-08时限实现：** `local_release.py`按Web/API测试、构建、打包单元累计`buildSeconds`计算600秒预算，保留剩余预算RuntimeMaxSec及失败/超时证据。安装、启动、健康、业务验收和前置检查不消耗构建预算，不向Web安装器下传剩余构建时限；安装器既有网络/恢复限制不变。`wallSeconds`仍记录完整交付墙钟，`under600Seconds`明确仅表示构建阶段。5项定向工具回归通过，尚未执行改动后完整双端发布；本任务沿原独立LOCAL安装器复用固定包。
