@@ -1,0 +1,14 @@
+[Unit]
+Description=CYF host cleanup with isolated background CPU budget
+After=local-fs.target
+
+[Service]
+Type=oneshot
+Slice=system-cyfcleanup.slice
+ExecStart=/home/isp/bin/clear_disk.sh clean
+Nice=19
+IOSchedulingClass=idle
+CPUAccounting=yes
+TimeoutStartSec=infinity
+StandardOutput=null
+StandardError=journal

@@ -1,0 +1,7 @@
+[Unit]
+Description=CPU budget for CYF host maintenance only
+
+[Slice]
+CPUAccounting=yes
+CPUQuota=50%
+CPUShares=128

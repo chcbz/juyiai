@@ -44,7 +44,7 @@
 | [juyiting-voice-realtime](juyiting-voice-realtime/spec.md) | 实时语音传输与会话生命周期 | 主spec及design |
 | [personal-center-navigation-v1-8](personal-center-navigation-v1-8/spec.md) | 个人中心身份与功能导航 | 主spec及design |
 | [public-beta-release](public-beta-release/spec.md) | 公测范围与真实交付验收 | 主spec及design |
-| [runtime-self-host-onboarding](runtime-self-host-onboarding/spec.md) | 自托管Runtime安装与就绪交接 | 主spec及design |
+| [runtime-self-host-onboarding](runtime-self-host-onboarding/spec.md) | Runtime接入、Agent授权与租约分离（含自部署交接） | 主spec、design、审查及验收 |
 | [username-encoding-integrity](username-encoding-integrity/spec.md) | 用户名编码与权威发送者身份 | 主spec及design |
 
 ## 已闭环专题（5个，只保留最终规格）

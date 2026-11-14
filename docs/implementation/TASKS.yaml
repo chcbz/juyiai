@@ -3,17 +3,74 @@ schema_version: 4
 runtime_ledger_json: |
   {
     "schema_version": 2,
-    "updated_at": "2026-11-12",
+    "updated_at": "2026-11-14T20:23:07+08:00",
     "critical_path": [
       "JUYIAI-OPEN-SOURCE-MIGRATION"
     ],
     "tasks": {
       "JUYIAI-OPEN-SOURCE-MIGRATION": {
         "owner": null,
-        "exact_sha_tree": {"commit_sha": null, "tree_sha": null},
+        "exact_sha_tree": {
+          "commit_sha": null,
+          "tree_sha": null
+        },
         "current_gate": "planned",
         "blocker": null,
         "next_action": "Repository migration verification; not production deployment."
+      },
+      "RUNTIME-LEASE-SEPARATION-20261112": {
+        "owner": {
+          "agent": "main_orchestrator",
+          "profile": "main_orchestrator",
+          "mode": "writer"
+        },
+        "exact_sha_tree": {
+          "commit_sha": "377132f786c6a38b1cb9d2cb90bda7dc3a96ff0b",
+          "tree_sha": "2f8ef34554e28be8c83c3d874d6b6a525927d39c"
+        },
+        "current_gate": "targeted_verification",
+        "blocker": null,
+        "next_action": "API55 build03 after verified fixture constructor fix; original678 revision and billing acceptance"
+      },
+      "HERO-MODEL-HOSTING-20261112": {
+        "owner": null,
+        "exact_sha_tree": {
+          "commit_sha": "f3fd61a84833266ee68a7ce06ad61c77f72d7077",
+          "tree_sha": "cea03a51924f11b3cd5ac50cf46f47ae2563a215"
+        },
+        "current_gate": "done",
+        "blocker": null,
+        "next_action": "Database model/tariff release scope complete: API1.1.49 f3fd61a848 deployed,167 tests passed,108/8 authenticated online readback matches DB,health/attestation/previous JAR backup verified. Delivery receipt production-release/delivery.json. Runtime model switching and private channel settlement are explicitly not completed; no recommendation fee changes. Docs-only follow-up fcebdeb2fb is not deployed source."
+      },
+      "API-BUILD-PERF-20261113": {
+        "owner": null,
+        "exact_sha_tree": {
+          "commit_sha": "80618640d6dd48f23ae668b59ea88778d9e57bdf",
+          "tree_sha": "8d6d5104eefe4e41f0523d3b19e0298e85accb19"
+        },
+        "current_gate": "done",
+        "blocker": null,
+        "next_action": "User5min goal achieved: batch5min02 full fresh95 tests/layering/bootJar/package141.108s, compile cache75 reused, no cold-cache guarantee; SHA/input/tests audited, retained final package registered; no deployment/resource changes"
+      },
+      "HUARONG-BIND-RECEIPT-20261114": {
+        "owner": null,
+        "exact_sha_tree": {
+          "commit_sha": "9661503e639e5b2c876dece69025396ebd106ea6",
+          "tree_sha": "dc9c7f2864f74680a127ad2aaffcca6db38d2a65"
+        },
+        "current_gate": "done",
+        "blocker": null,
+        "next_action": "Completed: receipt sanitization fixed and deployed; 98 backend + 59 frontend tests; existing huarong setup bound to chcbz; ACTIVE lease and intent; 500 WEN charged once. Evidence /home/isp/state/cyf-huarong-bind-20261114/binding-completion.json"
+      },
+      "TASK-QUOTE-DATABASE-20261114": {
+        "owner": null,
+        "exact_sha_tree": {
+          "commit_sha": "43feb23d914c2316dd6d7aa460e4a8599f4d67e4",
+          "tree_sha": "aef93a448e1d7b307e27d20974b8ee1aece156c9"
+        },
+        "current_gate": "done",
+        "blocker": null,
+        "next_action": "Completed: API1.1.53 installed;318tests+2browser+33Web pass;75production readonly quotes+healthUP;141obsolete keys removed;hot-price/immutable quotes isolated PASS. Evidence /home/isp/state/cyf-quote-db/completion-audit.json; root docs0525d29a local-only (unrelated unpublished ancestors); no Runtime/Web release or production test debit."
       }
     }
   }
