@@ -58,3 +58,13 @@
 > 文档收口（2026-10-23）：保留自托管文书/登记合同及E2E未验；CYF程序路径遵循固定app规则，不恢复旧releases/current安装。 本轮仅核对文档归属与覆盖，不重新验证源码/上线；执行规则以根AGENTS为准。
 
 用户要求补齐 isp-install 和聚义厅自家接应说明。目标：用户无需猜 tenant、手算摘要或等待不存在的后台密钥签发，即可依现行 Runtime 契约完成安装交接。非目标：旧协议兼容、历史任务迁移、新认证接口、自动生产部署、自动图片付费开通。
+
+## 2026-11-14会话收口说明：合同、实施、验收分开
+
+本页开头“正在开发，未发布”及§5存量状态是2026-11-13设计冻结时的历史快照，不作为2026-11-14实时运行结论。当前源码核对：API `377132f786`、Runtime `978d442`；交付过程与实际失败/后续修复保留在[原handoff](../../docs/implementation/handoffs/RUNTIME-LEASE-SEPARATION-20261112.md)。已有阶段安装不等于全局验收完成，回归快照见[全局手册§8](../juyiting-unified-experience/global-regression.md#8-2026-11-14会话收口快照非新的全量通过基线)。本次不查询/改变生产绑定、租约、续费开关或主机状态。
+
+最终规则继续以本页§1—§5为准：API持有租约/资金及平台准入，Runtime执行精确授权的本机操作；一主机一主服务、逐Agent隔离，不等于全机只能一条HTTP通道。离线不暂停租期；自行部署解绑不依赖本机停止/清理，不能远程清用户资产；平台托管受管目录仍遵守隔离和恢复要求。早期建议开放入站mTLS、反向隧道、以adopt回执作为免费过渡登记前置已被取代，不从历史聊天恢复。
+
+花荣接入回执缺失的稳定修复：`HostingSetupService.View.authorization`是公开授权元数据，不是Bearer秘密；使用现有字段级`SensitiveStrategy.KEEP`保留该对象，仍递归脱敏其子字段，不关闭全局脱敏。回归入口为`HostingOutboundResponseSanitizationTest`；前端继续校验回执身份一致性，不能因修复删去。沿原setup/幂等键恢复，不重复登记/收费。2026-11-14历史完成回执`/home/isp/state/cyf-huarong-bind-20261114/binding-completion.json`记录原setup、一次500文捕获、首期技能费0及ACTIVE；不据此声称其`executionModel`已上报（该回执字段为null）。
+
+Runtime启动警告探测的定向裁剪见Runtime `patches/codex/0.167.0/README.md`及固定源码/补丁摘要：只删除app-server启动时非必要bwrap警告探测，不删除执行沙箱或通用安全检查。共享盘不可用的D态、卸载/重启属于主机故障处置，不作为后续自动杀进程/重启授权；程序就绪、通道回执、租约和业务验收各自取证。

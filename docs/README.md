@@ -46,7 +46,7 @@
 | 旧bridge协议参考 | [历史/局部基线](codex-ws-agent.md) | 只用于定位，现行原生执行以技能主spec指定合同和实际源码为准 |
 | Git与跨仓集成交付 | [Git说明](workspace-git.md) · [SDD流程](sdd-workflow.md) | 脏修改保留、只暂存本任务文件、develop不自动部署 |
 | Agent角色/活动任务归属 | [实施入口](implementation/README.md) | [角色说明](../.codex/README.md)、[路由配置](implementation/MODEL_ROUTING.yaml)、唯一TASKS内嵌ledger |
-| 追溯历史为何这样做 | [历史决定分类](../specs/codex-history-closeout-20261023/summary-20261107.md) | 按专题链接查原handoff/receipt；[旧路径映射](sdd-document-map.json)不当作现行实现 |
+| 追溯历史为何这样做 | [会话收口与责任落点](sdd-workflow.md#codex历史会话收口2026-11-14) | 按专题链接查原handoff/receipt；[旧路径映射](sdd-document-map.json)不当作现行实现 |
 
 ## 文档角色与有效性
 

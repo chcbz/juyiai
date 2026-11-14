@@ -167,3 +167,21 @@ CYF uses local tests, builds and packaging on fixed clean source with independen
 ### 校验必要性（2026-10-24）
 
 新建/保留拒绝条件必须在对应规格写清风险、输入条件、失败影响和回归；不能仅因旧代码或旧测试存在就保留。无依据项默认待移除，先按实际调用链识别会否削弱身份/资金/数据完整性，必要则补完整理由，否则删除。沿用[校验必要性规格](../api/docs/interface-catalog/validation-policy.md)，不新增统一校验平台、逐项审批或硬门禁。
+
+## Codex历史会话收口（2026-11-14）
+
+聊天不是唯一规格或完成证据。删除前按所属项目、真实会话ID、是否在途确定范围，完整检查用户决定与最终结果；将被取代方案、已完成事实、待办和未核实建议分开，不把历史授权或助手建议提升为当前合同。
+
+稳定结论回写既有责任spec/运维说明；只保留必要源码、日期、测试边界及原证据路径，不公开凭据、完整模型输入、用户私有内容或生产日志。历史失败/验收证据不随聊天清理；当前聊天、其他项目、业务Runtime会话/状态、附件及worktree不在本次删除范围。
+
+本轮整理三条已归档CYF聊天，来源清单/摘要/删除回执私有保存于`/home/isp/state/cyf-codex-history-closeout-20261114/manifest.json`。责任落点：
+
+| 主题 | 长期入口 | 必须保留的未完成边界 |
+| --- | --- | --- |
+| 接入、租约与主机职责、回执脱敏 | [接入规范](../specs/runtime-self-host-onboarding/spec.md) | 不能把通道在线等同租约/业务通过；保留自行部署资产边界 |
+| 数据库报价与实际用量 | [报价详设§14](../specs/agent-economy-marketplace/task-quote-database-design-20261114.md#14-会话收口报价可用性估算准确性与实际成本2026-11-14) | 两条原始usage链路尚待计价；输入计量方案未冻结/未开发 |
+| 108模型、托管定价、配置与观测 | [模型治理](../specs/juyiting-agent-model-governance/spec.md) | 公开参考价不是采购成本；数据库配置不证明Runtime换模 |
+| 真实界面回归 | [全局回归](../specs/juyiting-unified-experience/global-regression.md) | 当时33PASS/1FAIL/85NOT_RUN；多轮修订待闭环 |
+| 后端构建优化 | [默认执行基线](../ops/orchestration/README.md#api-local-build-baseline) | 目标300秒/单批600秒硬上限；141.108秒是固定输入实测，不是全冷保证 |
+
+删除在文档落盘、定向检查并固定提交之后执行，使用本机支持的原生会话删除接口、逐ID核验；不通过直接改SQLite或清空整个`.codex`实现。文档完成、Git推送和会话删除分别报告，以私有回执记录实际删除结果，不能把已归档冒充已删除。本次文档基线根`6330d63c`，API`377132f786`、Web`f64c127`、Runtime`978d442`。整理始于11月14日，定向核验于北京时间2026-11-15完成；新增14处链接/锚点与历史回归计数核对通过，全库导航仍因原有`sdd-document-map.json`缺失无法执行。
