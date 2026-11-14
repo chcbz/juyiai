@@ -1,10 +1,10 @@
 # 聚义厅端到端链路
 
-> 有效性：原有链路章节来自 `BASELINE.yaml` 的 2026-08-15 静态基线及既有增补，本轮未全量复核。仅“议事输入区 UI”按明确源码范围更新；历史发布证据不等于当前线上状态。
+> 有效性：原有链路章节来自 `BASELINE.yaml` 的 2026-08-15 静态基线及既有增补，本轮未全量复核。“议事输入区 UI”及下述2026-11-14事项价目段按明确源码范围更新；历史发布证据不等于当前线上状态。
 
 
 <a id="beta-task-billing"></a>
-## 内测事项费用（源码已集成，尚未生产切换）
+## 内测事项费用（历史基线与2026-11-14价目增量）
 
 2026-11-06局部核对：API `f24f4c1aef16c4eb48b95329b828cc83ec2f1558`、Web `c1e478f633845a448833a3973e732a12a75874aa`、Runtime `dbb9e3d93466460235ace9e926a4b63627bb4377`。只说明下列已实现职责，不将旧章节的银两/固定预览价作为新业务规则；不证明这些版本已安装，也不改变全文旧基线。
 
@@ -19,8 +19,20 @@
 
 - 钱袋`/wallet`显示余额与流水；API为`GET /economy/wallet`、`GET /economy/ledger`、`POST /economy/events`，沿统一认证/环境scope及Q/R。钱袋余额节点不在`/juyiting`页面，浏览器验证须区分两个路由。
 - 聚义厅`HALL_ENTERED`触发可配置活动；候选配置`beta-hall-welcome-v1`赠3500文且默认关闭。同活动领取幂等，停活动不清领取事实；不是按注册日赠送，也不是普通埋点任意增余额。
-- `economy.pricing.models/tools/rules`保存人工人民币价与估算规则，不引入在线汇率。没有合法目录不会猜价；模型展示与计费路由是不同责任，不能从好汉详情展示文字推断采购渠道。
+- 2026-11-14起，模型/工具价目及模型事项报价选择由economy五表维护，`DatabaseTaskPricingService`替代启动配置；不再读取`economy.pricing.models/tools`或`jia.agent.task-pricing.routes`。报价采用认证Runtime已保存的`execution_model`，不根据展示文字猜采购渠道；事项参考价不冒充实际采购价。无在线汇率、自动抓价或逐Agent配置。
 - 好汉详情展示Runtime上报的执行模型；统一目标`gpt-6-luna`不意味着本任务已修改生产配置或将历史模型改名。
+
+### 数据库价目职责及维护（2026-11-14局部核验）
+
+源码：API `43feb23d914c2316dd6d7aa460e4a8599f4d67e4` / tree `aef93a448e1d7b307e27d20974b8ee1aece156c9`，1.1.53-SNAPSHOT已安装。本次不修改/发布Runtime和Web；其余章节仍按原日期理解。
+
+- agent在原事项根事务内对授权候选一次批读Runtime模型；economy统一负责tariff、完整scope/channel/model/tier键、模型/工具版本及计算。新绑定使用已登记模型即可报价；全新模型先登记模型价和tariff，不猜价/免费兜底。
+- 模型和工具各有不可变版本表及current指针；`economy_task_model_tariff`明确模型的事项channel/tier和工具列表。当前价用单条JOIN，在原REPEATABLE-READ事务内一致读取；没有本地缓存、重启刷新或额外配置中心。
+- 在线维护：在获授权目标scope事务内INSERT新版本，再以完整键和原version作条件更新current，影响1行才提交；冲突回滚。tariff变更锁原模型行。回退只切指针，不UPDATE/DELETE历史版本，不删除报价、资金或成本事实。工具价同样维护版本和指针。
+- `TaskBillingServiceImpl`先重放绑定报价，再查询当时价目；后续模型/价格变化不修改旧quoteId、金额或快照。reserve/capture/release继续只使用原资金合同。实际成本消费者按原精确渠道及版本查询，STARTED中的null也不以新价回填。
+- Git/JAR只保留通用默认配置、五表DDL与合成fixture；真实价目seed、渠道/租户、主机和凭据在受限部署侧。数据库价目不是字典项；本次不迁移活动、托管套餐或全部外置配置。
+- 318项后端测试、独立浏览器/SQL承办与余额不足验收、33项Web消费侧测试通过；生产健康及只读覆盖为7有效绑定、8支持模型、5种kind共75组计价。热价与旧报价不可变组合在隔离MySQL、同一已安装JAR服务实例验证，未在生产试改价/扣款；不把覆盖探针说成7个Agent真实付费执行。
+- 恢复旧JAR前先在原发布锁下恢复旧配置备份；再用原安装/恢复入口。不要恢复整库资金快照。字段、部署顺序和验收边界以[事项报价详设](../../specs/agent-economy-marketplace/task-quote-database-design-20261114.md)为准。
 
 ### 验证与切换边界
 
