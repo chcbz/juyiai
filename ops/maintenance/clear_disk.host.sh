@@ -54,7 +54,7 @@ check  Show disk space and the bounded cleanup scope.
 plan   List eligible expired artifacts without changing files.
 clean  Run Flow and Runtime recovery-payload retention (newest two + current pin).
        Runtime retirement is independent of disk pressure; records remain. If free space is below MIN_FREE_GB (default: 5),
-       remove only inactive, root-owned, non-symlink cache files older
+       remove only inactive, root-owned, non-symlink temporary files older
        than TMP_KEEP_DAYS (default: 2).  Stops at RECOVERY_FREE_GB (default: 8).
        Also considers allowlisted files under /home/isp/wsps/cyf/deliverables
        older than DELIVERABLES_KEEP_DAYS (default: 30): .jar/.zip/.tgz/.tar.gz,
@@ -63,13 +63,12 @@ clean  Run Flow and Runtime recovery-payload retention (newest two + current pin
        Old temporary release JARs/known cloud packages use a state/lock-aware
        per-file helper (RELEASE_KEEP_DAYS default: 2). Embedded records are copied
        and byte-verified before cloud package deletion; all directories remain.
-       Also considers inactive Gradle cache files aged GRADLE_CACHE_KEEP_DAYS+1
-       days (default 3 days) and node_modules declared in the private completed-task
-       registry after COMPLETED_TASK_KEEP_HOURS (default 24). Explicit final packages
-       in that same registry retain newest two batches per component plus authoritative
-       current/rollback pins; release locks and content identity are rechecked.
-       Unregistered packages are never inferred disposable. Never infers completion
-       from age/inactivity. No deliverables/temp directory tree is removed; plan never deletes.
+       Historical outputs in the explicit CYF build bases are discovered even when
+       unregistered: retain 24 hours and newest two stages per component, plus all
+       current/rollback/active pins. API generated classes/JARs use source identity.
+       Embedded package evidence is preserved before deletion; directories remain.
+       Reusable Gradle/NPM/Web dependency and Node compile caches are NEVER cleaned,
+       even under low disk pressure. No task completion is inferred or recorded.
        Clean stdout/stderr/exit status persists in /home/isp/logs/clear_disk.log.
 
 Protected unconditionally: databases, middleware data, application/runtime files,
@@ -186,7 +185,7 @@ is_safe_temp() {
       [[ "${path%/*}" == "$TEMP_ROOT" && -d "$path" ]] || return 1
       [[ -z $(find -P "$path" -mindepth 1 -maxdepth 1 -print -quit) ]] || return 1 ;;
     "$TEMP_ROOT"/node-compile-cache/*|"$TEMP_ROOT"/tsx-0/*)
-      [[ -f "$path" && $(stat -c '%h' -- "$path") == 1 ]] || return 1 ;;
+      return 1 ;;
     *) return 1 ;;
   esac
   [[ -n $(find -P "$path" -maxdepth 0 -mtime +"$TMP_KEEP_DAYS" -print) ]] || return 1
@@ -241,11 +240,6 @@ list_temp_candidates() {
   done < <(
     find -P "$root" -xdev -mindepth 1 -maxdepth 1 -type d \
       -name '.org.chromium.Chromium.*' -mtime +"$TMP_KEEP_DAYS" -print0 2>/dev/null
-    for path in "$root/node-compile-cache" "$root/tsx-0"; do
-      [[ -d "$path" && ! -L "$path" ]] || continue
-      find -P "$path" -xdev -maxdepth 4 \
-        -type f -mtime +"$TMP_KEEP_DAYS" -print0 2>/dev/null
-    done
   )
 }
 
@@ -317,26 +311,11 @@ list_npm_candidates() {
 }
 
 clean_npm_caches() {
-  local root path identity removed=0 skipped=0
-  for root in "${NPM_CACHE_ROOTS[@]}"; do
-    while IFS= read -r -d '' path; do
-      recovery_reached && break
-      snapshot_active_paths
-      if ! is_safe_npm_file "$path" "$root"; then skipped=$((skipped + 1)); continue; fi
-      identity=$(stat -c '%d:%i:%s:%Y:%Z' -- "$path") || continue
-      is_safe_npm_file "$path" "$root" || { skipped=$((skipped + 1)); continue; }
-      unlink_deliverable "$path" "$identity" || continue
-      printf 'REMOVED NPM cache file: %q\n' "$path"
-      removed=$((removed + 1))
-    done < <(list_npm_candidates "$root")
-  done
-  printf 'NPM cache cleanup: removed %s files; skipped %s; all directories retained.\n' "$removed" "$skipped"
+  echo 'Reusable NPM cache preserved; no files deleted.'
 }
 
 clean_basic_caches() {
-  journalctl --vacuum-size=200M >/dev/null 2>&1 || true
-  dnf clean all >/dev/null 2>&1 || yum clean all >/dev/null 2>&1 || true
-  clean_npm_caches
+  echo 'Reusable caches preserved (Gradle, NPM, Web dependencies and Node compile caches).'
 }
 
 is_safe_rotated_log() {
@@ -372,16 +351,7 @@ list_rotated_logs() {
 
 plan_cache_and_logs() {
   local root path count=0 skipped=0 bytes=0 blocks
-  for root in "${NPM_CACHE_ROOTS[@]}"; do
-    while IFS= read -r -d '' path; do
-      if is_safe_npm_file "$path" "$root"; then
-        blocks=$(stat -c '%b' -- "$path") || continue
-        bytes=$((bytes + blocks * 512)); count=$((count + 1))
-        if (( count <= PLAN_DETAIL_LIMIT )); then printf 'ELIGIBLE NPM cache %q\n' "$path"; fi
-      else skipped=$((skipped + 1)); fi
-    done < <(list_npm_candidates "$root")
-  done
-  printf 'Eligible NPM cache files: %s; skipped: %s; estimated reclaim: %s\n' "$count" "$skipped" "$(human_bytes "$bytes")"
+  echo 'Reusable build/dependency caches preserved; no cache deletion candidates.'
   count=0; skipped=0; bytes=0
   while IFS= read -r -d '' path; do
     if is_safe_rotated_log "$path"; then
@@ -595,9 +565,9 @@ main() {
       echo "== Expired deliverables files (>${DELIVERABLES_KEEP_DAYS} days; releases/evidence excluded) =="
       plan_deliverables_cleanup
       echo
-      echo '== Rebuildable caches and explicitly completed task dependencies/final packages =='
+      echo '== Historical registered and discovered build outputs (caches preserved) =='
       run_rebuildables plan || echo 'WARNING: rebuildable plan stopped safely.' >&2
-      echo '== Expired NPM cache files and rotated logs =='
+      echo '== Rotated logs (NPM cache preserved) =='
       plan_cache_and_logs
       ;;
     clean)
@@ -616,7 +586,7 @@ main() {
       if ! run_flow clean; then stage_failed=1; echo 'WARNING: Flow retention failed/stopped safely; inspect cleanup log.' >&2; fi
       echo '== Runtime recovery-payload retention =='
       if ! run_runtime_backups clean; then stage_failed=1; echo 'WARNING: Runtime backup cleanup stopped safely.' >&2; fi
-      echo '== Scheduled registered package retention (independent of free space) =='
+      echo '== Scheduled historical output retention (registered/discovered; independent of free space) =='
       if ! run_rebuildables clean --artifacts-only; then stage_failed=1; echo 'WARNING: scheduled package retention stopped safely.' >&2; fi
       if ! needs_cleanup; then
         echo 'Free-space trigger is not met; no generic temporary cleanup is needed.'
@@ -626,7 +596,6 @@ main() {
       snapshot_active_paths
       echo '== Basic caches =='
       clean_basic_caches
-      recovery_reached || { echo '== Rebuildable caches and completed task dependencies/final packages =='; if ! run_rebuildables clean; then stage_failed=1; echo 'WARNING: rebuildable cleanup failed/stopped safely.' >&2; fi; }
       recovery_reached || { echo '== Old temporary release payloads =='; if ! run_releases clean; then stage_failed=1; echo 'WARNING: release cleanup failed/stopped safely; protected payloads preserved.' >&2; fi; }
       recovery_reached || { echo '== Expired temporary cache files/empty directories =='; clean_temp; }
       recovery_reached || { echo '== Expired deliverables files =='; clean_deliverables; }

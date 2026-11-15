@@ -1,46 +1,47 @@
-# 本地最终包的受控保留（核对：2026-11-15）
+# 本地构建包与产物自动保留（核对：2026-11-15）
 
-> 历史状态（2026-11-07）：已安装并回读现有清理器、LOCAL记录适配及artifact登记；4个已完成任务已登记，原30分钟cron入口已真实消费。维护回归253项通过。实际入口退出3仅因根盘约1GiB仍低于5GiB，无可合法继续删除候选；未改写安装record或强删受保护数据。详细证据见 `docs/implementation/evidence/local-release-closure-20261107/`。
+## 当前策略（2026-11-15用户更新）
 
-## 责任与范围
+**可复用构建缓存保留；未登记的历史构建输出也自动清理，需要时重新构建。** 本节覆盖此前“只清理完成登记包”及低磁盘时清理构建缓存的口径。不从产物年龄推定任务完成，不改写任务ledger或发布回执。
 
-- 根 AGENTS 本地执行新规则下，清理仍由主机存储适配器执行。扩展现有 `rebuildable_cache_cleanup.py` 的 `mark-complete` / `mark-active`、现有 `/home/isp/state/cyf-host-cleanup/completed-tasks.json`，不是新台账、审批或发布通道。
-- 只清理 Owner 已确认任务完成/终止、无需继续持有的**明确最终输出**。任务根沿用 `/tmp/cyf-*`、`/var/tmp/cyf-*` 及原显式 worktree bases，也支持同一显式base下`cyf-BATCH/{api,web,runtime}`的精确组件子根（逐级身份/挂载/.keep检查，不允许任意嵌套）。2026-11-15补齐 `cyf-build/<batch>`、`cyf-local-build/artifacts/<batch>`，并只在 `cyf-local-build/{tasks,artifacts}` 允许一个明确批次子层 `<batch>/<attempt或component>`；不递归认领。路径只能是任务根直接文件或 `package/`、`packages/`、`artifacts/` 下最多两层的 `.jar/.tar/.tgz/.tar.gz/.zip`。不递归猜测 source/build/state/backups/recovery/evidence，不扫描未知历史目录；deliverables/releases 仍不做通用兜底删除。
-- 完成声明复用既有 root Owner 控制面，不是包内字段自动授予清理权限。登记绑定组件、完整 commit/tree、文件签名/SHA-256；API 还须声明**实际 application JAR SHA-256**，用于匹配 current record 的 candidate/previous 回退摘要。Owner 从同批生产者证据取得该值，不能填压缩包摘要冒充 JAR 摘要。工具不重做构建真实性/发布审批。
-- Owner 登记前须把同批日志、测试、receipt/metadata/manifest 等追溯材料保存在包外；若包内仍有唯一证据副本，先按原格式受控保存并核对摘要，否则不登记。工具信任已有 Owner 完成声明，不另建证据准入框架。
-- 最新两个已登记构建批次**按组件分别保留**；沿用24小时完成保留期。当前记录绑定的 commit/tree、包摘要、API payload/回退摘要、Runtime 当前 backup/current.json 中前一版本源码/包绑定、显式路径引用额外保留；`.keep`（含悬空链接）、挂载、符号链接、外部硬链接、文件/任务替换、当前状态不明和进程使用均保护。只 unlink 精确登记文件，全部目录、日志、测试/receipt/manifest证据保持。
-- 重新使用已完成目录前 `mark-active --task-root <真实目录>`；不复用已被回收的包/目录或靠 mtime 重新认领新文件。缺失旧文件为幂等跳过，替换的同名文件不会被自动采纳。
+### 自动触发与保留
 
-## 自动触发与发布互斥
+- 复用每天北京时间 **03:15、13:15** 的 `cyf-host-cleanup.service` → `/home/isp/bin/clear_disk.sh clean`，不新增cron或收费Flow。构建包及明确中间输出清理独立于磁盘空闲量。
+- 已登记包沿原 `completed-tasks.json`：完成满24小时、每组件最近两批、当前/回退/占用保护；明确退役声明仍只豁免时间与最近两批，不豁免安全保护。
+- **未登记输出无需补登记或等待Owner宣告任务结束**。只在下述明确构建基目录发现；按同组件输出阶段最近修改时间保留最近两批，其余最后修改/状态变化满24小时才可回收。新文件、替换文件及新批次重新计时。此时间仅判断产物保留，不是任务完成事实。已登记路径不被重新解释成未登记输出，不绕过其既有保护。
+- 两种来源的最近两批分别保守保留，当前/回退绑定额外保留；不会为了凑数量删除恢复输入。需要暂时保留某批可放置 `.keep`（含悬空链接）；开始复用已登记批次仍先 `mark-active`，正在运行的批次由构建/发布锁与进程占用保护，不能把撤销登记理解为未登记产物永久豁免。
 
-- 复用现有 `/etc/crontab` 每天北京时间03:15、13:15启动 `cyf-host-cleanup.service` → `/home/isp/bin/clear_disk.sh clean`，不新增计划任务。**已登记最终包**每次定时运行都执行 `clean --artifacts-only`，不再受5→8GiB空间阈值限制；普通包仍须完成满24h、排除每组件最近两批及当前/回退/占用等保护。缓存和普通临时目录仍只在低于5GiB时触发，回收到8GiB停止。
-- 复用 host cleanup lock；涉及登记包时还按现有次序非阻塞获取 API coordinator→release、Web deploy 或 Runtime release lock，不创建/改写锁。任一缺失/忙/元数据不符时保护**全部登记包**，独立缓存清理仍可执行；不取消别人的发布。
-- 只读读取各组件现行权威发布记录；API 必须 installed/not_required，Web online_verified，Runtime verified-active，或明确的 LOCAL / installed-channel-verification-pending / forward-only 且commit/tree完整。后者仅用于保留绑定识别，不表示验收成功；同时读取并保护其 `backup/release-records/current.json` 的前一批绑定，缺失/未知仍保护全部Runtime登记包。未知新记录格式先保护包，等责任层明确适配，不猜测语义。此读取不代表重新验证持续线上健康。
-- 每次 unlink 前复核登记/当前记录、完整进程扫描、路径/文件身份及 SHA-256。复用现有预删除审计 `/home/isp/baks/host-cleanup/rebuildable-cache/audit.jsonl` 和全局清理日志。错误停止/跳过，不递归删除目录、不碰数据库、生产程序或备份。
+### 未登记发现范围
 
-## Owner 完成登记
+- 仅 `/home/isp/state/cyf-build`、`/home/isp/state/cyf-local-build/tasks`、`/home/isp/state/cyf-local-build/artifacts`，最多 `<batch>/<attempt或component>` 两层阶段根。不扫描整个state、worktree、生产安装、备份或任意tmp目录。
+- 阶段根必须有现有生产者文档 `result.json`、`manifest.json`、`release.json` 或 `build-evidence.json`；不要求其宣告任务完成。缺失/无法读取时保留，不把未知目录或测试fixture当构建输出。
+- 最终包只识别阶段根或其 `package/`、`packages/`、`artifacts/` 下的 `api`、`web`、`runtime`（可带数字版本后缀）的 `.tar/.tgz/.tar.gz`。API包还须能识别 `application.jar`；未知命名、未知格式、坏包保留并报告，不对任意压缩包兜底删除。
+- API中间输出只处理该阶段 `build/jia/**` 下 `classes`、`libs` 路径内的 `.class/.jar`，且须有可读取的源码身份。源码、报告、测试XML、依赖目录和其他输出不随之删除；不递归删除阶段目录。
 
-以下占位符必须使用本任务真实值；并非要求每项任务都新建目录：
+### 缓存与证据
 
-```bash
-/usr/bin/python3 -I -B /usr/local/libexec/cyf/rebuildable_cache_cleanup.py mark-complete \
-  --task-root /var/tmp/cyf-REAL_TASK_BATCH \
-  --artifact package/REAL_PACKAGE.tgz --component api \
-  --source-commit FULL_40_HEX_COMMIT --source-tree FULL_40_HEX_TREE \
-  --payload-sha256 ACTUAL_APPLICATION_JAR_64_HEX_SHA256
-```
+- **无论空闲空间多少，都不删除可复用Gradle缓存、NPM缓存、Web共享依赖、已登记node_modules以及Node/TSX编译缓存。** 旧参数保持CLI兼容，不再授权缓存回收；包清理不调用旧缓存候选逻辑，底层unlink也拒绝缓存行。
+- 未登记包删除前，把包顶层JSON/XML/log/Markdown及 `test-results/`、`evidence/`、`reports/` 文档按原字节保存到 `/home/isp/state/cyf-host-cleanup/retained-artifact-evidence/<package-sha256>/`，索引绑定原包路径、摘要、内部文档名与摘要。只流式读取，不按压缩包路径解压。单文档16MiB/总64MiB的读取保护沿本次受控证据保存约束，超限保留原包、不丢弃证据。
+- 原有包外日志、测试、receipt/metadata/manifest、源码、状态和备份全部保留。已登记包仍由Owner在登记前保存唯一证据。未登记包解析/证据保存/核验失败就保留。
 
-Web/Runtime 使用对应 component，不需 API payload 参数；可同时用既有 `--node-modules web/node_modules` 登记依赖目录。只有有已知最终包且任务已结束才登记；不为无包任务添加步骤。未识别/待恢复任务保持不登记。
+### 当前/回退与并发保护
 
-只读预案：`/usr/bin/python3 -I -B /usr/local/libexec/cyf/rebuildable_cache_cleanup.py plan`。不以 `clean` 作为探测。
+- 原host清理锁、API coordinator/release、Web deploy、Runtime release锁不变；增加获取已有Gradle与orchestrator构建锁，全部非阻塞，不创建替代锁、不终止别人的任务。缺失/忙/不安全则跳过本轮构建输出。沿用既有50文件审计批次，每批结束释放构建锁并让出调度；若构建接手，不等待或抢回，余下产物留给下一次定时清理。逐文件占用/摘要/身份核验不减，避免成千class的小额回收长期阻塞后续构建。
+- 只读读取权威发布记录及Runtime前一批记录；源码commit/tree、外层包摘要、API实际application JAR摘要、显式路径引用与当前/回退绑定匹配时保护。未知/未确认发布状态保护相应组件，不伪造验收状态。
+- 删除前复核文件/阶段身份、SHA-256、源码文档身份及完整进程快照；`.keep`、挂载、符号链接、外部硬链接、在用文件/阶段均保护。预删除审计仍用 `/home/isp/baks/host-cleanup/rebuildable-cache/audit.jsonl`。
+- 数据库、生产程序、运行身份/会话、备份、源码、证据不是“可以重新构建”的输出，不在新增发现范围。
 
-## 明确退役历史批次（2026-11-15）
+## 兼容入口与只读预案
 
-用户明确授权退役的**精确构建批次**可在原 `mark-complete` 增加 `--retirement-reason '真实授权及包外证据位置'`。只登记明确列出的最终包，不代表终止整项业务任务。该声明保留真实当前登记时间，豁免24h及最近两批；**不能豁免当前/回退绑定、锁、占用、身份、摘要或证据保留**。退役批次不挤占普通批次最近两批名额；不得给未知任务自动补退役声明。恢复使用仍先 `mark-active`。
+`rebuildable_cache_cleanup.py plan --artifacts-only` 输出精确候选，无删除、无证据写入。`clean` 与 `clean --artifacts-only` 均只消费登记包及上述发现输出，不清缓存、不等待低磁盘。
 
-自动清理不从包年龄猜测任务结束。后续Owner完成/终止时仍必须按上述 `mark-complete` 登记；未登记、未知状态、锁冲突及活动批次不会自动删除。构建成功本身不等于任务完成，本轮未将二者混同，也没有自动终止未完成任务。
+既有 `mark-complete` / `mark-active` / `--retirement-reason` 保留兼容；完成登记不再是上述未登记发现范围的回收前置条件，不另建完成台账。`--node-modules` 的历史声明可读取，但不再触发依赖删除。
 
-本轮主机安装/回读、真实入口执行、42份历史包的逐包来源与包外证据、实际保护/回收结果保存在私有目录 `/home/isp/state/cyf-git-cleanup-20261115/`，不把内部日志/回执内容提交到公开仓库。维护脚本回归不等于应用构建/发布。旧Flow/release清理对缺失回退文件仍可报警；这些独立阶段失败不会阻止登记包阶段运行，也没有伪改发布状态掩盖报警。
+## 本轮实施与验收
+
+已通过108项独立Python用例与88项Shell用例，并将候选安装到现有主机入口、逐文件回读摘要一致；原03:15/13:15计划不变。规则、源码、隔离测试、主机安装回读和真实执行分别记录。本轮私有证据目录为 `/home/isp/state/cyf-git-cleanup-20261115/automatic-output-retention/`；最终安装回执为其中 `lock-yield/installation.json`；后台实跑状态及回收量独立记录，不将启动或中止的执行重标为完整成功。此前回收41包、6.614GiB是上一轮结果，不冒充新增发现的收益。旧Flow缺失回退JAR及Runtime备份待验收可能仍令整个service报警；不绕过这些独立阶段的保护。
+
+## 历史验证与目录变更（不覆盖上述当前策略）
 
 ## 回归与实施状态
 

@@ -13,6 +13,7 @@ class Tests(unittest.TestCase):
   self.p.mountinfo=self.base/'mounts';self.p.mountinfo.write_text('1 0 0:0 / / rw - ext4 /dev/x rw\n')
   self.p.proc=self.base/'proc';(self.p.proc/'123/fd').mkdir(parents=True);(self.p.proc/'123/maps').write_text('')
   self.temp=self.base/'tasks';self.temp.mkdir();self.p.task_bases=[self.temp,self.base/'var-tasks']
+  self.p.discovery_bases=[];self.p.build_locks=[]
   self.now=time.time()+5*86400
  def tearDown(self):shutil.rmtree(str(self.base))
  def file(self,name='old.bin'):
@@ -38,7 +39,7 @@ class Tests(unittest.TestCase):
    self.assertEqual(m.task_root(self.p,task),task)
    nested=task/'nested';nested.mkdir()
    with self.assertRaises(m.Unsafe):m.task_root(self.p,nested)
- def test_old_global_cache_eligible(self):p=self.file();self.assertEqual([r['path'] for r in self.rows()],[str(p)])
+ def test_legacy_readonly_cache_plan_metadata(self):p=self.file();self.assertEqual([r['path'] for r in self.rows()],[str(p)])
  def test_recent_ctime_protects_even_if_mtime_old(self):p=self.file();os.utime(str(p),(0,0));self.assertFalse(m.collect(self.p,m.proc.snapshot(self.p.proc),time.time())[0])
  def test_keep_dangling_symlink_protects(self):self.file();(self.p.cache/'.keep').symlink_to('missing');self.assertFalse(self.rows())
  def test_hardlinks_protected(self):p=self.file();os.link(str(p),str(self.base/'external'));self.assertFalse(self.rows())
@@ -47,7 +48,7 @@ class Tests(unittest.TestCase):
  def test_fd_scope_protected(self):p=self.file();(self.p.proc/'123/fd/4').symlink_to(p);self.assertFalse(self.rows())
  def test_mmap_without_fd_protected(self):p=self.file();st=p.stat();(self.p.proc/'123/maps').write_text('1000-2000 r--p 00000000 %02x:%02x %d %s\n'%(os.major(st.st_dev),os.minor(st.st_dev),st.st_ino,p));self.assertFalse(self.rows())
  def test_incomplete_process_scan_fails_closed(self):self.file();(self.p.proc/'123/maps').write_text('malformed');self.assertRaises(ValueError,self.rows)
- def test_unregistered_task_never_scanned(self):self.task();self.assertFalse(self.rows())
+ def test_legacy_cache_collector_does_not_discover_tasks(self):self.task();self.assertFalse(self.rows())
  def test_register_requires_inactive_task(self):task=self.task();(self.p.proc/'123/cwd').symlink_to(task);self.assertRaises(m.Unsafe,self.complete,task)
  def test_only_declared_dependencies_no_source_or_database(self):
   task=self.task();(task/'source.py').write_text('source');(task/'mysql-data').mkdir();(task/'mysql-data/data.bin').write_text('database');self.complete(task)
@@ -62,17 +63,17 @@ class Tests(unittest.TestCase):
  def test_changed_file_before_unlink_retained(self):p=self.file();r=self.rows()[0];p.write_text('changed');self.assertRaises(m.Unsafe,m.unlink_row,self.p,r,m.proc.snapshot(self.p.proc));self.assertTrue(p.exists())
  def test_parent_symlink_before_unlink_rejected(self):p=self.file();r=self.rows()[0];self.p.cache.rename(self.base/'original');self.p.cache.symlink_to(self.base/'original');self.assertRaises((m.Unsafe,OSError),m.unlink_row,self.p,r,m.proc.snapshot(self.p.proc));self.assertTrue(p.exists())
  def test_plan_has_no_mutation_or_audit(self):p=self.file();result=m.run(self.p,'plan');self.assertTrue(p.exists());self.assertFalse(self.p.audit.exists());self.assertEqual(result['removed_files'],0)
- def test_clean_removes_registered_dependencies_only(self):
+ def test_clean_preserves_registered_dependencies(self):
   task=self.task();self.complete(task);(task/'source.py').write_text('keep')
   with mock.patch.object(m.time,'time',return_value=self.now),mock.patch.object(m,'free_bytes',return_value=0):result=m.run(self.p,'clean')
-  self.assertEqual(result['removed_files'],2);self.assertTrue((task/'source.py').exists());self.assertTrue(task.exists());self.assertIn('intent',self.p.audit.read_text())
+  self.assertEqual(result['removed_files'],0);self.assertTrue((task/'web/node_modules/a.js').exists());self.assertTrue((task/'source.py').exists());self.assertTrue(task.exists());self.assertFalse(self.p.audit.exists())
  def test_clean_high_space_is_noop(self):
   p=self.file()
   with mock.patch.object(m.time,'time',return_value=self.now),mock.patch.object(m,'free_bytes',return_value=10*1024**3):result=m.run(self.p,'clean')
   self.assertTrue(p.exists());self.assertEqual(result['removed_files'],0)
- def test_audit_symlink_blocks_all_mutations(self):
+ def test_cache_only_clean_never_opens_audit(self):
   p=self.file();self.p.audit.parent.mkdir();self.p.audit.symlink_to(self.base/'outside')
-  with mock.patch.object(m.time,'time',return_value=self.now),mock.patch.object(m,'free_bytes',return_value=0):self.assertRaises(OSError,m.run,self.p,'clean')
+  with mock.patch.object(m.time,'time',return_value=self.now),mock.patch.object(m,'free_bytes',return_value=0):self.assertEqual(m.run(self.p,'clean')['removed_files'],0)
   self.assertTrue(p.exists())
  def test_missing_lock_fails_closed(self):self.file();self.p.lock.unlink();self.assertRaises(FileNotFoundError,m.run,self.p,'clean')
  def test_task_cannot_escape_explicit_bases(self):self.assertRaises(m.Unsafe,m.task_root,self.p,self.base)
@@ -80,22 +81,22 @@ class Tests(unittest.TestCase):
   p=self.file();r=self.rows()[0];p.write_text('changed')
   with mock.patch.object(m,'signature',return_value=tuple(r['signature'])):self.assertRaises(m.Unsafe,m.unlink_row,self.p,r,m.proc.snapshot(self.p.proc))
   self.assertTrue(p.exists())
- def test_scan_limit_aborts_no_partial_delete(self):
+ def test_cache_only_clean_does_not_traverse_cache(self):
   a=self.file('a.bin');b=self.file('b.bin')
-  with mock.patch.object(m,'MAX_ENTRIES',1),mock.patch.object(m.time,'time',return_value=self.now),mock.patch.object(m,'free_bytes',return_value=0):self.assertRaises(m.Unsafe,m.run,self.p,'clean')
+  with mock.patch.object(m,'MAX_ENTRIES',1),mock.patch.object(m.time,'time',return_value=self.now),mock.patch.object(m,'free_bytes',return_value=0):self.assertEqual(m.run(self.p,'clean')['removed_files'],0)
   self.assertTrue(a.exists());self.assertTrue(b.exists())
- def test_snapshot_failure_after_plan_stops_deletion(self):
+ def test_cache_only_clean_never_starts_mutation_snapshot(self):
   p=self.file();u=m.proc.snapshot(self.p.proc)
-  with mock.patch.object(m.proc,'snapshot',side_effect=[u,PermissionError('fixture incomplete')]),mock.patch.object(m.time,'time',return_value=self.now),mock.patch.object(m,'free_bytes',return_value=0):self.assertRaises(PermissionError,m.run,self.p,'clean')
+  with mock.patch.object(m.proc,'snapshot',side_effect=[u,PermissionError('fixture incomplete')]),mock.patch.object(m.time,'time',return_value=self.now),mock.patch.object(m,'free_bytes',return_value=0):self.assertEqual(m.run(self.p,'clean')['removed_files'],0)
   self.assertTrue(p.exists())
  def test_wrong_inherited_lock_refused(self):
   self.file();other=self.base/'other.lock';other.write_text('');fd=os.open(str(other),os.O_RDWR)
   try:self.assertRaises(m.Unsafe,m.run,self.p,'plan',inherited=fd)
   finally:os.close(fd)
- def test_custom_free_space_trigger_respected(self):
+ def test_custom_free_space_trigger_still_preserves_cache(self):
   p=self.file()
   with mock.patch.object(m.time,'time',return_value=self.now),mock.patch.object(m,'free_bytes',return_value=7*1024**3):result=m.run(self.p,'clean',min_free_gib=10,target_gib=12)
-  self.assertFalse(p.exists());self.assertEqual(result['removed_files'],1)
+  self.assertTrue(p.exists());self.assertEqual(result['removed_files'],0)
 class ArtifactTests(unittest.TestCase):
  setUp=Tests.setUp
  tearDown=Tests.tearDown
@@ -250,12 +251,12 @@ class ArtifactTests(unittest.TestCase):
  def test_registry_changed_after_plan_rejected(self):
   self.four();row=self.rows()[0];self.p.registry.write_text(self.p.registry.read_text()+' ')
   self.assertRaises(m.Unsafe,m.unlink_row,self.p,row,m.proc.snapshot(self.p.proc))
- def test_busy_release_lock_skips_artifacts_not_cache(self):
+ def test_busy_release_lock_preserves_artifacts_and_cache(self):
   self.four();cache=self.p.cache/'a.bin';cache.write_text('cache');lock=self.p.artifact_locks['api'][0][0]
   import fcntl
   fd=os.open(lock,os.O_RDWR);fcntl.flock(fd,fcntl.LOCK_EX|fcntl.LOCK_NB)
   try:
-   result=self.clean();self.assertEqual(result['artifact_eligible_files'],0);self.assertEqual(result['removed_files'],1)
+   result=self.clean();self.assertEqual(result['artifact_eligible_files'],0);self.assertEqual(result['removed_files'],0);self.assertTrue(cache.exists())
   finally:os.close(fd)
  def test_missing_release_lock_skips_artifacts(self):
   self.four();self.p.artifact_locks['api'][0][0].unlink();self.assertEqual(self.clean()['removed_files'],0)
@@ -263,10 +264,10 @@ class ArtifactTests(unittest.TestCase):
   self.four()
   with mock.patch.object(m.time,'time',return_value=self.now):result=m.run(self.p,'plan')
   self.assertEqual(result['artifact_eligible_files'],2);self.assertEqual(result['removed_files'],0);self.assertFalse(self.p.audit.exists())
- def test_high_space_is_noop(self):
+ def test_high_space_still_removes_eligible_outputs(self):
   self.four()
   with mock.patch.object(m.time,'time',return_value=self.now),mock.patch.object(m,'free_bytes',return_value=10*1024**3):result=m.run(self.p,'clean')
-  self.assertEqual(result['removed_files'],0)
+  self.assertEqual(result['removed_files'],2)
  def test_web_runtime_have_separate_retention_slots(self):
   a=self.four('web');b=self.four('runtime');self.assertEqual(len(self.rows()),4)
   self.assertEqual(self.clean()['removed_files'],4)
@@ -279,7 +280,7 @@ class ArtifactTests(unittest.TestCase):
   self.assertFalse(self.rows())
  def test_dependencies_and_artifacts_together(self):
   self.four();task,f=self.batch(5,dependencies=True);self.assertEqual(len(self.rows()),4)
-  self.assertEqual(self.clean()['removed_files'],4);self.assertTrue(f.exists());self.assertTrue((task/'web/package.json').exists())
+  self.assertEqual(self.clean()['removed_files'],3);self.assertTrue(f.exists());self.assertTrue((task/'web/node_modules/a.js').exists());self.assertTrue((task/'web/package.json').exists())
  def test_invalid_artifact_scope_or_api_missing_payload_digest_rejected(self):
   task=self.temp/'cyf-invalid';task.mkdir();(task/'data.jar').write_text('payload')
   for rel in ('../escape.jar','source/data.jar','backup.tgz','package/state.tar.gz','receipt.json'):

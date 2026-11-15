@@ -170,8 +170,8 @@ for language in C zh_CN.UTF-8; do
   LC_ALL="$language" is_safe_entry "$TEMP_ROOT/tsx-0" || fail "locale $language directory rejected"
   ok "locale $language uses numeric and shell file-type checks"
 done
-is_safe_temp "$TEMP_ROOT/tsx-0/old.js" || fail 'expired TSX cache rejected'
-is_safe_temp "$TEMP_ROOT/node-compile-cache/version/old.cache" || fail 'expired Node cache rejected'
+if is_safe_temp "$TEMP_ROOT/tsx-0/old.js"; then fail 'reusable TSX cache eligible'; fi
+if is_safe_temp "$TEMP_ROOT/node-compile-cache/version/old.cache"; then fail 'reusable Node cache eligible'; fi
 is_safe_temp "$TEMP_ROOT/.org.chromium.Chromium.empty" || fail 'empty Chromium dir rejected'
 for path in "$TEMP_ROOT/cyf-unused-database" "$TEMP_ROOT/cyf-unused-release/candidate-api.jar" "$TEMP_ROOT/.org.chromium.Chromium.nonempty"; do
   if is_safe_temp "$path"; then fail "arbitrary temp content accepted: $path"; fi
@@ -188,25 +188,25 @@ ACTIVE_PATHS=("$TEMP_ROOT/tsx-0")
 if is_safe_temp "$TEMP_ROOT/tsx-0/old.js"; then fail 'active cache accepted'; fi
 ACTIVE_PATHS=()
 plan=$(plan_temp_cleanup)
-[[ "$plan" == *'Eligible temporary entries: 3;'* ]] || fail "unexpected temp plan: $plan"
+[[ "$plan" == *'Eligible temporary entries: 1;'* ]] || fail "unexpected temp plan: $plan"
 [[ -f "$TEMP_ROOT/tsx-0/old.js" ]] || fail 'temp plan mutated files'
-ok 'temp plan lists exactly three disposable entries without mutation'
+ok 'temp plan lists empty Chromium only, preserving reusable compile caches'
 clean_temp >/dev/null
-[[ ! -e "$TEMP_ROOT/tsx-0/old.js" && ! -e "$TEMP_ROOT/.org.chromium.Chromium.empty" ]] || fail 'temp caches retained'
+[[ -f "$TEMP_ROOT/tsx-0/old.js" && -f "$TEMP_ROOT/node-compile-cache/version/old.cache" && ! -e "$TEMP_ROOT/.org.chromium.Chromium.empty" ]] || fail 'temp caches retained'
 [[ -d "$TEMP_ROOT/tsx-0" && -d "$TEMP_ROOT/node-compile-cache/version" && -f "$TEMP_ROOT/cyf-unused-database/data/mysql.ibd" && -f "$TEMP_ROOT/cyf-unused-release/candidate-api.jar" && -f "$TEMP_ROOT/.org.chromium.Chromium.nonempty/report.json" ]] || fail 'protected temporary contents affected'
-ok 'temp clean only unlinks cache files/rmdirs empty Chromium; database/source/release/evidence untouched'
+ok 'temp clean removes empty Chromium only; reusable caches and data preserved'
 # Rejected aged candidates must remain visible in plan and clean counters.
 old_file "$TEMP_ROOT/tsx-0/unsafe-old.js"
 chmod 0666 "$TEMP_ROOT/tsx-0/unsafe-old.js"
 old_file "$TEMP_ROOT/tsx-0/active-old.js"
 ACTIVE_PATHS=("$TEMP_ROOT/tsx-0/active-old.js")
 plan=$(plan_temp_cleanup)
-[[ "$plan" == *'Eligible temporary entries: 0; skipped by safety checks: 2;'* ]] || fail "hidden skip counters: $plan"
-ok 'permission-rejected and active aged cache candidates counted rather than hidden'
+[[ "$plan" == *'Eligible temporary entries: 0; skipped by safety checks: 0;'* ]] || fail "hidden skip counters: $plan"
+ok 'reusable cache files excluded from automatic candidates regardless of age'
 clean_temp >/dev/null
-[[ "$SKIPPED_UNSAFE_COUNT" == 1 && "$SKIPPED_ACTIVE_COUNT" == 1 ]] || fail 'clean skip counters incorrect'
+[[ "$SKIPPED_UNSAFE_COUNT" == 0 && "$SKIPPED_ACTIVE_COUNT" == 0 ]] || fail 'clean skip counters incorrect'
 [[ -f "$TEMP_ROOT/tsx-0/unsafe-old.js" && -f "$TEMP_ROOT/tsx-0/active-old.js" ]] || fail 'rejected cache removed'
-ok 'clean retains rejected cache candidates and records both skip classes'
+ok 'clean retains reusable cache candidates unconditionally'
 ACTIVE_PATHS=()
 # Deep audit: caches are file-only; log candidates require specific rotations.
 NPM_CACHE_ROOTS=("$FIXTURE/npm/_cacache" "$FIXTURE/npm/_logs")
@@ -234,8 +234,8 @@ if is_safe_npm_file "$cache/content-v2/hash/old-cache" "$cache"; then fail 'acti
 ACTIVE_PATHS=()
 ok 'active NPM cache protected'
 clean_npm_caches >/dev/null
-[[ ! -e "$cache/content-v2/hash/old-cache" && -d "$cache/content-v2/hash" && -f "$cache/recent-cache" ]] || fail 'NPM file-only cleanup scope'
-ok 'NPM cleanup retains directories and recent files without recursive rm'
+[[ -f "$cache/content-v2/hash/old-cache" && -d "$cache/content-v2/hash" && -f "$cache/recent-cache" ]] || fail 'NPM file-only cleanup scope'
+ok 'NPM cleanup preserves old and recent files without recursive rm'
 LOG_ROOT="$FIXTURE/logs"
 old_file "$LOG_ROOT/service/server.log.1.gz"
 old_file "$LOG_ROOT/service/server.log.20260901T120000.gz"
@@ -289,6 +289,13 @@ ok 'mount above log whitelist root protected'
 if is_safe_deliverable "$DELIVERABLES_ROOT/ancestor-mount/old.zip"; then fail 'ancestor deliverables mount accepted'; fi
 ok 'mount above deliverables whitelist root protected'
 unset -f findmnt
+# Low disk cannot revive build/dependency cache deletion through the basic stage.
+dnf() { fail 'DNF cache deleted'; }
+yum() { fail 'YUM cache deleted'; }
+journalctl() { fail 'journal altered by reusable-cache stage'; }
+clean_basic_caches >/dev/null
+[[ -f "$cache/content-v2/hash/old-cache" ]] || fail 'basic cache stage deleted reusable data'
+ok 'basic cache stage is non-destructive even when explicitly invoked'
 # Exercise integration with inert stand-ins, never production Flow/cache cleanup.
 print_status() { :; }
 run_flow() { return 1; }

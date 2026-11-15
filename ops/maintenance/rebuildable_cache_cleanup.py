@@ -1,8 +1,8 @@
 #!/usr/bin/python3
-"""Bounded inactive caches and explicitly completed task dependencies/final packages.
-No inferred completion or recursive source/database/release scanning.
+"""Bounded historical build output retention; reusable caches are preserved.
+Unregistered historical outputs are disposable; reusable caches and evidence stay intact.
 """
-import argparse, fcntl, hashlib, importlib.util, json, os, re, stat, sys, time, uuid
+import argparse, fcntl, hashlib, importlib.util, json, os, re, stat, sys, time, uuid, tarfile
 from pathlib import Path
 
 def module(name, file):
@@ -23,6 +23,8 @@ class Paths:
   # Packages/build state follow the host layout; old shared worktrees are legacy-only.
   self.task_bases=[Path(x) for x in ['/tmp','/var/tmp','/home/isp/pkgs/cyf','/home/isp/state/cyf-local-build/tasks','/home/isp/state/cyf-local-build/artifacts','/home/isp/state/cyf-build','/home/isp/wsps/cyf/.worktrees','/home/isp/wsps/worktrees']]
   self.nested_task_bases=[Path('/home/isp/state/cyf-local-build/tasks'),Path('/home/isp/state/cyf-local-build/artifacts')]
+  self.discovery_bases=[Path('/home/isp/state/cyf-build'),Path('/home/isp/state/cyf-local-build/tasks'),Path('/home/isp/state/cyf-local-build/artifacts')]
+  self.build_locks=[(Path('/tmp/cyf-gradle.lock'),0o644),(Path('/tmp/cyf-orchestrator.lock'),0o644)]
   self.runtime_backup_base=Path('/home/isp/baks/cyf-agent-runtime-v1')
   self.artifact_records={
    'api':Path('/home/isp/state/cyf-api-flow/record.json'),
@@ -281,6 +283,163 @@ def collect_artifacts(paths,u,now,task_hours):
  return rows,skips
 
 
+
+def source_tokens(value):
+ tokens=set()
+ def visit(v):
+  if isinstance(v,str) and (re.fullmatch('[0-9a-f]{40}|[0-9a-f]{64}',v) or v.startswith('/')):tokens.add(v)
+  elif isinstance(v,dict):
+   for x in v.values():visit(x)
+  elif isinstance(v,list):
+   for x in v:visit(x)
+ visit(value)
+ return tokens
+
+def inspect_output(paths,p,expected,preserve=False):
+ # Stream known producer TARs, never extract archive paths or follow archive links.
+ # Only package-level documents/reports are retained, never payload/source trees.
+ docs={};tokens=set();payload=None;total=0;seen=set()
+ with tarfile.open(str(p),'r|*') as archive:
+  for member in archive:
+   name=member.name
+   while name.startswith('./'):name=name[2:]
+   if name.startswith('/') or '..' in name.split('/'):raise Unsafe('unsafe archive member')
+   if not member.isfile():continue
+   keep=(('/' not in name and name.endswith(('.json','.xml','.log','.md')))
+         or name.startswith(('test-results/','evidence/','reports/')))
+   if name=='application.jar':
+    if payload is not None:raise Unsafe('duplicate application JAR')
+    h=hashlib.sha256()
+    with archive.extractfile(member) as f:
+     for b in iter(lambda:f.read(1024*1024),b''):h.update(b)
+    payload=h.hexdigest()
+   elif keep:
+    if name in seen:raise Unsafe('duplicate evidence member')
+    seen.add(name);total+=member.size
+    if member.size>16*1024**2 or total>64*1024**2:raise Unsafe('oversized package evidence; preserve original')
+    with archive.extractfile(member) as f:data=f.read()
+    docs[name]=data
+    if name.endswith('.json'):
+     try:tokens.update(source_tokens(json.loads(data.decode('utf-8'))))
+     except (ValueError,UnicodeError):pass
+ if signature(regular(p))!=tuple(expected):raise Unsafe('archive changed during inspection')
+ hashes={n:hashlib.sha256(b).hexdigest() for n,b in docs.items()}
+ if preserve:
+  # Content-addressed evidence outside the disposable task; do not trust package filenames.
+  if not paths.state.exists():paths.state.mkdir(mode=0o700)
+  physical(paths.state)
+  base=paths.state/'retained-artifact-evidence'
+  if not base.exists():base.mkdir(mode=0o700)
+  physical(base)
+  dest=base/digest(p,expected)
+  if not dest.exists():dest.mkdir(mode=0o700)
+  physical(dest)
+  for name,data in docs.items():
+   target=dest/(hashlib.sha256(name.encode()).hexdigest()+'.document')
+   if os.path.lexists(str(target)):
+    if digest(target,signature(regular(target)))!=hashes[name]:raise Unsafe('retained evidence changed')
+   else:
+    fd=os.open(str(target),os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600)
+    with os.fdopen(fd,'wb') as f:f.write(data);f.flush();os.fsync(f.fileno())
+  atomic_json(dest/'index.json',{'package':str(p),'sha256':dest.name,'documents':hashes,'payload_sha256':payload})
+  fd=os.open(str(dest),os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW)
+  try:os.fsync(fd)
+  finally:os.close(fd)
+ return tokens,payload,hashes
+
+def output_stages(paths):
+ # Only explicit build bases, at most batch/attempt/component; no worktrees/tmp/apps.
+ stages=[];count=0
+ for base in paths.discovery_bases:
+  if not base.exists():continue
+  physical(base)
+  if base.resolve()!=base or mounted(paths,base):raise Unsafe('unsafe discovery base')
+  for d,ds,fs in os.walk(str(base),followlinks=False):
+   root=Path(d);depth=len(root.relative_to(base).parts)
+   ds[:]=[n for n in ds if depth<2 and not n.startswith('.') and n not in
+          ('source','sources','src','build','dist','node_modules','package','packages','artifacts','evidence','reports','test-results','tests','fixtures','backups','backup','recovery','state','cache','caches')
+          and not (root/n).is_symlink() and not os.path.lexists(str(root/n/'.keep')) and not mounted(paths,root/n)]
+   if not depth:continue
+   try:
+    task_root(paths,root)
+    if not any((root/n).is_file() for n in ('result.json','manifest.json','release.json','build-evidence.json')):continue
+    for parent in root.parents:
+     if os.path.lexists(str(parent/'.keep')):raise Unsafe('ancestor keep marker')
+    items=[]
+    for directory in (root,root/'package',root/'packages',root/'artifacts'):
+     if not directory.is_dir() or directory.is_symlink():continue
+     for f in directory.iterdir():
+      count+=1
+      if count>MAX_ENTRIES:raise Unsafe('bounded discovery limit exceeded')
+      match=re.fullmatch(r'(api|web|runtime)(?:-[0-9][A-Za-z0-9_.-]*)?\.(?:tar|tgz|tar\.gz)',f.name)
+      if match and f.is_file():items.append((f,match.group(1),'package'))
+    build=root/'build/jia'
+    if build.is_dir() and not build.is_symlink() and not (root/'build').is_symlink():
+     for bd,bds,bfs in os.walk(str(build),followlinks=False):
+      bp=Path(bd)
+      bds[:]=[n for n in bds if not (bp/n).is_symlink() and not os.path.lexists(str(bp/n/'.keep')) and n not in ('reports','test-results','src','source','node_modules','cache','caches') and not mounted(paths,bp/n)]
+      for name in bfs:
+       count+=1
+       if count>MAX_ENTRIES:raise Unsafe('bounded discovery limit exceeded')
+       f=bp/name
+       if name.endswith(('.jar','.class')) and any(n in ('classes','libs') for n in f.relative_to(build).parts):items.append((f,'api','intermediate'))
+    if items:stages.append((root,items))
+   except (OSError,Unsafe):
+    # A broken candidate is protected. Never silently accept a truncated scan.
+    if count>MAX_ENTRIES:raise
+    continue
+ return stages
+
+def stage_identity(root):
+ tokens=set();identities={}
+ for name in ('result.json','manifest.json','release.json','build-evidence.json'):
+  p=root/name
+  if not os.path.lexists(str(p)):continue
+  data,sig=artifact_document(p);tokens.update(source_tokens(data));identities[str(p)]=sig
+ return tokens,identities
+
+def collect_discovered(paths,u,now,task_hours):
+ rows=[];skips=[];groups={};registered=set()
+ for e in read_registry(paths):
+  for item in e.get('artifacts',{}).get('files',[]):registered.add(str(Path(e['task_root'])/item['relative_path']))
+ for task,items in output_stages(paths):
+  for component in set(c for p,c,k in items):
+   subset=[(p,k) for p,c,k in items if c==component]
+   try:
+    stamps=[max(regular(p).st_mtime,regular(p).st_ctime) for p,k in subset]
+    groups.setdefault(component,[]).append((max(stamps),task,subset))
+   except (OSError,Unsafe) as exc:skips.append({'path':str(task),'reason':str(exc)})
+ for component,batches in groups.items():
+  try:tokens,record_sig=artifact_record(paths,component)
+  except (OSError,Unsafe,ValueError,TypeError) as exc:
+   skips.append({'component':component,'reason':str(exc)});continue
+  batches.sort(key=lambda b:(b[0],str(b[1])),reverse=True)
+  for stamp,task,items in batches[2:]:
+   if now-stamp<task_hours*3600:continue
+   try:
+    if used(u,task):raise Unsafe('artifact task active')
+    identity,identity_sigs=stage_identity(task)
+    if identity & tokens or str(task) in tokens or any(t.startswith(str(task)+'/') for t in tokens):raise Unsafe('active/current/rollback-bound artifact')
+    pending=[]
+    for p,kind in items:
+     if str(p) in registered:continue
+     st=guard(paths,p,task);sig=signature(st)
+     if used(u,p):raise Unsafe('artifact task active')
+     sha=digest(p,sig);doc_hashes={};payload=None;package_tokens=set()
+     if kind=='package':
+      package_tokens,payload,doc_hashes=inspect_output(paths,p,sig)
+      if component=='api' and payload is None:raise Unsafe('unrecognized API archive; no application JAR')
+     elif not any(re.fullmatch('[0-9a-f]{40}',t) for t in identity):raise Unsafe('intermediate source identity unavailable')
+     meta={'commit':'','tree':'','payload_sha256':payload};item={'sha256':sha}
+     if package_tokens & tokens or artifact_pinned(meta,item,p,task,tokens):raise Unsafe('active/current/rollback-bound artifact')
+     pending.append({'artifact':True,'discovered':True,'kind':kind,'path':str(p),'root':str(task),'task':str(task),'signature':sig,'sha256':sha,'allocated':st.st_blocks*512,'cutoff':now-task_hours*3600,'completed_at':None,'root_identity':(task.stat().st_dev,task.stat().st_ino),'task_identity':(task.stat().st_dev,task.stat().st_ino),'component':component,'record_signature':record_sig,'artifact_metadata':meta,'artifact_item':item,'identity_signatures':identity_sigs,'evidence_hashes':doc_hashes})
+    rows.extend(pending)
+   except (OSError,Unsafe,ValueError,TypeError,tarfile.TarError) as exc:skips.append({'path':str(task),'reason':str(exc)})
+ return rows,skips
+
+
+# Legacy read-only candidate helpers remain for fixture/backward compatibility.
+# Production run() never consumes these cache rows; unlink_row() also rejects them.
 def scopes(paths,now,cache_days,task_hours):
  out=[];skips=[]
  if paths.cache.exists():
@@ -325,11 +484,15 @@ def collect(paths,u,now,cache_days=2,task_hours=24,include_artifacts=True):
  return rows,skips
 
 def unlink_row(paths,r,u):
+ if not r.get('artifact'):raise Unsafe('reusable cache/dependency deletion is retired')
  p=Path(r['path']);root=Path(r['root']);task=Path(r['task'])
  if used(u,task) or used(u,p):raise Unsafe('active before unlink')
  if (root.stat().st_dev,root.stat().st_ino)!=tuple(r['root_identity']) or (task.stat().st_dev,task.stat().st_ino)!=tuple(r['task_identity']):raise Unsafe('scope identity changed')
  if r.get('artifact'):
-  if signature(regular(paths.registry))!=tuple(r['registry_signature']):raise Unsafe('completion registry changed')
+  if r.get('discovered'):
+   for name,sig in r['identity_signatures'].items():
+    if signature(regular(Path(name)))!=tuple(sig):raise Unsafe('build source identity changed')
+  elif signature(regular(paths.registry))!=tuple(r['registry_signature']):raise Unsafe('completion registry changed')
   tokens,record_sig=artifact_record(paths,r['component'])
   if record_sig!=tuple(r['record_signature']) or artifact_pinned(r['artifact_metadata'],r['artifact_item'],p,task,tokens):raise Unsafe('current release changed/pinned artifact')
  elif r['completed_at'] and any((root.parent/n).lstat().st_ctime>r['completed_at'] for n in ('package-lock.json','package.json')):raise Unsafe('project changed after completion')
@@ -345,7 +508,12 @@ def unlink_row(paths,r,u):
   if signature(os.stat(p.name,dir_fd=fd,follow_symlinks=False))!=tuple(r['signature']):raise Unsafe('anchored file changed')
   if digest(p,r['signature'],fd)!=r['sha256']:raise Unsafe('cache content changed')
   if signature(os.stat(p.name,dir_fd=fd,follow_symlinks=False))!=tuple(r['signature']):raise Unsafe('file changed after content verification')
-  guard(paths,p,root);os.unlink(p.name,dir_fd=fd)
+  if r.get('discovered') and r['kind']=='package':
+   tokens,payload,docs=inspect_output(paths,p,r['signature'],preserve=True)
+   if docs!=r['evidence_hashes'] or payload!=r['artifact_metadata']['payload_sha256']:raise Unsafe('package evidence changed')
+  guard(paths,p,root)
+  if signature(os.stat(p.name,dir_fd=fd,follow_symlinks=False))!=tuple(r['signature']):raise Unsafe('file changed while retaining evidence')
+  os.unlink(p.name,dir_fd=fd)
  finally:os.close(fd)
 
 def free_bytes():
@@ -354,31 +522,38 @@ def free_bytes():
 def run(paths,mode,cache_days=2,task_hours=24,target_gib=8,inherited=None,min_free_gib=5,artifacts_only=False):
  before=regular(paths.lock)
  fd=os.dup(inherited) if inherited is not None else os.open(str(paths.lock),os.O_RDWR|os.O_NOFOLLOW)
- auditfd=None;artifact_fds=[]
+ auditfd=None;artifact_fds=[];build_fds=[]
  try:
   if signature(os.fstat(fd))!=signature(before):raise Unsafe('lock changed')
   fcntl.flock(fd,fcntl.LOCK_EX|fcntl.LOCK_NB)
   if signature(paths.lock.lstat())!=signature(before):raise Unsafe('lock replaced')
   include_artifacts=True;artifact_lock_error=None
-  components={e['artifacts'].get('component') for e in read_registry(paths) if isinstance(e.get('artifacts'),dict)}
+  components=set(paths.artifact_records)
   try:
-   for component in sorted(c for c in components if c in paths.artifact_locks):
-    for lock,lock_mode in paths.artifact_locks[component]:
+   lock_groups=[paths.artifact_locks[c] for c in sorted(components) if c in paths.artifact_locks]+[paths.build_locks]
+   for locks in lock_groups:
+    for lock,lock_mode in locks:
      st=lock.lstat()
      if not stat.S_ISREG(st.st_mode) or st.st_uid!=0 or st.st_nlink!=1 or stat.S_IMODE(st.st_mode)!=lock_mode:raise Unsafe('unsafe artifact release lock')
      held=os.open(lock,os.O_RDWR|os.O_NOFOLLOW|os.O_NONBLOCK);artifact_fds.append(held)
      if signature(os.fstat(held))!=signature(st):raise Unsafe('artifact release lock changed')
      fcntl.flock(held,fcntl.LOCK_EX|fcntl.LOCK_NB)
      if signature(lock.lstat())!=signature(st):raise Unsafe('artifact release lock replaced')
+     if (lock,lock_mode) in paths.build_locks:build_fds.append((held,lock,signature(st)))
   except (OSError,Unsafe) as exc:
    include_artifacts=False;artifact_lock_error=str(exc)
   u=proc.snapshot(paths.proc)
-  if artifacts_only:
-   rows,skips=collect_artifacts(paths,u,time.time(),task_hours) if include_artifacts else ([],[])
-  else:rows,skips=collect(paths,u,time.time(),cache_days,task_hours,include_artifacts)
+  # Reusable caches/dependency sets are never consumed, even during low disk.
+  rows,skips=collect_artifacts(paths,u,time.time(),task_hours) if include_artifacts else ([],[])
+  if include_artifacts:
+   discovered,discovery_skips=collect_discovered(paths,u,time.time(),task_hours)
+   rows.extend(discovered);skips.extend(discovery_skips)
   if artifact_lock_error:skips.append({'path':'registered local artifacts','reason':artifact_lock_error})
-  result={'stage':'rebuildable_caches','mode':mode,'eligible_files':len(rows),'estimated_reclaim_bytes':sum(r['allocated'] for r in rows),'skipped_count':len(skips),'artifact_eligible_files':sum(bool(r.get('artifact')) for r in rows),'scope_skips':[r for r in skips if 'component' in r or r.get('path')=='registered local artifacts' or r.get('reason') in ('scope active','task identity changed','dependencies changed after completion','artifact task active','active/current/rollback-bound artifact','registered artifact changed')],'removed_files':0,'reclaimed_allocated_bytes':0}
-  if mode=='plan' or (not artifacts_only and free_bytes()>=min_free_gib*1024**3) or not rows:return result
+  result={'stage':'rebuildable_caches','mode':mode,'eligible_files':len(rows),'estimated_reclaim_bytes':sum(r['allocated'] for r in rows),'skipped_count':len(skips),'caches_preserved':True,'discovered_eligible_files':sum(bool(r.get('discovered')) for r in rows),'artifact_eligible_files':sum(bool(r.get('artifact')) for r in rows),'scope_skips':skips[:60],'removed_files':0,'reclaimed_allocated_bytes':0}
+  if mode=='plan':
+   result['candidates']=[{'path':r['path'],'component':r['component'],'kind':r.get('kind','registered-package'),'allocated_bytes':r['allocated']} for r in rows]
+   return result
+  if not rows:return result
   if not paths.audit.parent.exists():paths.audit.parent.mkdir(mode=0o700)
   physical(paths.audit.parent);logger.LOG=paths.audit;auditfd=logger.rotate_log(logger.open_log(paths.audit))
   def audit(v):
@@ -389,16 +564,28 @@ def run(paths,mode,cache_days=2,task_hours=24,target_gib=8,inherited=None,min_fr
     view=view[n:]
    os.fsync(auditfd)
   for i in range(0,len(rows),50):
-   if not artifacts_only and free_bytes()>=target_gib*1024**3:break
    batch=rows[i:i+50];auditfd=logger.rotate_log(auditfd);audit({'intent':batch})
    for r in batch:
-    if not artifacts_only and free_bytes()>=target_gib*1024**3:break
     # Fresh FD/cwd/mmap snapshot for every mutation. Incomplete scans abort, not skip silently.
     fresh=proc.snapshot(paths.proc)
     try:unlink_row(paths,r,fresh)
     except (OSError,Unsafe):result['skipped_count']+=1;continue
     result['removed_files']+=1;result['reclaimed_allocated_bytes']+=r['allocated']
     audit({'removed':r['path']})
+   # Existing 50-file audit batches are also natural handoff points. Never
+   # monopolize build locks for thousands of per-file process/hash checks.
+   if i+50<len(rows) and build_fds:
+    for held,lock,original in build_fds:fcntl.flock(held,fcntl.LOCK_UN)
+    time.sleep(0)  # yield to already queued builders, without a new wait budget
+    try:
+     for held,lock,original in build_fds:
+      if signature(lock.lstat())!=original or signature(os.fstat(held))!=original:raise Unsafe('build lock changed at handoff')
+      fcntl.flock(held,fcntl.LOCK_EX|fcntl.LOCK_NB)
+    except (OSError,Unsafe) as exc:
+     result['deferred_files']=len(rows)-(i+len(batch))
+     result['scope_skips'].append({'path':'build locks','reason':'build took priority; remaining outputs deferred: '+str(exc)})
+     return result
+
   return result
  finally:
   if auditfd is not None:os.close(auditfd)
@@ -406,7 +593,7 @@ def run(paths,mode,cache_days=2,task_hours=24,target_gib=8,inherited=None,min_fr
   os.close(fd)
 
 def main():
- p=argparse.ArgumentParser(description=__doc__);p.add_argument('mode',choices=['plan','clean','mark-complete','mark-active']);p.add_argument('--host-lock-fd',type=int);p.add_argument('--cache-keep-days',type=int,default=2);p.add_argument('--task-keep-hours',type=int,default=24);p.add_argument('--target-gib',type=int,default=8);p.add_argument('--min-free-gib',type=int,default=5);p.add_argument('--task-root',type=Path);p.add_argument('--node-modules',action='append',default=[]);p.add_argument('--artifact',action='append',default=[]);p.add_argument('--component',choices=['api','web','runtime']);p.add_argument('--source-commit');p.add_argument('--source-tree');p.add_argument('--payload-sha256',help='API application JAR digest declared by the task Owner, for rollback pin protection');p.add_argument('--artifacts-only',action='store_true',help='Age-based registered package retention, independent of free space; no cache scan');p.add_argument('--retirement-reason',help='Explicit Owner retirement of exact listed artifacts; waives only age/newest-two, never pins or safety checks');a=p.parse_args()
+ p=argparse.ArgumentParser(description=__doc__);p.add_argument('mode',choices=['plan','clean','mark-complete','mark-active']);p.add_argument('--host-lock-fd',type=int);p.add_argument('--cache-keep-days',type=int,default=2);p.add_argument('--task-keep-hours',type=int,default=24);p.add_argument('--target-gib',type=int,default=8);p.add_argument('--min-free-gib',type=int,default=5);p.add_argument('--task-root',type=Path);p.add_argument('--node-modules',action='append',default=[]);p.add_argument('--artifact',action='append',default=[]);p.add_argument('--component',choices=['api','web','runtime']);p.add_argument('--source-commit');p.add_argument('--source-tree');p.add_argument('--payload-sha256',help='API application JAR digest declared by the task Owner, for rollback pin protection');p.add_argument('--artifacts-only',action='store_true',help='Historical output retention (registered and discovered), independent of free space; caches always preserved');p.add_argument('--retirement-reason',help='Explicit Owner retirement of exact listed artifacts; waives only age/newest-two, never pins or safety checks');a=p.parse_args()
  if any(v<0 or v>999999999 for v in (a.cache_keep_days,a.task_keep_hours,a.target_gib,a.min_free_gib)) or a.host_lock_fd is not None and a.host_lock_fd<3:p.error('invalid bounded settings')
  if a.target_gib<a.min_free_gib:p.error('target must be at least trigger')
  paths=Paths()
@@ -429,5 +616,5 @@ def main():
    if a.mode=='clean' and os.geteuid()!=0:p.error('clean requires root')
    result=run(paths,a.mode,a.cache_keep_days,a.task_keep_hours,a.target_gib,a.host_lock_fd,a.min_free_gib,a.artifacts_only)
   print(json.dumps(result));return 0
- except (OSError,Unsafe,ValueError,TypeError) as e:print('WARNING: rebuildable cleanup stopped safely: '+str(e),file=sys.stderr);return 1
+ except (OSError,Unsafe,ValueError,TypeError,tarfile.TarError) as e:print('WARNING: rebuildable cleanup stopped safely: '+str(e),file=sys.stderr);return 1
 if __name__=='__main__':sys.exit(main())
