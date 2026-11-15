@@ -555,10 +555,11 @@ run_releases() {
 
 run_rebuildables() {
   local mode="$1"
+  shift
   [[ -r "$REBUILDABLE_CLEANUP" ]] || { echo 'Missing rebuildable cache helper' >&2; return 1; }
   local args=("$mode" --cache-keep-days "$GRADLE_CACHE_KEEP_DAYS" --task-keep-hours "$COMPLETED_TASK_KEEP_HOURS" --target-gib "$RECOVERY_FREE_GB" --min-free-gib "$MIN_FREE_GB")
   [[ "$mode" == clean ]] && args+=(--host-lock-fd 9)
-  /usr/bin/python3 -I -B "$REBUILDABLE_CLEANUP" "${args[@]}"
+  /usr/bin/python3 -I -B "$REBUILDABLE_CLEANUP" "${args[@]}" "$@"
 }
 
 run_runtime_backups() {
@@ -615,6 +616,8 @@ main() {
       if ! run_flow clean; then stage_failed=1; echo 'WARNING: Flow retention failed/stopped safely; inspect cleanup log.' >&2; fi
       echo '== Runtime recovery-payload retention =='
       if ! run_runtime_backups clean; then stage_failed=1; echo 'WARNING: Runtime backup cleanup stopped safely.' >&2; fi
+      echo '== Scheduled registered package retention (independent of free space) =='
+      if ! run_rebuildables clean --artifacts-only; then stage_failed=1; echo 'WARNING: scheduled package retention stopped safely.' >&2; fi
       if ! needs_cleanup; then
         echo 'Free-space trigger is not met; no generic temporary cleanup is needed.'
         (( stage_failed == 0 )) || return 4

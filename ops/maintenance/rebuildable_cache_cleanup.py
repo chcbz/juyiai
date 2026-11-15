@@ -21,7 +21,8 @@ class Paths:
   self.mountinfo=Path('/proc/self/mountinfo')
   self.proc=Path('/proc')
   # Packages/build state follow the host layout; old shared worktrees are legacy-only.
-  self.task_bases=[Path(x) for x in ['/tmp','/var/tmp','/home/isp/pkgs/cyf','/home/isp/state/cyf-local-build/tasks','/home/isp/wsps/cyf/.worktrees','/home/isp/wsps/worktrees']]
+  self.task_bases=[Path(x) for x in ['/tmp','/var/tmp','/home/isp/pkgs/cyf','/home/isp/state/cyf-local-build/tasks','/home/isp/state/cyf-local-build/artifacts','/home/isp/state/cyf-build','/home/isp/wsps/cyf/.worktrees','/home/isp/wsps/worktrees']]
+  self.nested_task_bases=[Path('/home/isp/state/cyf-local-build/tasks'),Path('/home/isp/state/cyf-local-build/artifacts')]
   self.runtime_backup_base=Path('/home/isp/baks/cyf-agent-runtime-v1')
   self.artifact_records={
    'api':Path('/home/isp/state/cyf-api-flow/record.json'),
@@ -111,13 +112,15 @@ def used(u,p):
 def task_root(paths,p):
  direct=p.parent in paths.task_bases
  # The existing combined controller emits <batch>/api/package and /web/package.
- # Admit only these exact component children, not arbitrary nested task trees.
+ # Legacy combined component roots remain supported; local build bases also
+ # admit one explicitly registered attempt level, never recursive discovery.
  combined=(p.name in ('api','web','runtime') and p.parent.parent in paths.task_bases
            and re.fullmatch(r'cyf-[A-Za-z0-9_.-]+',p.parent.name))
- if not p.is_absolute() or '..' in p.parts or not (direct or combined):raise Unsafe('task outside explicit bases')
+ nested=(p.parent.parent in paths.nested_task_bases and all(re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.-]*',n) for n in (p.parent.name,p.name)))
+ if not p.is_absolute() or '..' in p.parts or not (direct or combined or nested):raise Unsafe('task outside explicit bases')
  if direct and p.parent in paths.task_bases[:2] and not re.fullmatch(r'cyf-[A-Za-z0-9_.-]+',p.name):raise Unsafe('unrecognized temporary task')
  if str(p.resolve())!=str(p):raise Unsafe('symlink task path')
- for root in ([p.parent,p] if combined else [p]):
+ for root in ([p.parent,p] if combined or nested else [p]):
   physical(root)
   if mounted(paths,root):raise Unsafe('mounted task')
   if os.path.lexists(str(root/'.keep')):raise Unsafe('task keep marker')
@@ -144,7 +147,8 @@ def artifact_path(paths,task,rel):
  p=task/rel;guard(paths,p,task)
  return p
 
-def mark_complete(paths,task,rels,artifacts=(),component=None,commit=None,tree=None,payload_sha256=None):
+def mark_complete(paths,task,rels,artifacts=(),component=None,commit=None,tree=None,payload_sha256=None,retirement_reason=None):
+ if retirement_reason is not None and (not isinstance(retirement_reason,str) or not retirement_reason.strip() or len(retirement_reason)>1024 or rels or not artifacts):raise Unsafe('retirement requires explicit artifacts only and an Owner reason')
  task=task_root(paths,task);u=proc.snapshot(paths.proc)
  if used(u,task):raise Unsafe('task still active')
  if not isinstance(rels,(list,tuple)) or len(rels)>8 or not rels and not artifacts:raise Unsafe('declare dependencies or final artifacts')
@@ -172,6 +176,7 @@ def mark_complete(paths,task,rels,artifacts=(),component=None,commit=None,tree=N
  entry={'task_root':str(task),'device':st.st_dev,'inode':st.st_ino,'completed_at':time.time(),'dependencies':[str(r.relative_to(task)) for r in roots]}
  if declared:
   entry['artifacts']={'component':component,'commit':commit,'tree':tree,'payload_sha256':payload_sha256,'files':declared}
+ if retirement_reason is not None:entry['retirement_reason']=retirement_reason
  entries.append(entry)
  if not paths.state.exists():paths.state.mkdir(mode=0o700)
  physical(paths.state);atomic_json(paths.registry,{'version':1,'tasks':entries})
@@ -208,7 +213,8 @@ def artifact_record(paths,component):
       or not isinstance(identity.get('buildId'),str) or not identity['buildId']):raise Unsafe('unknown LOCAL source; artifacts protected')
   commit=identity['commit']
  else:commit=data.get(key,'') if isinstance(data,dict) else ''
- if not isinstance(data,dict) or data.get('status')!=status or not re.fullmatch('[0-9a-f]{40}',str(commit)):raise Unsafe('unknown/unconfirmed current release; artifacts protected')
+ pending=(component=='runtime' and isinstance(data,dict) and data.get('status')=='installed-channel-verification-pending' and data.get('rollbackPolicy')=='forward-only' and data.get('sourceKind')=='LOCAL' and re.fullmatch('[0-9a-f]{40}',str(data.get('sourceTree',''))))
+ if not isinstance(data,dict) or (data.get('status')!=status and not pending) or not re.fullmatch('[0-9a-f]{40}',str(commit)):raise Unsafe('unknown/unconfirmed current release; artifacts protected')
  if component in ('api','web') and data.get('phase')!=status:raise Unsafe('current release is incomplete')
  if component=='api' and (data.get('recovery')!='not_required' or not re.fullmatch('[0-9a-f]{64}',str(data.get('previous_sha256','')))):raise Unsafe('unknown API recovery pin')
  tokens=set()
@@ -222,8 +228,9 @@ def artifact_record(paths,component):
  if component=='runtime':
   pin=Path(data.get('backup',''))
   if pin.parent!=paths.runtime_backup_base or not re.fullmatch(r'20[0-9]{6}-[A-Za-z0-9_.-]+',pin.name):raise Unsafe('unknown Runtime rollback pin')
-  old,old_sig=artifact_document(pin/'current.json')
-  if not isinstance(old,dict) or old.get('status')!='verified-active' or not re.fullmatch('[0-9a-f]{40}',str(old.get('sourceCommit',''))):raise Unsafe('unknown Runtime rollback source')
+  old,old_sig=artifact_document(pin/('release-records/current.json' if pending else 'current.json'))
+  old_pending=(pending and isinstance(old,dict) and old.get('status')=='installed-channel-verification-pending' and old.get('rollbackPolicy')=='forward-only' and old.get('sourceKind')=='LOCAL' and re.fullmatch('[0-9a-f]{40}',str(old.get('sourceTree',''))))
+  if not isinstance(old,dict) or (old.get('status')!='verified-active' and not old_pending) or not re.fullmatch('[0-9a-f]{40}',str(old.get('sourceCommit',''))):raise Unsafe('unknown Runtime rollback source')
   strings(old);record_sig=record_sig+(str(pin),)+old_sig
  return tokens,record_sig
 
@@ -244,11 +251,16 @@ def collect_artifacts(paths,u,now,task_hours):
   try:tokens,record_sig=artifact_record(paths,component)
   except (OSError,Unsafe,ValueError,TypeError) as exc:
    skips.append({'component':component,'reason':str(exc)});continue
-  for entry in batches[2:]:
+  ordinary=[e for e in batches if 'retirement_reason' not in e]
+  for entry in batches:
+   retired='retirement_reason' in entry
+   if retired and (not isinstance(entry['retirement_reason'],str) or not entry['retirement_reason'].strip() or len(entry['retirement_reason'])>1024):
+    skips.append({'component':component,'reason':'invalid retirement declaration'});continue
+   if not retired and entry in ordinary[:2]:continue
    try:
     task=task_root(paths,Path(entry['task_root']));st=task.lstat();meta=entry['artifacts']
     if (st.st_dev,st.st_ino)!=(entry['device'],entry['inode']):raise Unsafe('task identity changed')
-    if now-entry['completed_at']<task_hours*3600:continue
+    if not retired and now-entry['completed_at']<task_hours*3600:continue
     if used(u,task):raise Unsafe('artifact task active')
     if (not re.fullmatch('[0-9a-f]{40}',str(meta.get('commit','')))
         or not re.fullmatch('[0-9a-f]{40}',str(meta.get('tree','')))
@@ -339,7 +351,7 @@ def unlink_row(paths,r,u):
 def free_bytes():
  s=os.statvfs('/');return s.f_bavail*s.f_frsize
 
-def run(paths,mode,cache_days=2,task_hours=24,target_gib=8,inherited=None,min_free_gib=5):
+def run(paths,mode,cache_days=2,task_hours=24,target_gib=8,inherited=None,min_free_gib=5,artifacts_only=False):
  before=regular(paths.lock)
  fd=os.dup(inherited) if inherited is not None else os.open(str(paths.lock),os.O_RDWR|os.O_NOFOLLOW)
  auditfd=None;artifact_fds=[]
@@ -360,10 +372,13 @@ def run(paths,mode,cache_days=2,task_hours=24,target_gib=8,inherited=None,min_fr
      if signature(lock.lstat())!=signature(st):raise Unsafe('artifact release lock replaced')
   except (OSError,Unsafe) as exc:
    include_artifacts=False;artifact_lock_error=str(exc)
-  u=proc.snapshot(paths.proc);rows,skips=collect(paths,u,time.time(),cache_days,task_hours,include_artifacts)
+  u=proc.snapshot(paths.proc)
+  if artifacts_only:
+   rows,skips=collect_artifacts(paths,u,time.time(),task_hours) if include_artifacts else ([],[])
+  else:rows,skips=collect(paths,u,time.time(),cache_days,task_hours,include_artifacts)
   if artifact_lock_error:skips.append({'path':'registered local artifacts','reason':artifact_lock_error})
   result={'stage':'rebuildable_caches','mode':mode,'eligible_files':len(rows),'estimated_reclaim_bytes':sum(r['allocated'] for r in rows),'skipped_count':len(skips),'artifact_eligible_files':sum(bool(r.get('artifact')) for r in rows),'scope_skips':[r for r in skips if 'component' in r or r.get('path')=='registered local artifacts' or r.get('reason') in ('scope active','task identity changed','dependencies changed after completion','artifact task active','active/current/rollback-bound artifact','registered artifact changed')],'removed_files':0,'reclaimed_allocated_bytes':0}
-  if mode=='plan' or free_bytes()>=min_free_gib*1024**3 or not rows:return result
+  if mode=='plan' or (not artifacts_only and free_bytes()>=min_free_gib*1024**3) or not rows:return result
   if not paths.audit.parent.exists():paths.audit.parent.mkdir(mode=0o700)
   physical(paths.audit.parent);logger.LOG=paths.audit;auditfd=logger.rotate_log(logger.open_log(paths.audit))
   def audit(v):
@@ -374,10 +389,10 @@ def run(paths,mode,cache_days=2,task_hours=24,target_gib=8,inherited=None,min_fr
     view=view[n:]
    os.fsync(auditfd)
   for i in range(0,len(rows),50):
-   if free_bytes()>=target_gib*1024**3:break
+   if not artifacts_only and free_bytes()>=target_gib*1024**3:break
    batch=rows[i:i+50];auditfd=logger.rotate_log(auditfd);audit({'intent':batch})
    for r in batch:
-    if free_bytes()>=target_gib*1024**3:break
+    if not artifacts_only and free_bytes()>=target_gib*1024**3:break
     # Fresh FD/cwd/mmap snapshot for every mutation. Incomplete scans abort, not skip silently.
     fresh=proc.snapshot(paths.proc)
     try:unlink_row(paths,r,fresh)
@@ -391,7 +406,7 @@ def run(paths,mode,cache_days=2,task_hours=24,target_gib=8,inherited=None,min_fr
   os.close(fd)
 
 def main():
- p=argparse.ArgumentParser(description=__doc__);p.add_argument('mode',choices=['plan','clean','mark-complete','mark-active']);p.add_argument('--host-lock-fd',type=int);p.add_argument('--cache-keep-days',type=int,default=2);p.add_argument('--task-keep-hours',type=int,default=24);p.add_argument('--target-gib',type=int,default=8);p.add_argument('--min-free-gib',type=int,default=5);p.add_argument('--task-root',type=Path);p.add_argument('--node-modules',action='append',default=[]);p.add_argument('--artifact',action='append',default=[]);p.add_argument('--component',choices=['api','web','runtime']);p.add_argument('--source-commit');p.add_argument('--source-tree');p.add_argument('--payload-sha256',help='API application JAR digest declared by the task Owner, for rollback pin protection');a=p.parse_args()
+ p=argparse.ArgumentParser(description=__doc__);p.add_argument('mode',choices=['plan','clean','mark-complete','mark-active']);p.add_argument('--host-lock-fd',type=int);p.add_argument('--cache-keep-days',type=int,default=2);p.add_argument('--task-keep-hours',type=int,default=24);p.add_argument('--target-gib',type=int,default=8);p.add_argument('--min-free-gib',type=int,default=5);p.add_argument('--task-root',type=Path);p.add_argument('--node-modules',action='append',default=[]);p.add_argument('--artifact',action='append',default=[]);p.add_argument('--component',choices=['api','web','runtime']);p.add_argument('--source-commit');p.add_argument('--source-tree');p.add_argument('--payload-sha256',help='API application JAR digest declared by the task Owner, for rollback pin protection');p.add_argument('--artifacts-only',action='store_true',help='Age-based registered package retention, independent of free space; no cache scan');p.add_argument('--retirement-reason',help='Explicit Owner retirement of exact listed artifacts; waives only age/newest-two, never pins or safety checks');a=p.parse_args()
  if any(v<0 or v>999999999 for v in (a.cache_keep_days,a.task_keep_hours,a.target_gib,a.min_free_gib)) or a.host_lock_fd is not None and a.host_lock_fd<3:p.error('invalid bounded settings')
  if a.target_gib<a.min_free_gib:p.error('target must be at least trigger')
  paths=Paths()
@@ -404,7 +419,7 @@ def main():
     if signature(os.fstat(fd))!=signature(st):raise Unsafe('lock changed')
     fcntl.flock(fd,fcntl.LOCK_EX|fcntl.LOCK_NB)
     if signature(paths.lock.lstat())!=signature(st):raise Unsafe('lock replaced')
-    if a.mode=='mark-complete':result=mark_complete(paths,a.task_root,a.node_modules,a.artifact,a.component,a.source_commit,a.source_tree,a.payload_sha256)
+    if a.mode=='mark-complete':result=mark_complete(paths,a.task_root,a.node_modules,a.artifact,a.component,a.source_commit,a.source_tree,a.payload_sha256,a.retirement_reason)
     else:
      task=task_root(paths,a.task_root);entries=read_registry(paths)
      if not paths.state.exists():paths.state.mkdir(mode=0o700)
@@ -412,7 +427,7 @@ def main():
    finally:os.close(fd)
   else:
    if a.mode=='clean' and os.geteuid()!=0:p.error('clean requires root')
-   result=run(paths,a.mode,a.cache_keep_days,a.task_keep_hours,a.target_gib,a.host_lock_fd,a.min_free_gib)
+   result=run(paths,a.mode,a.cache_keep_days,a.task_keep_hours,a.target_gib,a.host_lock_fd,a.min_free_gib,a.artifacts_only)
   print(json.dumps(result));return 0
  except (OSError,Unsafe,ValueError,TypeError) as e:print('WARNING: rebuildable cleanup stopped safely: '+str(e),file=sys.stderr);return 1
 if __name__=='__main__':sys.exit(main())

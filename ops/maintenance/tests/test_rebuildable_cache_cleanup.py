@@ -133,6 +133,69 @@ class ArtifactTests(unittest.TestCase):
  def clean(self):
   with mock.patch.object(m.time,'time',return_value=self.now),mock.patch.object(m,'free_bytes',return_value=0):
    return m.run(self.p,'clean')
+ def retire(self,task,file,component='api'):
+  entry=next(e for e in m.read_registry(self.p) if e['task_root']==str(task));meta=entry['artifacts']
+  return m.mark_complete(self.p,task,[],[str(file.relative_to(task))],component,meta['commit'],meta['tree'],meta['payload_sha256'],'User explicitly retired this historical batch; evidence retained')
+ def test_retirement_waives_only_grace_and_newest_two(self):
+  task,file=self.batch(1);self.retire(task,file)
+  rows,_=m.collect_artifacts(self.p,m.proc.snapshot(self.p.proc),time.time(),24)
+  self.assertEqual([r['path'] for r in rows],[str(file)])
+  self.pin(source_commit_sha='%040x'%1)
+  self.assertFalse(m.collect_artifacts(self.p,m.proc.snapshot(self.p.proc),time.time(),24)[0])
+ def test_retirement_keeps_rollback_payload_and_unknown_status(self):
+  task,file=self.batch(1);self.retire(task,file);self.pin(previous_sha256='%064x'%201)
+  self.assertFalse(self.rows());self.pin(status='unknown');self.assertFalse(self.rows())
+ def test_retirement_does_not_displace_normal_newest_two(self):
+  batches=self.four();self.retire(*batches[0])
+  self.assertEqual({r['path'] for r in self.rows()},{str(f) for t,f in batches[:2]})
+ def test_artifacts_only_ignores_free_space_but_not_age_or_cache(self):
+  task,file=self.batch(1);self.retire(task,file);cache=self.p.cache/'old';cache.write_text('cache')
+  with mock.patch.object(m,'free_bytes',return_value=100*1024**3):result=m.run(self.p,'clean',artifacts_only=True)
+  self.assertFalse(file.exists());self.assertTrue(cache.exists());self.assertEqual(result['removed_files'],1)
+ def test_scheduled_retention_keeps_fresh_and_newest_two_normal_batches(self):
+  batches=self.four()
+  with mock.patch.object(m,'free_bytes',return_value=100*1024**3):
+   self.assertEqual(m.run(self.p,'clean',artifacts_only=True)['removed_files'],0)
+   with mock.patch.object(m.time,'time',return_value=self.now):
+    self.assertEqual(m.run(self.p,'clean',artifacts_only=True)['removed_files'],2)
+  self.assertTrue(all(f.exists() for t,f in batches[2:]))
+ def test_retired_replaced_content_and_keep_still_protected(self):
+  task,file=self.batch(1);self.retire(task,file);file.write_text('replaced')
+  self.assertFalse(self.rows())
+  task2,file2=self.batch(2);self.retire(task2,file2);(task2/'.keep').touch()
+  self.assertFalse(self.rows())
+ def test_pending_runtime_missing_previous_record_still_protected(self):
+  task,file=self.batch(1,'runtime');self.retire(task,file,'runtime')
+  self.pin('runtime',status='installed-channel-verification-pending',sourceKind='LOCAL',rollbackPolicy='forward-only',sourceTree='b'*40)
+  self.assertFalse(self.rows());self.assertTrue(file.exists())
+ def test_artifacts_only_honors_busy_release_lock(self):
+  import fcntl
+  task,file=self.batch(1);self.retire(task,file);fd=os.open(str(self.p.artifact_locks['api'][0][0]),os.O_RDWR)
+  try:
+   fcntl.flock(fd,fcntl.LOCK_EX|fcntl.LOCK_NB)
+   result=m.run(self.p,'clean',artifacts_only=True)
+   self.assertEqual(result['removed_files'],0);self.assertTrue(file.exists())
+  finally:os.close(fd)
+ def test_pending_runtime_forward_only_preserves_current_and_previous(self):
+  batches=self.four('runtime')
+  pin=self.p.runtime_backup_base/'20261106-fixture'
+  old={'status':'installed-channel-verification-pending','sourceKind':'LOCAL','rollbackPolicy':'forward-only','sourceCommit':'%040x'%1,'sourceTree':'a'*40}
+  (pin/'release-records').mkdir();(pin/'release-records/current.json').write_text(json.dumps(old))
+  self.pin('runtime',status='installed-channel-verification-pending',sourceKind='LOCAL',rollbackPolicy='forward-only',sourceTree='b'*40,sourceCommit='%040x'%2)
+  self.assertFalse(self.rows())
+  self.pin('runtime',status='installed-channel-verification-pending',sourceKind='LOCAL',rollbackPolicy='unknown',sourceTree='b'*40)
+  self.assertFalse(self.rows())
+ def test_explicit_nested_build_roots_only_one_level_and_keep_guarded(self):
+  base=self.base/'local-build';base.mkdir();self.p.nested_task_bases=[base];self.p.task_bases.append(base)
+  task=base/'batch/attempt';task.mkdir(parents=True);self.assertEqual(m.task_root(self.p,task),task)
+  deep=task/'deeper';deep.mkdir()
+  with self.assertRaises(m.Unsafe):m.task_root(self.p,deep)
+  (task.parent/'.keep').touch()
+  with self.assertRaises(m.Unsafe):m.task_root(self.p,task)
+ def test_retirement_requires_artifacts_and_nonempty_reason(self):
+  task,file=self.batch(1)
+  with self.assertRaises(m.Unsafe):m.mark_complete(self.p,task,[],retirement_reason='user')
+  with self.assertRaises(m.Unsafe):m.mark_complete(self.p,task,[],['package/final.tgz'],'api','1'*40,'2'*40,'3'*64,' ')
  def test_newest_two_per_component_preserved(self):
   batches=self.four();self.assertEqual({r['path'] for r in self.rows()},{str(f) for t,f in batches[:2]})
  def test_current_source_preserved(self):

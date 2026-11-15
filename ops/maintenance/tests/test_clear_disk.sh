@@ -317,6 +317,12 @@ run_runtime_backups() { runtime_called=$((runtime_called + 1)); }
 main >/dev/null 2>&1
 [[ "$runtime_called" == 1 ]] || fail 'Runtime retention skipped above space trigger'
 ok 'Runtime retention runs even above free-space trigger'
+registered_called=0
+run_rebuildables() { [[ "$*" == 'clean --artifacts-only' ]] && registered_called=$((registered_called + 1)); return 0; }
+main >/dev/null 2>&1
+[[ "$registered_called" == 1 ]] || fail 'registered package retention skipped above space trigger'
+ok 'registered package age retention runs above free-space trigger'
+run_rebuildables() { return 0; }
 run_runtime_backups() { return 1; }
 if main >/dev/null 2>&1; then fail 'Runtime failure hidden'; else [[ $? == 4 ]] || fail 'wrong Runtime failure status'; fi
 ok 'Runtime stage failure returns 4 even above free-space trigger'
