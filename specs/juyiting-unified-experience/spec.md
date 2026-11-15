@@ -15,6 +15,15 @@ DRAFT/SUBMISSION/RESULTS历史合同不冒充新业务完成；不重建并行�
 
 通用开发/验证约束：[统一开发约束](../architecture-convergence/development-principles.md)。业务字段、状态、错误及测试细节仍由本专题下文和详设维护。
 
+### 新接入 Agent 的正式议事就绪（2026-11-15）
+在线仅为通道存在，不等于可以承办正式事项。API 的已认证会话注册表统一判断：唯一有效的 executor 安装会话、现行正式议事声明 READY、已实测且非空的原生输出能力。候选页/推荐沿既有 availability 将未就绪候选标为 unavailable；不修改原始 presence，不新增客户端安全判断。
+
+首次确认承办在任务/目标归属锁内、预占文费用及承办变更前消费同一就绪结果；未就绪返回 HTTP409 / `TASK_DELIBERATION_NOT_READY`，本次不得创建授权、会话意图或预占。外部委派使用服务端解析出的执行者归属，不能用事项Owner查询执行会话。已提交原操作的幂等读取/恢复不重验首次准入、不另起授权或再扣费；准入后断线仍由原会话意图恢复，不能承诺网络永不故障。
+
+Runtime 新安装的现代 app-server CHAT profile 默认声明正式议事（保留显式关闭），从可信安装取得API源并分配主体独立的文件根；这不自动授予技能/Provider权限，也不伪造实测READY。托管模板必须配置原生执行Provider及明确网络连接超时；新托管在保存目标/创建安装候选前检查，缺项以 `HOSTING_TEMPLATE_DELIBERATION_CONFIG_REQUIRED` 拒绝，不注册半成品。原关系恢复不套用新建准入；配置检查不能替代真实测量。缺配置/测量失败的Agent不能以在线冒充可承办。存量配置修正、软件发布和真实业务验收分别取证。
+
+回归：`TypedDeliberationSessionRegistryTest`、`AgentTaskExecutionGrantServiceImplTest`、`AgentExternalServicePolicyServiceImplTest`、Runtime `native-readiness.test.mjs`，并在全局 TASK03/ASSIGN 类记录真实新接入与恢复证据，不能由单元测试直接标整项PASS。
+
 ### 验收落点
 端到端新事项、失败/取消/恢复结束态、当前与历史成果、重复操作幂等、刷新/返回保持真实事实。
 

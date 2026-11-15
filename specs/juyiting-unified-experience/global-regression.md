@@ -421,3 +421,14 @@ CORE17加上实际变更责任层、合同及真实消费者涉及的用例，�
 - CORE17真实工具/Provider及PDF修订证据仍待补，DELIVERY05/06等复合项仍未全覆盖，F5/F6/F7资源缺口不绕过。下一步沿既有活动证据补核/执行可用范围，不重放678/682终态。
 
 来源：[同一handoff](../../docs/implementation/handoffs/RUNTIME-LEASE-SEPARATION-20261112.md)12:26段；私有证据根沿第9节，新增`K1-private-draft-assertions.json`、`K2-mainline-assertions.json`、`K2-flow-wire.json`及`browser-20261115/K2-*`。本节是执行快照，不改变用例定义、授权或资源前提。
+
+## 11. 2026-11-15 新托管承办反例684（未修复上线，非全部通过）
+
+用户chcbz的原事项684「推荐一款好的杯子」确认新托管花荣后未自动进入议事。只读核查显示任务assigned、原grant ACTIVE、原bootstrap RETRY/BOUNTY_ADMISSION_UNAVAILABLE，会话/请求均未建立。已在线的执行者缺正式议事声明及native执行配置；用安装中代码离线复现注册报文无typedDeliberation，不能构建原生执行能力。不是仅由前端跳转故障导致。
+
+- 新反例覆盖原正常候选未覆盖的新托管分支：`JYT-ASSIGN-03`从PASS转FAIL（原PASS保留history），`JYT-TASK-03`从NOT_RUN转FAIL。活动现**37 PASS / 2 FAIL / 80 NOT_RUN**；第10节38/0/81保持当时快照，不改写历史。
+- API候选在预占/承办前使用现有注册表的唯一、有效、native READY判断；候选/推荐复用同结果。外部委派按执行者归属查询，原幂等重试不重新准入或收费。Runtime候选补主体独立文件根及正式议事缺省值，新托管模板缺native配置时在创建安装候选前失败。禁止把在线或模板静态有效等同实测READY。
+- Runtime候选1.3.112/bridge1.1.74 `b7a8183d3d99b53f7364b1cdf95e3455ca5b5c7d` 四组回归201 PASS/0 FAIL/0 skipped，464.107秒；含真实prepare→profile→registration接线的离线fixture，不是生产新接入验收。API56 `d6f03755ac524b7604495ed162943a5b30ec580f` 第03批必要基线/定向183项全部通过，layering及fresh JAR/打包成功，531.955秒；前两次FAIL完整保留。测试数量不混入119项，构建通过不等于部署或业务复验。
+- 本轮只读原684，未重复交办、改资金/授权或重启其他Agent。原684仅预占1文、capture0、outstanding1，不归入原自有活动22/100文预算。修复候选尚未部署，存量配置尚未修正，原事项尚未恢复；两项FAIL保持，待受控发布后原意图恢复及真实新接入/页面验收才能复验。
+
+证据沿原私有根`cup-navigation/`：`state.tsv`、`runtime.tsv`、`funding684.tsv`、`installed-registration-reproduction.json`、`runtime-final-result.json`及API逐次原始日志。详细来源、失败归因、源码与未完成项见[原handoff](../../docs/implementation/handoffs/RUNTIME-LEASE-SEPARATION-20261112.md)。
