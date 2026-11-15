@@ -1,0 +1,19 @@
+# CYF instance only. Installed as /etc/logrotate.d/cyf-mysql; keep vendor rules unchanged.
+/home/isp/logs/mysql.log {
+    daily
+    rotate 5
+    missingok
+    notifempty
+    dateext
+    dateformat -%Y%m%d
+    compress
+    delaycompress
+    su mysql mysql
+    create 0640 mysql mysql
+    prerotate
+        /usr/bin/python3 -I -B /usr/local/libexec/cyf/mysql_error_log_reopen.py check
+    endscript
+    postrotate
+        /usr/bin/python3 -I -B /usr/local/libexec/cyf/mysql_error_log_reopen.py reopen
+    endscript
+}

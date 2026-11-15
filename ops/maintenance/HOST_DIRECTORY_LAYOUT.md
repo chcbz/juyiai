@@ -29,3 +29,14 @@
 ## 2026-11-15后续：未登记输出发现与缓存保留
 
 用户要求已落实到本次候选：可复用构建/依赖/Node编译缓存不参与自动清理，即使低磁盘；既有每天两次入口发现三个明确构建base的未登记最终包与API class/JAR，按24小时及每组件最近两批阶段保留，当前/回退/锁/占用与证据保存不变。不从年龄推断任务完成，不自动登记或删除整个目录。本文前一节“未知历史目录不扫描”改为责任范围内按精确模式发现，范围和实施回执见 [现行保留策略](LOCAL_ARTIFACT_RETENTION.md)。
+
+## 2026-11-15：本实例MySQL错误日志自动轮转
+
+核对范围：本机 `/home/isp/apps/mysql` 实例，修改前源码基线 `f3d0364e7062f1b0338bb8b4b86e397cf95787c8`。不覆盖其他主机或数据库；安装字节摘要、实际执行及恢复信息保存在 `/home/isp/state/cyf-git-cleanup-20261115/mysql-logrotate-fix/`，不把规则文本当安装证明。
+
+- 原厂 `/etc/logrotate.d/mysqld` 只管理 `/var/log/mysql/mysqld.log`，不覆盖本实例实际 `/home/isp/logs/mysql.log`；旧路径仍有空文件，保留原厂规则不改。新增本实例 `/etc/logrotate.d/cyf-mysql`，仓库模板为 `mysql-error-log.logrotate`，沿既有 cron.daily/anacron 自动入口执行，不新增cron。每天轮转、保留5份（沿原规则数量）、gzip并延迟一个周期压缩，创建文件保持mysql:mysql、0640；不用copytruncate，不丢失轮转中的写入。
+- `/usr/local/libexec/cyf/mysql_error_log_reopen.py` 对应本目录同名源码。轮转前核对PID文件、实际mysqld可执行文件/身份/配置、mysql.service进程组及当前日志FD。主机服务MainPID是mysqld_safe包装进程，**不能向它发送信号**。仅向已核实的实际MySQL 8.0.19+服务进程发送SIGUSR1，重开文本日志，不使用SIGHUP或会同时轮转binlog的flush-logs。无需SQL凭据、服务重启或更改数据库保留策略。
+- 重开后最多等待5秒核对同一进程/starttime已经打开新日志；这只是logrotate操作回执等待，不是数据库请求deadline。未知版本、进程变化、日志身份/FD异常即失败；延迟压缩使本次原件仍可恢复，下一次prerotate未确认写入当前文件则拒绝继续轮转/压缩。
+- 本机已安装回读并通过全局logrotate debug；实际定向轮转及最终helper重开均成功，服务PID/starttime不变，无重启。首次原件在确认无进程占用后单独无损压缩，解压SHA-256一致；后续自动执行沿delaycompress，不将这次人工验证压缩宣称为额外常驻策略。
+- 回归：`python3 -B ops/maintenance/tests/test_mysql_error_log_reopen.py`（8项隔离单测）；真实logrotate隔离fixture分别覆盖成功轮转、prerotate失败保留当前文件、postrotate失败保留未压缩原件（3种场景）。本轮未执行应用构建、部署、SQL记录清理或binlog purge。
+- 配置恢复：如需停用新增轮转，移除本任务新增的 `/etc/logrotate.d/cyf-mysql` 即可，原厂规则与数据库配置未改。已轮转文件保留原字节，当前新日志继续写入；不要用旧日志覆盖当前文件或重置共享logrotate状态。恢复/暂停配置不意味着已撤销历史轮转事实。
