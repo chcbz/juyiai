@@ -432,3 +432,9 @@ CORE17加上实际变更责任层、合同及真实消费者涉及的用例，�
 - 本轮只读原684，未重复交办、改资金/授权或重启其他Agent。原684仅预占1文、capture0、outstanding1，不归入原自有活动22/100文预算。修复候选尚未部署，存量配置尚未修正，原事项尚未恢复；两项FAIL保持，待受控发布后原意图恢复及真实新接入/页面验收才能复验。
 
 证据沿原私有根`cup-navigation/`：`state.tsv`、`runtime.tsv`、`funding684.tsv`、`installed-registration-reproduction.json`、`runtime-final-result.json`及API逐次原始日志。详细来源、失败归因、源码与未完成项见[原handoff](../../docs/implementation/handoffs/RUNTIME-LEASE-SEPARATION-20261112.md)。
+
+### 11.1 删除重复开关候选（2026-11-15，未部署）
+
+按用户要求，Runtime1.3.113 / bridge1.1.75候选`af9f10ab84fef01def1083ac7da817a504abc617`删除正式议事、Fast CHAT、app-server启动及真实流式四个重复布尔配置开关；历史false只读忽略。旧磁盘profile恢复仅忽略废弃字段且不重写文件，身份/路径及其他有效配置差异仍拒绝。引擎选择、Provider/作用域授权和实测READY保护不变。
+
+离线定向bridge396通过/1跳过、Runtime197通过/1跳过，零失败；两项分别缺文档工具链及既有M3跨端集成前提，不冒充全通过。原失败尝试及最终源码/selector/摘要保留在原证据根`cup-switch-removal/`。API沿第11节已验证候选不变。本轮未部署、未重放684、未收费，**37 PASS / 2 FAIL / 80 NOT_RUN**保持；ASSIGN03/TASK03须实际发布及原意图/真实新接入验收后才能复验。详情见原handoff同日开关删除段。

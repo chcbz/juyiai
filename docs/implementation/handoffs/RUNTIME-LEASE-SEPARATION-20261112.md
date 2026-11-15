@@ -668,3 +668,16 @@ ENTRY01独立同账号browser context实测FAIL：退出当前设备后自动OAu
 - `cup-api-readiness-03` **BUILT / exit0 / sourceUnchanged**，完整531.955秒（Gradle约492秒、打包32.912秒），183项测试0失败/错误/跳过，validateLayering及fresh bootJar成功。包SHA `4e90e11e65872a83782aab9be22387c731d153ff6466b406823751243e5158d8`，JAR SHA `f6c8fa110f2bc23acf1b8d39d4d6e59de8455a28a92f0d3f2ab7627268f8e840`。本批未达300秒性能目标，未超600秒；无锁等待，实际bootJar102.045秒、agent安全基线91.061秒、layering74.935秒、starter基线61.359秒、grant52.877秒、chat定向编译46.023秒（存在并行，不能相加当总时长）。73项任务FROM-CACHE；共享负载/CPU积分贡献未测，不虚构归因下载或未来速度保证。
 - 原01/02 FAIL及各自耗时、归因不改写。第03批包内4份metadata/receipt等已按原字节保存到B/cup-navigation/api03-package-evidence/，索引记录摘要，真实测试XML及源码/工具/selector/fixture在原输出及api03-test-and-performance.json；独立result复制为api-result03-BUILT.json。最终包经原mark-complete登记，登记不等于主任务完成/部署授权，使用前按原mark-active；未清理缓存、源代码、证据或生产状态。
 - 本次`git diff --check`与活动119项计数、定向文档链接检查通过；原`./sddw check-docs juyiting-unified-experience`仍因导出缺`docs/sdd-document-map.json`退出2，日志保留，不宣称全库检查通过。新候选API/Runtime已本地develop提交，未推送/未部署；原684及存量配置未改，状态37/2/80不变。
+
+### 2026-11-15 用户要求删除冗余功能开关（源码完成，未部署）
+- 固定基线根3f864786、Runtime b7a8183d3d99b53f7364b1cdf95e3455ca5b5c7d / tree26d7c8717b3f49a5786ccb5b7fd27263caf2f865，API d6f03755不改；既有web/动态ledger脏修改保留。沿同一任务及RB-1/interface v1.4，不部署、不改生产配置或重放684。证据B/cup-switch-removal/。
+- 目标：删除typedDeliberationEnabled，以及同链路重复控制现代CHAT/app-server的fastChatEnabled、appServerEnabled和真实流式开关trueDeltaEnabled。配置/执行分支/托管新建检查/作用域拼装/示例/测试/现行正文一起收口，不只是设置true。能力以实际引擎、沙箱策略和已测量适配器为准；缺Provider仍失败。旧字段只允许兼容读取并忽略，不能让旧false关闭基础能力。
+- 不删除有独立语义的引擎选择chatEngine、主体enabled/active、技能用户开关、隔离/认证/租费/Provider授权或未知外部副作用保护；typedInspection独立能力/授权链不在本次机械扩改。旧wire capabilityContractVersion1里的三个Enabled名字是消费者已用的能力结果字段而非配置，维持字段兼容，改由真实引擎/策略计算。首先红灯补缺省/历史false测试，再跑现有typed/action/chat/注册/托管/Runtime回归；不将离线测试冒充新Agent线上验收。
+
+#### 16:15 开关删除自检与本地候选
+- Runtime1.3.113 / bridge1.1.75：`af9f10ab84fef01def1083ac7da817a504abc617` / tree `e7e897c1617e68f46814b23621b51c1f75f0dd1b`，本地develop、工作区干净；API沿原d6f03755不变，不重复构建。配置与执行代码不再读取四开关；历史false/true/字符串false/缺省均不关闭现代CHAT基础能力。能力结果仍按引擎/策略/实测生成，不用常量READY取代测量。
+- 发现并修正升级兼容：旧托管profile.json残留四字段时，materialize只忽略这四字段，不重写旧文件或冻结template；agentId/codexHome/codexBin等其他字段仍严格匹配。真实文件→materialize→停止/启动→resume回归验证字节不变、只原一次enroll、重启仅新session；有效字段篡改仍HOSTING_STATE_UNCONFIRMED。主体enabled:false及作用域/身份隔离测试仍保留。
+- 最终bridge十组 **396 PASS / 0 FAIL / 1 skipped，69.761秒**；Runtime五组 **197 PASS / 0 FAIL / 1 skipped，105.995秒**。bridge跳过真实XLSX/openpyxl首次打开探针（未配置文档工具链CYF_CHAT_FILE_PROBE_PYTHON），Runtime跳过既有M3跨端HTTP ACK集成NOT_RUN。不是全仓全量通过，更不是119项业务回归通过。完整selector、Node v24.22.1、源码/fixture摘要、日志SHA及输入绑定见B/cup-switch-removal/final-result.json、source-manifest.json和log-checksums.txt。
+- 原red/bridge01/runtime01日志保留：bridge01暴露旧FEATURE_DISABLED断言及无真实delta却在final补发伪delta；修正旧断言及实际流式处理，保留原materials final持久化顺序断言。runtime01两项UDS listen EINVAL来自过长TMPDIR；最终改用短普通磁盘`/home/isp/state/cup-flags-tmp`（ext4），没有放宽socket/权限检查，并增加上述磁盘兼容修复及回归后重跑。证据生成首次误用系统Python3.6的text参数失败，改用已安装Python3.11，仅影响证据生成，不改变测试结果。
+- 本轮仅源码、测试与文档；没有生产打包、安装、共享Runtime重启、存量配置写入、684重放或资金变更。原684尚未恢复，活动状态仍37PASS/2FAIL/80NOT_RUN。未push，不声称远端最新。其他开关仅定向核查本链路：有独立生命周期/授权语义和未证明冗余者不机械删除，不把此轮称为全项目开关清理完成。下一步仍须实际发布授权、模板native配置与原意图恢复及真实新Agent接入验收。
+- 本轮组件/根`git diff --check`通过；`./sddw check-docs juyiting-unified-experience`仍因导出缺`docs/sdd-document-map.json`退出2，见cup-switch-removal/docs-check.log，不宣称全库文档检查通过。
