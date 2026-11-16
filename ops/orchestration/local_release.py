@@ -173,6 +173,12 @@ def main():
                             ROOT / 'ops/orchestration/local-web-build.mjs', ROOT / 'ops/orchestration/remote_build.py',
                             ROOT / 'ops/orchestration/build_storage.py', ROOT / 'ops/orchestration/web_dependencies.py',
                             API_HELPER, WEB_HELPER, args.jdk / 'bin/java')}
+        before_api = sha(API_JAR)
+        previous_api = json.loads(API_RECORD.read_text())
+        if previous_api['status'] != 'installed' or previous_api['candidate_sha256'] != before_api:
+            raise ValueError('API predecessor must be fully installed and hash-bound')
+        before_web_record = sha(WEB_RECORD)
+        before_web_index = sha(WEB_SITE / 'index.html')
         if args.build_host:
             preparation_start = time.monotonic()
             remote = RemoteBuild(args.build_host, args.remote_root, ROOT, args.evidence_dir / 'ssh',
@@ -206,12 +212,6 @@ def main():
             if not public_runtime_config or any(not k.startswith('VITE_') for k in public_runtime_config):
                 raise ValueError('expected Web runtime config must contain only public VITE keys')
             result['webRuntimeConfigInput'] = {'path': str(args.web_runtime_config), 'sha256': sha(args.web_runtime_config)}
-        before_api = sha(API_JAR)
-        previous_api = json.loads(API_RECORD.read_text())
-        if previous_api['status'] != 'installed' or previous_api['candidate_sha256'] != before_api:
-            raise ValueError('API predecessor must be fully installed and hash-bound')
-        before_web_record = sha(WEB_RECORD)
-        before_web_index = sha(WEB_SITE / 'index.html')
         run('preflight-api-status', ['/usr/local/sbin/cyf-api-kit', 'status'])
         # Match the installed helper shebang and its system CA store. The
         # controller's Python may have a different/missing OpenSSL trust path.
