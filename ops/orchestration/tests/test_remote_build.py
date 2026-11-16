@@ -73,6 +73,19 @@ class RemoteBuildTest(unittest.TestCase):
             self.assertNotIn('deploy', script)
             worker.close()
 
+    def test_runtime_uses_fixed_source_and_no_production_credentials(self):
+        with tempfile.TemporaryDirectory() as d:
+            worker = self.make(Path(d))
+            command = worker.build_command(['/python', '/controller/ops/orchestration/runtime_build.py',
+                '--source', '/source/runtime'], 'own-runtime-build', 600,
+                Path('/source/api'), Path('/source/web'), Path('/source/runtime'))
+            remote = shlex.split(command[-1])
+            self.assertIn('--property=RuntimeMaxSec=600', remote)
+            self.assertIn(str(worker.root / 'runtime'), remote[-1])
+            self.assertNotIn('source /home/isp/conf/', remote[-1])
+            self.assertIsNone(worker.transfer_basis('runtime'))
+            worker.close()
+
     def test_archive_filter_rejects_path_and_link_escape(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
@@ -133,7 +146,7 @@ class RemoteBuildTest(unittest.TestCase):
         def local_call(argv, **kw):
             command = list(map(str, argv)); command[0] = sys.executable
             if 'tarfile' in command[2]:
-                command[-2:] = [str(remote), str(remote_tar)]
+                command[-3:-1] = [str(remote), str(remote_tar)]
             else:
                 command[-1] = str(remote_tar)
             return subprocess.run(command, check=True, **kw)
@@ -162,6 +175,16 @@ class RemoteBuildTest(unittest.TestCase):
             self.assertEqual('rsync-block-delta', transfer['algorithm'])
             self.assertIn('Matched data:', (root / 'rsync.log').read_text())
             self.assertFalse((root / 'worker-transport.tar').exists())
+            worker.close()
+
+    def test_runtime_collection_excludes_duplicate_source_and_payload(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d); worker = self.collect_fixture(root)
+            (root / 'worker-output/build/source').mkdir()
+            (root / 'worker-output/build/source/package.json').write_text('{}')
+            worker.collect('runtime', root / 'received', timeout=20)
+            self.assertTrue((root / 'received/result.json').exists())
+            self.assertFalse((root / 'received/build').exists())
             worker.close()
 
     def test_delta_collection_rejects_corruption_before_extraction(self):

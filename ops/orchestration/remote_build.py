@@ -148,10 +148,12 @@ a.unlink()
         self.call(['python3', '-c', code, str(self.root), '/home/isp/state/cyf-local-build'])
         self.save()
 
-    def build_command(self, command, unit, budget, api_source, web_source):
+    def build_command(self, command, unit, budget, api_source, web_source, runtime_source=None):
         mapped = []
         for value in command:
-            if str(value) == str(api_source):
+            if runtime_source is not None and str(value) == str(runtime_source):
+                value = str(self.root / 'runtime')
+            elif str(value) == str(api_source):
                 value = str(self.root / 'api')
             elif str(value) == str(web_source):
                 value = str(self.root / 'web')
@@ -162,7 +164,8 @@ a.unlink()
         # Credentials are read only by the remote build process, never in argv,
         # controller logs, source snapshots, receipts or archive transfers.
         environment_file = 'maven.env' if any(v.endswith('/local_build.py') for v in mapped) else 'web.env'
-        script = ('set -euo pipefail; set -a; source /home/isp/conf/cyf-build/' + environment_file + '; set +a; exec ' +
+        credentials = '' if any(v.endswith('/runtime_build.py') for v in mapped) else 'set -a; source /home/isp/conf/cyf-build/' + environment_file + '; set +a; '
+        script = ('set -euo pipefail; ' + credentials + 'exec ' +
                   shlex.join(['/home/isp/bin/cyf-build-env'] + mapped))
         return self.command(['systemd-run', '--quiet', '--wait', '--pipe', '--collect',
             '--unit=' + unit, '--property=RuntimeMaxSec=' + str(int(budget)),
@@ -178,6 +181,8 @@ a.unlink()
                 path = Path(record['package']['path'])
             except (OSError, KeyError, ValueError):
                 return None
+        elif component == 'runtime':
+            return None  # Portable code is small; no production identity/dependency bytes.
         else:
             raise ValueError('unknown build component')
         return path if path.is_absolute() and path.is_file() and not path.is_symlink() else None
@@ -211,6 +216,7 @@ a.unlink()
 p=pathlib.Path(sys.argv[1]); a=pathlib.Path(sys.argv[2]); assert p.is_dir()
 with a.open('xb') as raw, tarfile.open(fileobj=raw,mode='w|') as tf:
  for f in sorted(p.rglob('*')):
+  if sys.argv[3]=='runtime' and str(f.relative_to(p)).startswith('build/'):continue
   if f.is_file() and not f.is_symlink() and (not str(f.relative_to(p)).startswith('build/') or f.suffix in ('.json','.xml','.log')):
    tf.add(f,arcname=str(f.relative_to(p)),recursive=False)
 h=hashlib.sha256()
@@ -218,7 +224,7 @@ with a.open('rb') as stream:
  while b:=stream.read(1048576):h.update(b)
 print(json.dumps({'sha256':h.hexdigest(),'size':a.stat().st_size}))
 '''
-        expected = json.loads(self.call(['python3', '-c', code, str(output), str(remote_archive)],
+        expected = json.loads(self.call(['python3', '-c', code, str(output), str(remote_archive), component],
                               stdout=subprocess.PIPE, text=True, timeout=remaining()).stdout)
         basis = self.transfer_basis(component)
         if basis is not None:
