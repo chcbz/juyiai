@@ -1,4 +1,4 @@
-> **2026-11-06 现行规则：** 用户告知云效额度用完，CYF 默认改为本地测试、构建、打包和受控部署；不自动启动 Flow。正式证据绑定真实本地构建批次、完整 commit/tree、必要测试与制品 SHA-256，不伪造 Run/CI 身份。保留发布授权、身份/ACL、锁、备份、可恢复安装与线上验收；develop 不自动部署。Gradle 仍先读构建文件并经现有编排器串行执行。下文冲突的 Flow-only/禁止本地构建说明仅作历史，完整规则见根 `AGENTS.md`“本地构建与部署（2026-11-06 用户最新决定）”。2026-11-07已完成Web/API原安装器LOCAL适配与同批实测；默认快速路径见本文末节，长期策略见 docs/aliyun-flow-cicd-strategy.md 的2026-11-07节。
+> **2026-11-16 现行统一策略：** Web/API/Runtime默认在自有SSH worker `203.32.84.239` 测试、构建和打包；控制机固定输入、回传核验并执行已授权的原LOCAL安装事务。不自动启动付费Flow、不自动回退控制机重型构建。完整规则见[根AGENTS](../../AGENTS.md#juyiting-build-release-policy)，具体执行见本文[SSH入口](#ssh-构建服务器2026-11-16迁移入口)。Web/API必须显式选择SSH参数，Runtime使用原参数化builder与同一传输，不宣称三端一键发布。下文冲突的Flow-only或控制机默认构建说明只作历史；身份/ACL、锁、摘要、备份恢复与独立验收不变。
 
 ## 本地构建存储（2026-11-08）
 
@@ -19,12 +19,12 @@
 
 ## 本地包收口与耗时（2026-11-06）
 
-- 2026-11-09用户最新决定：10分钟仅限定单次构建发布，异常重试重新计算。每次执行独立600秒，随构建执行的单元测试、构建、打包和发布在本次内计时，不按内部阶段重置，不跨源码候选／开发过程／重试累计。回归验证与业务验收单独记录、不受此限；不把单元测试改名豁免。重试前归因、保留原失败和耗时；同根因同输入连续失败两次不盲重试。单次超限仍按根AGENTS申请例外，历史累计不构成扩时理由。保留身份、锁、完整性及恢复保护，不下传应用或生产服务deadline。下方旧工具实现说明是历史事实，不代表已按本条适配。
+- 2026-11-16统一口径：单次必要单元测试、构建、打包、构建锁/排队等待及制品回传共用600秒，不按内部阶段重置，不跨源码候选／开发过程／重试累计；源码/工具/缓存准备单独留证，构建入口内实际依赖安装/核验不移出计时。生产安装/备份恢复/启动/健康另计，异常重试归因后重新计算。回归验证与业务验收单独记录、不受此限；不把单元测试改名豁免。重试前归因、保留原失败和耗时；同根因同输入连续失败两次不盲重试。单次超限仍按根AGENTS申请例外，历史累计不构成扩时理由。保留身份、锁、完整性及恢复保护，不下传应用或生产服务deadline。下方旧工具实现说明是历史事实，不代表已按本条适配。
 - 2026-11-15用户更新：可复用构建缓存保留；限定构建基目录中的未登记历史包/API生成class/JAR也由既有自动入口按24小时、最近两批及当前/回退/并发保护发现回收，删除包前保留唯一证据，不要求补登记或声明任务结束。完成登记仍兼容；不是旧准入、生产发布授权或全目录清理。精确范围与主机安装状态见 `ops/maintenance/LOCAL_ARTIFACT_RETENTION.md`。
 
-> 2026-10-29 用户更新：Flow 只在 worker 上测试/构建/打包/上传后结束，不调用或等待生产主机；主机主动拉取固定 Run 制品后独立受控安装/核验。目标是卸载本机内存并减少计费，不重复构建已核验的精确制品；锁/身份/备份/完整性保留。此条覆盖下方旧 Flow 部署口径，详见根 AGENTS 同日规则及 docs/aliyun-flow-cicd-strategy.md。
+> 历史（已被2026-11-16统一策略覆盖）：2026-10-29 用户更新：Flow 只在 worker 上测试/构建/打包/上传后结束，不调用或等待生产主机；主机主动拉取固定 Run 制品后独立受控安装/核验。目标是卸载本机内存并减少计费，不重复构建已核验的精确制品；锁/身份/备份/完整性保留。此条覆盖下方旧 Flow 部署口径，详见根 AGENTS 同日规则及 docs/aliyun-flow-cicd-strategy.md。
 
-# 当前交付入口（2026-10-22）
+# 历史交付入口（2026-10-22；非当前默认）
 
 Flow用于卸载本机高内存任务：前端 `4403172`、后端 `5260799` 执行重型测试、构建、打包及授权部署。文档/静态检查、低开销定向验证、状态查询、发布协调和上线核验可本机执行；按实际负载判断，不按Node.js/Gradle工具名一刀切，不设无依据内存门槛。本机不生产打包/源码直发。develop不自动部署；版本绑定固定源码、真实Run与同Run制品。
 
@@ -56,7 +56,7 @@ python3 -B ops/orchestration/cyf_orchestrator.py preflight TASK_ID \
 - 不执行 java/node/gradle/npm、候选 selector 或 shell；不读取 fixture/凭据内容，不下载依赖、不连接数据库、不修改任务或发通知。文件存在不等于内容/schema/依赖就绪。
 - 当前 ledger 不含 owned_paths/worktree 映射，路径冲突明确 UNKNOWN；仅列其他 Writer 作为人工协调线索，不能声称无冲突。锁可用性、数据库和工具版本也未验收。
 - Findings 仅建议，正常观察退出0；未知任务、非仓库或无法读取退出2。这不是测试成功、正式构建或发布批准。
-- 前后端重型正式验证走Flow4403172/5260799，轻量验证可在本机；后端先读build.gradle，再经原gradle串行入口，保留validateLayering。preflight不绕过锁、授权或失败处理，不把生产构建带回本机。
+- Web/API/Runtime必要测试与构建默认在指定SSH worker，轻量诊断可在控制机；后端先读build.gradle，再经原gradle串行入口，保留validateLayering。preflight不绕过锁、授权或失败处理，不自动回退控制机重型构建。
 
 隔离测试（只创建并清理自己的临时 Git 仓库）：
 
@@ -110,7 +110,7 @@ python3 -B -m unittest discover -s ops/orchestration/tests -p 'test_preflight.py
 
 | 项目 | 默认执行方式 | 不得退回/混淆 |
 | --- | --- | --- |
-| 入口与状态 | Python3.11运行 `local_build.py --package`，委托原编排器和Gradle锁；任务为本Owner可用的 `targeted_verification` 或 `verifying` 状态，commit/tree与干净源码一致 | 裸跑Gradle、绕锁、手改任务登记、从生产目录编译 |
+| 入口与状态 | worker系统Python3.14运行 `local_build.py --package`（控制器用已验证Python3.11），委托原编排器和Gradle锁；任务为本Owner可用的 `targeted_verification` 或 `verifying` 状态，commit/tree与干净源码一致 | 裸跑Gradle、绕锁、手改任务登记、从生产目录编译 |
 | 工具链 | 现行入口的Gradle9.3.1、Dragonwell21.0.11；构建JVM为C1-only、堆768m/Metaspace384m/ActiveProcessorCount2；`--no-daemon --parallel --max-workers=2 --build-cache` | 为凑时限增加worker/堆、默认恢复完整分层JIT、修改生产JVM；新参数先定向验证和完整实测 |
 | 输出与缓存 | 新批次独立普通磁盘buildDir，显式传入已核验的持久cache-home；仅JavaCompile复用标准内容寻址结果 | 清缓存作为常规步骤、复用旧测试/分层/JAR、无输入绑定借用class文件 |
 | 编译分析 | 仅本地init设置 `JavaCompile.options.incremental=false`，cache miss仍正常javac/注解处理 | 把关闭一次性增量分析误当关闭build-cache；改普通项目开发构建 |
@@ -221,9 +221,9 @@ systemd-run --unit="cyf-${BATCH}" --wait --pipe --collect \
 
 ## SSH 构建服务器（2026-11-16：迁移入口）
 
-根AGENTS已将 Web/API 默认构建位置迁到用户指定的 `203.32.84.239`；该主机只测试、构建、打包，不接收生产安装权限、不启动 Flow。生产机继续执行原 LOCAL 安装器，版本、身份/ACL、锁、备份、恢复、健康及线上资源摘要检查不变。该段原批次仅涵盖 Web/API；Runtime 后续补齐见下方专节，生产发布仍由既有受控事务负责。
+根AGENTS已将 Web/API/Runtime 今后默认构建位置统一为用户指定的 `203.32.84.239`；该主机只测试、构建、打包，不接收生产安装权限、不启动 Flow。生产机继续执行原 LOCAL 安装器，版本、身份/ACL、锁、备份、恢复、健康及线上资源摘要检查不变。Web/API显式参数见下文，Runtime参数化builder与原生闭包见下方专节；不是三端一键发布器，生产发布仍由既有受控事务负责。
 
-复用 `local_release.py`，在原固定源码参数上追加：
+Web/API复用 `local_release.py`，每次在原固定源码参数上显式追加（无参不自动选择worker）：
 
 ```bash
 --build-host 203.32.84.239 \
@@ -242,7 +242,7 @@ systemd-run --unit="cyf-${BATCH}" --wait --pipe --collect \
 
 本次实际安装、固定候选、测试、尝试和发布状态见 `docs/implementation/handoffs/REMOTE-BUILD-MIGRATION-20261116.md`；2026-11-16批次remote-20261116-03已实测构建与回传316.679秒并完成原受控安装，前两批FAIL原样保留；不代表全冷/任意负载均保证此耗时。后续Web/API任务继续显式选择SSH参数，不自动回落生产机重型构建。
 
-缓存准备注意：Gradle不可变Groovy DSL缓存的空目录也是输入，快照必须保留并核验目录清单；只校验文件不代表缓存结构完整。控制机使用已验证的Python3.11（当前 `/root/.local/bin/python3.11`），不以系统默认Python3.6执行控制器。
+缓存准备注意：Gradle不可变Groovy DSL缓存的空目录也是输入，快照必须保留并核验目录清单；只校验文件不代表缓存结构完整。控制机使用已验证的Python3.11（当前 `/root/.local/bin/python3.11`），不以系统默认Python3.6执行控制器；worker使用已验证系统Python3.14。
 
 ### Runtime 远程构建（2026-11-16补齐）
 
@@ -262,6 +262,8 @@ systemd-run --unit="cyf-${BATCH}" --wait --pipe --collect \
      --regression-test conf/codex-bridge/test/image-input.test.mjs \
      --regression-test conf/codex-bridge/test/typed-inspection-input-carriers.test.mjs
    ```
+
+   上例两项追加selector仅是材料输入变更的示例，后续按实际影响集选择；不可替换/减少原基线，也不将这两项强加给所有任务。
 
 4. 本 worker 是 Ubuntu26/uutils，原测试会把 cat/sleep 复制成不同名称后验证原生 inode；用 `build_command(..., runtime_source=..., native_fixtures=[('/usr/bin/gnucat','/usr/lib/cargo/bin/coreutils/cat'),('/usr/bin/gnusleep','/usr/lib/cargo/bin/coreutils/sleep')])`，只在该 systemd mount namespace 绑定 GNU 工具，不改系统命令。原生沙箱需要的 AppArmor profile 仅匹配隔离视图 `/runtime/codex-resources/bwrap` 并授予 userns；配置 `/home/isp/conf/cyf-build/runtime-bwrap.apparmor`，系统链接 `/etc/apparmor.d/cyf-runtime-build-bwrap`。**不关闭全局 AppArmor/userns 限制，不以跳过真实隔离用例替代依赖准备。** 其它主机按实际工具/内核决定，不机械安装该兼容绑定。
 5. `build_command` 的远端期限与 `collect('runtime', ..., timeout=remaining)` 共用600秒。源码/依赖准备另计，不能拆测试与打包续时；`build-result.json`、原 TAP、package manifest、原 tgz、工具/binary/resources SHA均回传，重复源码/payload及 scratch 不回传。包仍是 LOCAL 来源，不伪造 Flow Run。
