@@ -176,7 +176,7 @@ a.unlink()
 p=pathlib.Path(sys.argv[1]); assert p.is_dir()
 with tarfile.open(fileobj=sys.stdout.buffer,mode='w|') as tf:
  for f in sorted(p.rglob('*')):
-  if f.is_file() and not f.is_symlink() and (not str(f.relative_to(p)).startswith('build/') or f.suffix in ('.json','.xml','.log','.jar')):
+  if f.is_file() and not f.is_symlink() and (not str(f.relative_to(p)).startswith('build/') or f.suffix in ('.json','.xml','.log')):
    tf.add(f,arcname=str(f.relative_to(p)),recursive=False)
 '''
         with archive.open('xb') as stream:
