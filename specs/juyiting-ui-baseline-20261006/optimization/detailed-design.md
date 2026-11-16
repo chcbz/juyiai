@@ -399,3 +399,385 @@ Owner沿用JUYITING-POLLING-20261102。API工作区 `/home/isp/wsps/worktrees/ha
 5. **初始化、历史展示和业务刷新各有一个入口。** 消息loader负责初始页；本地binding reset不伪造服务端resync。历史页只adopt展示数据，不watch成果卡片刷新当前验收。当前验收初始任务/身份切换由`useHallDeliveryReview`负责，后续接现有实时业务事件及明确操作；保留真实断线resync。流式delta不因此增加REST请求。
 6. **持久化只有必要的派生索引。** typed outcome增加两个可回填的派生索引列与索引；消息增加分页复合索引。历史正文/原成果字段不改写。event wire version由既有sequence派生，删除多余物理UPDATE，物理列暂保留。旧JAR恢复须先在停写/锁保护下补齐零version，不整库回退覆盖新事实。
 7. **观测边界。** 生产60条历史的页内容与迁移前SHA逐条一致；SQL EXPLAIN显示小会话可能选原索引交集+filesort，不承诺所有数据规模强制选新复合索引。无COUNT/OFFSET/全历史服务端循环，不以强制索引或无依据时限掩盖优化器实际选择。320条合成真实组件用于验证正文/DOM窗口，生产浏览器用于验证真实读取和展示，两者不混称生产堆内存测量。
+
+
+<a id="cross-page-return-design-20261116"></a>
+## 跨页面返回直达与现场恢复详设（2026-11-16）
+
+### A. 状态、源码与范围
+
+**状态：设计待实施；调用链复核已补入Q。** 本节由当前任务Owner维护，仅核对本地源码并输出详设，不表示原型、实现、测试或发布已经完成。本轮按用户明确要求完成分析，不新增运行环境、审批或发布步骤。与旧节冲突时，本节仅定义“跨页面返回”后续目标；已实现的微信遮罩仍是当前代码行为，不因本节而成为已退役代码。
+
+核对基线：
+
+| 仓库 | 本地commit | 本轮范围 |
+| --- | --- | --- |
+| Root | `513a725605775ce925aa07780cb8eabc42c80a6e`（detached） | 既有规格与详设 |
+| Web | `a28b0c1b65143b74963df3f91c0446d47726ccc2`（develop） | 后续实现主责任仓；本轮不改运行代码 |
+| API | `377132f786c6a38b1cb9d2cb90bda7dc3a96ff0b` | 无接口/权限语义变更 |
+| Runtime | `978d44268d8d79b0361831e23a9dff1f51020a11` | 不涉及 |
+
+上述为本次读取的本地基线，不声称远端最新或生产版本。接口边界沿用根规则及 `api/docs/interface-standard.md`，本方案不新增HTTP接口、不改变服务端业务授权。前次431项通过只证明旧遮罩候选，不是本详设的验收。
+
+**目标：** 用户离开聚义厅执行原生操作后，回到原页面、原议事和未提交现场（可写状态以服务端当前事实为准）；入口直接选择目标，不先挂载首页再跳转。微信选文件是唯一首期接入方。公共部分仅承担交接识别、生命周期、启动编排；不做插件平台、持久任务引擎或业务自动恢复框架。
+
+**非目标：** 分享链接直达、分享授权、公开访问、跨设备恢复、任意深链接路由、全站路由重构、全站草稿系统、支付/OAuth/扫码接入、上传协议重构、自动发送/提交/执行、像素级滚动和完整历史导航栈还原。正常应用内部导航继续使用现有panel机制；不把每次点击都变成持久交接。本期不把“同一个交接在多个窗口同时编辑”作为支持场景，检测到冲突要求用户只保留一个恢复窗口；无法检测的极端同时写入风险见I.8。
+
+### B. 当前实现与实际缺口
+
+以下均来自本节固定Web基线：
+
+1. `/juyiting`进入`JuyiHallEntry`，页面内部由`JuyiHall`管理`activePanel`、`renderedPanel`和frame。`HallPortraitHome`主要用`v-show`控制；首页组件及其数据逻辑并非因为不可见就未初始化。
+2. `JuyiHall.onMounted`先认证/补用户资料，再`refreshHall`，最后`restoreWechatSource`；`loadAgents`同时读地图、名册和人物目录。原生返回不是必须先去首页，而是目前初始化顺序如此。
+3. `miniProgramMaterialBridge`将来源、草稿、固定版本引用按UUID存入localStorage；native通过`wechatImport/wechatFiles/wechatState`回传。无参数时会取同身份24小时内最新记录，无法证明用户本次确实在返回；该兜底不可直接推广为公共规则。
+4. `activeResume`是模块内单一ID；事件通知加picker挂载补读已覆盖部分先后顺序，但没有显式的“目标接收完成”确认，Shell不等待资料全部核验。
+5. picker确认资料可读后即删除交接，用户此时可能尚未点“完成”；首页已有sessionStorage文本草稿，但当前选择引用并不随文本一同保存。需要区分“结果已读”“暂选现场已保存”“已确认关联”。
+6. 上传已提交、上传未知以及页面返回是不同事实；旧业务保护保留，不因抽公共层而重传。
+
+### C. 设计决定与分层职责
+
+| 层 | 责任 | 不承担 |
+| --- | --- | --- |
+| 交接记录工具 | 本地记录读写、版本/过期检查、显式ID定位、按身份清理；读写失败如实返回 | 业务授权、任意URL跳转、解读微信文件结果 |
+| 返回协调器（Shell生命周期内） | 启动分流、当前恢复generation、目标准备与接收顺序、取消/重试/失败显示 | 开新议事、选最近议事、执行上传/提交 |
+| 目标页面适配 | 按既有业务入口读原事项/会话；挂载目标；恢复自己的草稿、选择器现场和导航 | 重做登录认证或复制后端ACL |
+| 微信适配 | 现有wire参数解码、引用/状态合法性、结果接入资料选择器 | 决定页面路由、授权资料、替代通用生命周期 |
+| 资料组件/业务API | 沿既有接口读取固定版本、展示可用/不可用引用；用户点击完成才关联 | 将本地记录或URL声明当服务器授权 |
+
+逻辑拆分落在现有`miniProgramMaterialBridge.js`/`wechatWorkspaceBridge.js`与一个小型返回协调composable；记录读写纯函数可独立为`pageReturnState.js`以便测试。文件名以M为实施落点，最多拆出确实复用的记录层与协调层，不按每个阶段新建模块。首期固定注册home和chat两种目标，微信一种结果类型；无动态插件发现。
+
+**特别约束：** 不建立对外可分享的目标URL。目标描述存本地，只能通过本次交接ID进入恢复。内部目标描述可供未来导航复用，但未来分享协议及授权不在本节承诺中。
+
+### D. 本地数据契约（version=1目标合同，待实施）
+
+交接ID仍复用现有`requestId`，不再制造第二个同义ID；UUID仅用于关联，不是访问令牌。复用现有key前缀，避免新旧两套扫描器并行。将记录规范化为下述信封，微信wire名称保持原状。
+
+| 字段 | 类型/必填 | 语义、空值及验证责任 |
+| --- | --- | --- |
+| `version` | integer，必填，首期1 | 无该字段只按本节L定义读取旧微信结构；未知语义版本不自动恢复 |
+| `requestId` | UUID string，必填 | 与存储key、显式回传ID相同；缺失/重复查询ID不能猜测 |
+| `operation` | string，必填 | 首期仅`wechat.material.import`，未知操作不执行 |
+| `owner` | string，必填 | 复用现有tenant/client/user身份scope；认证后比对。不是授权凭证 |
+| `createdAt` / `expiresAt` | 毫秒时间戳number，必填 | 有限值；首期保留现有24小时恢复上限。重试不续期；时钟异常不自动恢复 |
+| `target` | tagged object，必填 | 见下方；不存组件实例、函数、HTML、任意路由 |
+| `sourceRevision` | opaque string，必填 | 来源本地草稿checkpoint revision，不冒充后端taskVersion；旧记录无revision按迁移规则处理 |
+| `snapshot` | typed object，必填 | 未发送文本、原已选引用、选择器暂选引用、议事目标及资料作用范围；具体结构见I.10；微信上限仍32，version继续为字符串 |
+| `phase` | enum，必填 | `PREPARED`、`HANDED_OFF`、`RESULT_RECEIVED`、`RESULT_ACCEPTED`、`FINISHED`、`ABANDONED`，语义见E |
+| `result` | typed object或null | `null`表示尚无回传；微信由适配器保存状态及确认引用，不存文件二进制/令牌 |
+| `checkpoint` | typed object或null | 目标已接收后的本地现场，具体结构见I.10，确认过程中的纯数据写入意图见Q.4 |
+| `updatedAt` | 毫秒时间戳number，必填 | 本地修改观测时间，不用于决定哪个并发版本权威，不用于续期 |
+
+`target`联合类型：
+
+- `{kind:'home', surface:'material-picker'}`：目标确实是首页需求的资料选择，允许挂载首页表单；这不是“先经过首页”。不要求为首页资料选择新造一个业务页面。
+- `{kind:'chat', mode:'public'|'private'|'bounty', conversationId:string, taskId:string|null, agentId:string|null, surface:'material-picker'}`：必须有精确conversationId；bounty必须有taskId，private必须有agentId；public不猜agentId。字段适用性沿既有业务关系，taskId不允许替换成最近事项。
+- 未有持久conversationId的临时议事不能使用跨页恢复；沿现行微信入口可用性约束，不为调用微信自动新建会话。
+
+补充字段：`supersededBy: UUID|null`仅标记同一选择器连续微信选取的后继交接，缺省null；处理见Q.6，不借此自动跳转其他记录。
+
+引用格式保持`{fileId:string, version:string}`，按二者去重；不可自动换成最新版本。文本保留原字节，不因trim改变内容；长度沿原表单合同。时间戳、阶段、未知目标等校验用于避免错恢复，不新增与风险无关的字段白名单门禁；同版本无害新增字段可忽略，未知动作语义必须停止。
+
+**不入库/不入URL/不入日志：** bearer、文件正文、本机文件路径、整段会话历史、用户草稿。这里的“不入库”指服务端业务存储；本地恢复记录允许保存最小草稿，按身份和有效期治理，不承诺加密安全存储。调试日志只记阶段/错误类别，不打印快照或完整返回URL。
+
+正例：显式ID=A，owner一致，target为事项T的议事C → 读取T/C并核验关系 → 回到C，资料仍暂选。
+反例：显式ID=A不存在但本地B存在 → 报告A现场缺失，不恢复B；不能把“最后一个记录”当作A。
+
+### E. 生命周期：业务结果、接收、用户确认分别记录
+
+| 持久阶段 | 进入条件 | 允许后续动作 |
+| --- | --- | --- |
+| `PREPARED` | 来源快照写入且readback成功 | 发起原生交接；写入失败留原页，不离开 |
+| `HANDED_OFF` | bridge导航成功得到确认 | 等待显式回传；进程销毁可能来不及写该阶段，不能因阶段仍PREPARED拒绝合法回传 |
+| `RESULT_RECEIVED` | 对应ID结果通过适配器解析，写回同一交接记录 | 准备目标、恢复草稿与资料读取；重试仅做读取/恢复 |
+| `RESULT_ACCEPTED` | 当前目标已保存包含结果的checkpoint并readback | 展示目标选择器；再次挂载恢复checkpoint，不再次追加相同结果 |
+| `FINISHED` | 用户完成/取消选择，必要关联写入已确认或部分成功已由用户核对且无未决项，目标草稿接收确认后的现场已保存 | 清理交接并移除回传参数；不等于资料上传/发消息/任务业务完成 |
+| `ABANDONED` | 用户明确放弃，或Q.6已成功保存后继现场 | 清理本交接敏感现场；被替代者只保留最小标记到原有效期；不能删除服务器文件或其他交接 |
+
+`IDENTIFYING/AUTHENTICATING/PREPARING_TARGET/RESTORING/READY/ERROR/CONFLICT`为协调器内存状态，不分别建持久台账。所有异步结果需同时匹配当前owner、authorizationGeneration、requestId、navigationGeneration；主动离开目标即失效，迟到结果不改变当前页面。
+
+不能以“删除成功”证明精确一次。localStorage不提供跨记录事务/CAS；依靠按requestId去重、先保存接收checkpoint再完成交接，以及刷新时核对接收记录，处理崩溃窗口，不宣称全局exactly-once。
+
+### F. 启动识别与来源判定
+
+1. 在首页挂载前检查**显式回传参数**，只决定进入中性的返回启动视图，不读取或展示未认证用户的草稿/事项标题。
+2. 认证及用户资料水合后，验证交接owner、时间/版本和适配器结果，再选择目标。
+3. 若`wechatImport`存在但其余必要参数缺失/重复、记录不存在或解码失败，进入明确的恢复错误页；不得从其他记录补全，不无限loading。
+4. 无显式ID的普通启动继续正常入口。若有当前身份未完成记录，可显示不打断导航的“有未恢复现场”入口；用户主动选择后恢复。多个候选列出供选择，不按最近时间自动决定。
+5. 无参数且本地没有已持久结果时按`unconfirmed`处理，只恢复已保存正文/原选择；已有result/checkpoint按I.10恢复，不降级已知结果。不推断上传完成或扫描最近文件补引用，禁止自动重传。
+6. 身份不匹配不能展示原记录标题、草稿或文件名；沿身份生命周期清理相应记录，不为诊断保留敏感旧现场。
+
+**本轮取舍：** 保持小程序协议不变，因此取消“无参数也无感自动回原议事”的承诺；正常原生取消/完成仍有明确回传ID，可以自动直返。系统返回/异常终止若缺ID采用显式恢复入口。这一变化需要在原型和验收中明确，不得用模糊匹配换取表面无感。
+
+### G. 直接初始化目标，不经过首页
+
+固定协调顺序：
+
+```text
+识别显式交接 → 中性启动视图（未挂载首页/地图）
+  → 身份就绪 → 校验交接 → 准备目标必要数据
+  → 挂载目标页面加载态 → 精确会话/原草稿恢复
+  → 目标资料选择器就绪 → 接入结果并保存checkpoint
+  → 显示选择器现有加载/错误/就绪状态
+```
+
+- Shell保留布局、身份生命周期、错误呈现和导航协调；不为每种返回建立新Vue Router路径。
+- chat目标不挂载`HallPortraitHome/HallOverview`、首页事项列表或地图stage，不启动首页气泡/地图轮询；同步阻断横屏stage入口、体验模式watch及后台scene启动，具体入口见Q.1。不只改DOM上的`v-show`；相关composable的watch/加载入口也必须按启用范围检查。
+- 将`refreshHall/loadAgents`的整组首页启动与目标必需数据分开。目标复用`loadRosterAgents`、`loadTaskDetail`、精确会话历史/选择等现有入口；名册是否需要由具体模式及existing predicate决定，不能机械删权限所需数据。地图数据不作为议事启动前置；人物目录是persona好汉可操作投影的真实依赖，不能一律省略。首期chat准备统一读取名册及人物目录，再按原predicate生成投影，不调用包含地图的loadAgents。
+- 原会话选择继续使用已有restore模式，不并发读取latest，不触发默认新会话、发送或点将。
+- home目标只恢复原需求表单和picker所需现场，首页其他列表可沿原组件enabled机制延后；不为排除“首页”而否定真正的首页目标。
+- 不要求立刻拆出所有页面，也不机械销毁普通导航中的既有首页实例。对返回冷启动使用按需挂载，日常内部导航仍保留原frame/草稿行为。
+- 从直达议事主动返回首页时，再一次性初始化首页专属数据、地图目标和相关定时器。不存在的历史DOM节点不能作为焦点恢复目标；优先目标标题/主区域，回首页后再聚焦有效入口，避免移动键盘自动弹出。
+- 冷启动未保存整个导航栈：不合成来源frame，关闭直达议事回首页；已存在的有效frame仍按原returnPanel返回。原事项详情通过既有显式入口打开，不承诺凭taskId自动重建“详情→议事”历史。不得伪造来源DOM/浏览器history多层记录。
+
+加载与错误属于返回启动视图/目标页面本身，不是铺在已经初始化的首页上的遮罩。身份未确认时只显示“正在恢复…”；确认后可显示“正在恢复议事/资料”。不加固定最短等待，不给业务请求强塞超时；挂起时提供离开操作，原网络错误沿原机制显示。旧遮罩在新分流同候选替换，不保留两套自动启动流程。
+
+### H. 页面接收协议与异步防竞态
+
+最小调用关系（函数名称可随现有模块风格调整，语义固定）：
+
+```text
+capture(target, snapshot, revision) → 写入交接 → requestId
+parseReturn(location) → explicitId/result | absent | invalid
+resolveOwnedReturn(id, identity) → 有效交接或结构化错误
+prepareTarget(target, fence) → 原业务上下文
+registerTarget(receiverKey, receiver) → unregister
+receiver.restore(record, fence) → acceptedCheckpoint | conflict | retryableError
+finish(id, checkpointRevision) / abandon(id)
+```
+
+- receiverKey包含owner和完整目标，不能只用“chat”；目标实例就绪后主动注册并查询待接收项，协调器有项时也可通知。两端使用同一可查询状态，不靠一次性window事件保障交付。
+- 同一实例/同一requestId只允许一个恢复flight；卸载注销，原flight的结果被generation丢弃。异常后可重试同一阶段，不能因旧Promise仍在注册表而永久占用flight。迟注册可读取同一项；注册两个相同活跃接收方视为冲突，不两边同时套用草稿。
+- 相同ID、相同结果的重复回调不重复追加引用。相同ID但结果内容冲突不以到达时间判胜负：保留已接收checkpoint（尚未接收则保留首份已持久结果），提示核对，不自行覆盖或重复上传。
+- target-ready、正文恢复、资料列表加载、引用核验分阶段可观察；不得仅因为Shell发出通知就宣称资料全部恢复完成。资料读取失败时正文仍可保留，选择器展示缺失项及重试读取，不能自动确认部分材料。
+
+### I. 草稿持久化、确认及并发边界
+
+1. 离开前记录文本、原已选引用与picker暂选引用；用户编辑revision由来源页面负责。复用首页已有草稿与议事现有draft所有者，只扩展本链路需要的checkpoint，不复制一个通用业务store。
+2. 冷启动无较新本地稿时恢复原snapshot。有与sourceRevision不相等且内容不同的本地稿时进入冲突态（revision为不透明标识，禁止比较大小），默认保留当前稿，提供查看/明确采用恢复稿；不自动合并文本或用时间戳覆盖。
+3. `RESULT_ACCEPTED`保存当前暂选和`resultApplied=true`。此后用户删除某个返回文件或修改正文，必须更新checkpoint；刷新后读取checkpoint，不能把初始回传引用再次加回。
+4. 接收checkpoint优先写回同一requestId记录，使“已应用标记”和相应内容在一次setItem中保存。resultApplied只表示初始结果已并入现场，不表示全部引用可读；不可读项保留引用并显示待处理，完成按钮阻止提交，用户可重读或明确移除（Q.5）。写入/readback失败不得标记已接收或删原记录；可以显示现场但明确本机保存失败，并提供重试保存/留在当前页。
+5. 点“完成”：按当前picker规则将暂选交给来源；home在本地来源checkpoint保存后结束；chat必须先等待现有attach/detach关联流程确认成功，再保存来源checkpoint，交接才FINISHED。失败/结果未知留在RESULT_ACCEPTED并沿原写入恢复机制核对，禁止恢复器自动重放业务写入。点“取消”：尚未提交关联时放弃本次暂选、保留原已选和当前正文，保存来源checkpoint后再结束；已有部分关联写入时先读取服务器事实，不伪称撤销成功，也不自动反向解绑，用户核对后才能结束。取消不删除服务器文件。
+6. 来源checkpoint键需按owner+target隔离，包含revision、`acceptedRequestId`和`activeRequestId`；扩展当前草稿承载，仅承诺本链路。先保存来源checkpoint再完成/删除交接；若中间崩溃，下次以已接收requestId对账，不重复恢复初始结果。
+7. 保持回传ID直到交接可安全结束，结束后清理URL中本次参数，保留原URL其他参数/hash。记录缺失但存在匹配已接收checkpoint时，可以恢复该目标checkpoint，不把缺失解释成新业务请求。
+8. 跨标签页并发写不是首期强一致承诺。监听相关storage变化并在写入前复核revision，发现变化暂停自动应用；这些不是原子锁。同一交接多窗口编辑的极端同时写入无法靠localStorage完全排除，首期明确限制为单活跃恢复窗口，不宣称跨设备/跨标签精确一次。若业务以后要求强一致，另行设计服务端草稿/CAS，不在本轮偷偷引入。
+9. 交接和专用checkpoint采用现有24小时恢复保留范围及身份退出清理；既有独立草稿按原策略保留，不借本轮清全站storage。过期不再自动套用/重放；当前尚在编辑的内容不因定时清理突兀清空，后续离页恢复不作保证并提示。授权/业务对象有效性仍以实时读取为准。
+
+### I.10 实施闭合：字段、优先级和业务确认
+
+以下为本次复核确定的目标合同，不表示源码已具备：
+
+- **目标键**：对固定顺序数组`[owner,kind,mode或null,conversationId或null,taskId或null,agentId或null,surface]`做JSON序列化；缺省标识统一null，ID区分大小写且不数值化。home的chat字段全为null。snapshot不得覆写target。
+- **快照**：`{draft:string, committedSelection:Ref[], stagedSelection:Ref[], scope:string, discussionContext:object|null, materialContext:object|null}`。chat的materialContext完整保存现有`typedMaterialScope/draftMaterialScope`（TASK_DEFAULT、EXPLICIT、NONE）及`typedSourceIds/draftSourceIds:string[]`，沿用当前fileId+NUL+version引用键；home两种context均为null。discussionContext为`{mentionAgentIds:string[], outgoingMetadata:{inputRefs:{type:string,id:string}[], libraryCitationId?:string, librarySourceType?:string}}`，仅保存当前发送消费者明确读取的字段；恢复@目标前按现有可操作名册核对，失效目标提示用户重新选择，不静默改为广播。旧快照缺这些可选字段时按空值兼容，不声称恢复了原来未保存的选择。遗漏这些字段会改变资料参与语义，不得只恢复正文和文件。
+- **结果**：`{status:'complete'|'partial'|'cancelled'|'unconfirmed', references:Ref[]}`；status沿native原语义，unconfirmed也可能含已经确认的部分引用。出发额度由`32-snapshot.stagedSelection.length`固定计算，出发前须大于0，回传引用数不得超该额度；selected/staged各不超过32，沿现有validImportReference校验。引用按精确fileId/version去重，保留首次顺序。重复回调比较状态及引用集合，不因JSON属性顺序不同制造冲突。
+- **接收checkpoint**：`{revision:string,draft:string,committedSelection:Ref[],stagedSelection:Ref[],materialContext:object|null,discussionContext:object|null,pickerOpen:boolean,resultApplied:boolean,acceptedRequestId:string,writeIntents:WriteIntent[],confirmation:'idle'|'pending'|'unknown'|'confirmed'}`。confirmation仅描述用户确认关联，不是上传状态；普通恢复绝不把pending/unknown当成允许写入的指令。
+- **来源checkpoint**：复用记录层在同一前缀下使用`draft:`+编码目标键的独立key，保存`version/owner/target/revision/createdAt/expiresAt/activeRequestId`及上述现场（activeRequestId为空表示没有待完成交接）。扫描交接只接受UUID key，不将draft key当交接。sourceRevision取出发前成功保存的来源revision；每次实际现场变更生成新UUID，原有数字draftRevision仍用于页面内异步保护，不混用。来源记录只覆盖本链路涉及的草稿，非全站草稿重构。
+- **恢复优先级**：精确来源checkpoint已接受本requestId且交接已结束时，只恢复来源当前稿；否则有RESULT_ACCEPTED checkpoint先恢复它；否则恢复snapshot再接入result。revision比较前先区分页面初始化赋值与真实编辑（Q.3）；来源已有不同revision且内容不同，必须先处理冲突，不能用上述优先级盖掉新编辑。旧记录无revision时相同内容可接受，非空不同内容要求选择。
+- **无ID主动恢复**：已有持久result/checkpoint时保留其已知结果；只有确实没有已保存结果才生成unconfirmed展示。不把用户主动恢复等同于新的微信上传回调。显式ID带损坏/缺失wire字段仍走错误态，不借本地旧结果静默掩盖损坏回调。
+- **完成回执**：将ChatPanel当前fire-and-forget的completeMaterials/attachMaterials接入可等待的完成结果，含成功、失败、未知及generation失效。恢复器不能通过监听model-value变更就宣布FINISHED；attach/detach继续由既有资料关联composable负责权限、幂等及未决写恢复。用户只在明确点击完成时授权这组写入。
+- **保存及清理顺序**：保存并readback接收checkpoint→呈现；用户确认后必要业务写成功→保存并readback来源checkpoint（acceptedRequestId）→写FINISHED→删交接→清本次URL参数。任一步失败保留可重试状态；刷新只能读取/对账，不自动补发关联操作。用户放弃只删除本交接，已确认服务器事实不回滚。已结束重复callback由来源acceptedRequestId识别；再次出发的新requestId不得重用旧ID。
+- **正常编辑/发送**：本链路接入的来源现场变更同步更新当前checkpoint；首页sessionStorage文字与恢复checkpoint由同一个页面写入入口更新，启动时不让两个watch互相覆盖。议事正文仍归useHallConversation，资料上下文归ChatPanel。实际发送/提交成功后沿现有generation条件清对应草稿，同时持久化空正文及当前真实引用并更新revision，避免刷新复活已发送文本；发送期间新编辑不得被旧回执清除。普通消息现有入口会在发出前clearDraft，并由原requestId处理未知结果；本轮不重写此发送协议，也不承诺失败后自动把正文放回输入框。恢复checkpoint必须跟随实际清稿转移，不能用交接旧snapshot复活已交给发送链的正文；typed清稿增加发送时revision比对，见Q.3。持久化失败须提示，不承诺异常存储下绝无陈旧文本，但不会自动发送。
+- **认证中断**：沿现有api store的currentReturnPath和OAuth transaction.returnTo保留完整站内路径及回传query/hash，不新增OAuth恢复协议，不把草稿放URL。认证前不得清回传参数；认证后重新比对owner。测试包含完整OAuth离页往返而非仅mock token就绪；取消登录提供退出，身份变化使旧generation失效。
+- **按目标加载**：home准备需求表单/picker依赖；三种chat先读名册及人物目录完成现有投影，public/private沿原history分页找到精确会话，private匹配原agent；bounty先读原task再按原入口选择其精确conversation。各目标均保留实际需要的资料列表/关联目录/固定版本读取和实时订阅。请求失败不得当空列表继续猜目标；没有匹配会话不fallback latest。首页地图、气泡及首页专属列表只在进入首页后启用；watch和定时器与DOM一并受控。
+
+### J. 失败与用户操作矩阵
+
+| 情形 | 显示与允许操作 | 必须禁止 |
+| --- | --- | --- |
+| 出发前本地存储失败 | 留在原页，提示保存失败，可重试 | 带着未保存草稿离开 |
+| 明确返回但记录缺失/损坏/过期 | 恢复失败页；返回首页/资料列表核对 | 猜最新记录、假造原议事 |
+| 尚未登录 | 原认证链；认证后按明确ID继续；取消则结束恢复 | 未认证显示私人现场 |
+| 事项/会话不可读或关系不符 | 目标错误态；重试读取或明确离开 | 新建替代会话、改用其他事项 |
+| 资料/固定版本不可读 | 正文保留，选择器标出失败，允许重读 | 自动换最新版、自动忽略后提交 |
+| 用户主动跳其他页 | 取消当前generation，保存可保存的现场 | 迟到恢复拉回原页面 |
+| 返回结果未知 | 提示核对已上传文件；恢复原现场 | 自动重选重传、将未知标完成 |
+| checkpoint保存失败 | 保留原交接；提示保存失败/重试 | 清记录后宣称恢复完成 |
+| 草稿revision冲突 | 保留当前稿、显式选择恢复稿 | 静默覆盖、无依据自动合并 |
+| 未识别版本/操作 | 不执行；可放弃或升级后再读 | 猜协议、循环刷新/重放 |
+
+错误的自动回退不直接选首页：明确返回失败先给错误态，只有用户点击离开才进入首页。无明确交接的普通启动不受这一规则影响。
+
+### K. 安全、权限与数据归属
+
+- 公共层只核对交接所属身份与输入一致性；业务权限仍由现有API和页面服务判断，不在公共层复制资源ACL。
+- URL和localStorage都可修改。结果中的fileId即使可读取，也不等于证明它由本次上传产生；本方案只将其作为待用户确认的候选引用，不赋予发送/付费/执行能力。未来高风险业务不得复用这一结果可信度假设。
+- 继续沿原`validateReturnTarget`校验native返回地址；通用target只选择已注册目标，不允许构造任意URL、脚本或模块路径。
+- 交接ID不是保密授权码，不以“猜不到ID”代替ACL。snapshot不保存bearer，native令牌继续按现有内存/消息寿命管理。
+- 同源脚本可访问localStorage，不声称本地草稿防XSS或跨窗口保密。只留必要文本及引用，身份退出与有效期清理，不打印调试快照。
+- 恢复状态与业务事实分离：RESULT_ACCEPTED不代表用户确认关联，FINISHED不代表消息发送或任务完成。任何业务副作用必须走原用户操作与幂等链。
+
+### L. 兼容、范围与发布约束
+
+- 保持`wechatImport/wechatFiles/wechatState`、native路径、上传HTTP协议、最大数量和固定版本语义不变。首期无需修改小程序原生代码、API或Runtime；这是本节限定范围的判断，不承诺以后所有返回功能均无需改native。
+- 对部署前已出发、部署后返回的旧记录：仅微信适配器识别原无version结构并做完整原校验，再规范化写回。无revision的旧记录若遇到当前非空且不同草稿，需冲突确认，不能假定旧稿更新。转换失败不删旧记录。
+- 旧无参数记录不再自动取最新，只供同身份用户主动选择恢复。保留此兼容读取以覆盖既有24小时窗口，但不会恢复旧“猜最近”执行逻辑。
+- **回退沿用既有制品回退，不另开发一套兼容回退程序。** 固定新信封不包含旧source字段，旧a28b0c1b的readWechatImport会拒绝读取新记录，不能宣称降级后仍无感恢复新现场。回退只恢复旧功能，新checkpoint保留到有效期/身份清理；重新使用支持version=1的版本才能恢复。不得将旧代码的拒读误称数据损坏，也不为兼容降级写出会被旧扫描器误消费的双格式记录。可用性回退与恢复体验连续性明确分开；未知版本不删除，退出身份的既有清理规则不豁免。
+- 目标识别/恢复实现单轨，旧模块保留的是wire适配，不长期同时运行新旧两个恢复器。不新增全站feature flag审批机制。
+- 本轮只出详设。后续先更新现有离线原型与其规格，覆盖加载、失败、冲突和无参数恢复入口，再实施；原型与生产改造、测试与部署分别记录。提交/合入不自动发布，原生真机验收不能由H5测试替代。
+
+### M. 文件级实施落点
+
+以下路径相对Web根；复用现有文件，只新增记录层和协调层两个模块。
+
+| 落点 | 修改内容 |
+| --- | --- |
+| `src/components/world/JuyiHallEntry.vue`、`JuyiHall.vue` | 启动分流、按目标挂载、公共认证/目标数据/首页数据分离、导航generation和错误态；保留原会话选择入口 |
+| `src/utils/miniProgramMaterialBridge.js` | 微信wire适配；移除按最新记录自动恢复职责；兼容旧快照 |
+| `src/utils/wechatWorkspaceBridge.js` | 将微信结果接入目标接收协议，不自行控制全局导航 |
+| `src/utils/pageReturnState.js`（新增） | 纯记录读写、规范化、阶段/checkpoint及按身份清理；无Vue/UI业务 |
+| `src/composables/juyiting/useHallPageReturn.js`（新增） | 单个Shell内恢复协调、目标注册、generation与结构化错误 |
+| `src/components/juyiting/HallMaterialPicker.vue` | 就绪接收、checkpoint持久化、重复结果去重、完成/取消确认 |
+| `src/components/juyiting/HallOverview.vue`、`ChatPanel.vue`及`src/composables/juyiting/useHallConversation.js` | 各自draft/revision接收和可恢复引用保存、初始化抑制及发送清稿同步；不把业务草稿所有权挪给通用层 |
+| `src/components/juyiting/discussionPanelContract.js`及`PublicDiscussionPanel.vue`、`PrivateDiscussionPanel.vue`、`BountyDiscussionPanel.vue` | 传递同一恢复上下文/协调接收能力至ChatPanel，不在包装层另写恢复器 |
+| `src/composables/usePersonalWorkspaceWriteIntent.js`、`usePersonalWorkspaceConversationLinks.js`、`usePersonalWorkspaceTaskLinks.js` | 为本返回链可选接入Q.4纯数据意图保存/重新绑定；现有其他消费者默认行为不变，不新增服务端接口 |
+| `src/composables/juyiting/useHallData.js`及首页数据composable | 仅在调用链需要时修正enabled与初始化；优先复用已有定向load，不整文件重写 |
+| `prototypes/juyiting/` | 更新现有原型，非平行新原型 |
+| 现有微信、组件、导航、资料测试文件 | 按N扩展，不新建独立runner |
+
+### N. 验收矩阵与证据
+
+全部为**NOT_RUN（本详设未实施）**。最早反馈用真实编译Shell组件加可控认证/历史/资料延迟，不用纯字符串断言替代行为。
+
+1. 明确微信返回的public/private/bounty首帧：首页组件mount=0、地图mount=0，首页专属列表/地图请求=0；允许目标实际需要的名册、人物目录、事项、历史及资料读取。不得为了请求数断言删掉persona授权投影依赖。
+2. 同三模式仅选择原conversationId；慢请求下无latest并发、无新会话、无发送或执行。
+3. home目标打开原表单的资料选择；不强制先显示普通首页内容，不误拦真正首页目标。
+4. 普通启动无交接按原入口；存在旧pending也不自动跳转。无ID恢复需用户选择，多个候选不猜。
+5. 慢认证、补用户资料、取消登录、身份变化和未授权访问：无私人数据提前显示，旧结果不跨身份套用。
+6. 接收器迟挂载/重挂载、相同ID重复回调、重复通知：结果只套用一次；不同内容同ID进入冲突。
+7. 用户主动导航、卸载、慢history/资料迟返回：不拉回、不覆盖新稿、不泄漏轮询。
+8. 已暂选后删掉返回资料再刷新：删除保持，不能从原callback再次加回；完成/取消后的正文及原选择正确。
+9. 在写结果、写checkpoint、写来源草稿、标完成、删记录各窗口中断/刷新：不丢唯一现场、不重复应用；存储抛错/配额满如实提示。
+10. 记录过期、损坏、未知版本/操作、缺失/重复参数、显式ID找不到：错误确定，不猜fallback、不无限等待。
+11. 上传成功、取消、部分成功、未知结果分别保留原语义；恢复重试只读，不产生新uploadFile调用。
+12. 原会话删掉/权限撤销、固定版本不存在：不创建替代记录、不选择最新版；草稿和错误可见。
+13. 新旧H5/旧native回传/旧快照及回退读取组合；URL清理不损坏原参数/hash。明确兼容不能证明则不宣称可安全回退。
+14. 直达议事后关闭回首页、显式打开事项详情，以及暖启动已有frame返回，桌面及移动横竖屏：返回层级、焦点、安全区、地图首次初始化正常；首页只在实际进入时启动。
+15. 两窗口可检测冲突用例验证不静默覆盖；记录仍不承诺极端同时写的强一致。
+16. 微信开发者工具及真机：完成/取消自动直返、系统返回缺ID、web-view销毁重建、进程重启、部署跨版本返回；网络慢时目标加载态不出现首页。拍照/相册真实调用仍按全局回归既有排除规则执行。
+
+验证分层：纯记录/适配器单测 → 实际Shell和picker恢复组件集成 → 现有资料/导航/身份受影响回归 → 离线原型及H5浏览器布局/焦点；平台实测单列证据，不能用静态分析冒充。按用户最新要求，本次不以建设测试环境或增加发布步骤作为分析闭合条件；利用已有能力执行验证，无法执行的范围如实列出，不把“待部署实测”当成已完成开发验证。正式构建/发布按根规则独立绑定源码、日志和制品，不拿旧431项通过作新候选证明。
+
+### O. 实施顺序与完成条件
+
+1. 原型先行：按已明确的目标加载态、失败、草稿冲突和无参数恢复交互更新既有原型；草稿所有者与回退格式以本详设为准，不另留待定方案。
+2. 先建立记录契约及旧格式fixture；通过中断/重复接收/冲突测试，再接协调器。
+3. 将微信接入新协调器、目标接收确认和checkpoint；同候选移除旧自动恢复执行入口。
+4. 调整目标按需挂载与首页初始化，并验证源依赖没有被误删；移除已被替代的首页遮罩。
+5. 完成受影响回归、修复同轮问题并冻结完整候选；按已有条件分别记录代码验证和平台实测，按授权统一交付。详见P，不以先发布生产作为查找遗漏设计的手段。
+
+完成必须同时满足：原议事直达无首页挂载、原现场正确、正常入口不误判、异常可退出、重复返回不覆盖用户操作、兼容与回退输入已验证、未增加业务副作用。只消除闪现、只抽工具函数或只跑单测，均不等于本长期方案完成。
+
+**长期稳定边界：** 公共层只管理“这次离开和返回如何衔接”，目标页面管理自己的草稿，业务适配管理自己的结果。未来新功能只有确实符合这些边界时才接入；不以未来可扩展为由在本轮添加分享、授权、支付协议或通用执行引擎。
+
+### P. 单候选开发、统一发布约束（2026-11-16复核）
+
+**交付决定：全部功能、兼容和必要回归在同一个完整Web候选闭合，再统一生产部署。** 开发可以分提交和修复，不要求第一次编码零错误；不以“先上线看看”替代必测项，不把直达、草稿恢复、失败处理拆成生产补丁阶段。Root记录文档与最终子仓pin；API/Runtime/原生协议保持不变，本范围没有数据库迁移或必须先上线的后端依赖。
+
+| 完整交付包 | 必须一并完成 | 主要验证落点（Web tests相对路径） |
+| --- | --- | --- |
+| 记录/适配/兼容 | D/E/F/I.10，旧记录fixture、去重、存储失败、身份清理 | `wechat-material-import.test.js`；新增纯记录测试仅覆盖新职责 |
+| 启动与导航 | G/H，三种议事和home；DOM及请求负面断言；迟到请求不改页 | 实际编译Shell集成测试、`hall-account-navigation.test.js`、`juyiting-hall-data.test.js` |
+| 页面现场与完成 | typed/draft资料上下文、完成等待关联写入、取消、未决/部分写、成功发送后不复活 | 实际picker/ChatPanel组件集成；`juyiting-hall-overview-component.test.js`、`juyiting-hall-conversation.test.js`及现有资料关联测试 |
+| 身份与平台 | OAuth完整往返、跨身份、旧native、进程重建、无ID主动恢复 | 现有OAuth测试和N.16开发工具/真机记录 |
+| 原型与视觉 | 加载/错误/冲突/未恢复入口、横竖屏、焦点、正常入口 | 更新既有原型；浏览器与真机截图/网络记录 |
+| 发布及回退 | 新旧快照混合、旧页面在部署期间仍打开、兼容回退读取 | N.13固定输入；制品版本、摘要及回退演练记录 |
+
+**完整开发与统一交付定义：**
+
+1. A所列本地SHA仅为设计基线；实施开始重查Root/Web/API/Runtime HEAD、远端develop和脏文件，合入实际需要的新变化后再冻结受测输入，不能称当前基线永远最新。
+2. N各项映射到实际测试selector/fixture及通过证据；新增的persona依赖、资料scope保留、关联部分写/未知、发送清稿和OAuth往返必须覆盖。无关全局用例不机械全跑，受影响普通入口、账号切换、三种议事及资料系统选择保留回归。
+3. 不新增环境搭建任务，不新增审批或强制第二轮部署。优先用现有组件测试能力覆盖可控延迟、断点和旧格式输入；既有条件能做的平台实测单独记录。无法实测之处明确剩余不确定性，不能因此跳过源代码分析，也不能把生产试错写成实施计划。
+4. Web本地正式测试/构建/打包沿既有入口，绑定最终commit/tree、工具链、日志、测试结果和SHA-256。修复引起源码变化须重新验证受影响项并重新产出正式制品；不把不同commit的零散通过拼成最终通过。
+5. 正常交付仅一个完整新候选；回退使用既有版本制品及L明确的降级边界，不新增第二套恢复器或独立回退开发分支。冻结旧代码fixture证明source缺失时安全拒读；旧页面可能短暂显示旧遮罩，不承诺它获得新直达体验。新记录按有效期/身份规则保留，避免为了回退清空草稿。
+6. 生产安装前核对用户授权、最终制品与恢复手段；统一安装完整H5制品，按既有发布方式确保HTML/资源配套。生产后做登录、普通入口、三类明确返回及首页切换冒烟；不借统一发布承诺零平台差异。
+7. 本范围小程序原生无需新增功能发布；仍需用实际已发布原生版本验收。若实施发现必须改变wire/native/API合同，先更新详设、兼容矩阵和完整交付包，再统一开发/发布，不能暗中变成第二期。
+
+**当前完成度：** 已完成本地固定源码调用链复核，Q列出发现的遗漏、具体修正和反例；未实施、未运行新候选测试、未部署。没有发现要求拆期发布或修改服务端/原生wire的依赖。分析闭合不等于实现无缺陷，不能承诺零返工；开发中出现问题在同一完整候选交付前修复，不把已知缺口留到生产。
+
+### Q. 调用链逐项复核与最终处理决定（2026-11-16）
+
+本节是固定本地源码的分析结果与目标决定，不是执行流水账或测试通过回执。Root/Web基线仍为A所列SHA；API仅定向核对资料关联幂等实现，不修改。以下覆盖前述宽泛表述，实施不得只改URL跳转或遮罩。
+
+#### Q.1 首帧与必要依赖：把“尚未选定入口”变成明确状态
+
+| 已核对入口 | 当前问题/行为 | 同候选修改 |
+| --- | --- | --- |
+| JuyiHall setup、onMounted、permitStageMount及experience/homeMode watch | onMounted前已有watch；experienceReady先变true；横屏有独立stageTarget | setup同步生成`entryKind=normal/return`；未决return默认homeActivated=false。认证前及准备中禁止首页mount、stage许可、地图绘制；不能到onMounted才隐藏首页 |
+| HallPortraitHome overview slot、landscapeTarget、HallStage | v-show只是隐藏；首页列表组件会按identity启用 | 首页目标/用户真正进入首页后才首次挂载首页；chat冷启动保持0挂载。home返回需求表单可以挂载，表单enabled与列表加载enabled分开，避免为禁列表把picker一起禁用 |
+| refreshHall、startBackendSceneState、startDialogueBubbles | 整组刷新包含地图，后台scene和气泡独立存在 | 公共身份、目标准备、首页初始化拆开；首页首次激活single-flight，同epoch已成功不重复启动。失败保留可重试状态，不先置永久成功标志 |
+| loadRosterAgents/loadPersonaCatalog/deriveRosterProjections | persona绑定依赖catalog；catalog回调当前缺身份fence，两个loader均可能吞错返回undefined | chat按名册+catalog完成后再解析可操作投影；两个loader内部的onSuccess/catch/finally都加当前身份/请求generation判断并返回明确成功值，不能只在外层await之后检查 |
+| scope watch、selectHallConversation、continueBountyModification | scope切换会清草稿/会话；bounty入口先openPanel时可能短暂挂public ChatPanel | 先完成mode/subject设置与精确会话选择，再使目标业务面板可挂载。准备期只有中性/目标加载壳，不创建临时public receiver；正常入口保持原顺序 |
+| JuyiHallEntry.syncOnboarding/onAuthReady | 认证就绪可能立刻弹新手引导，争夺恢复选择器 | return流程中延后自动引导；恢复选择器结束或用户离开后再按原状态判断，不标记已读/完成。显式打开帮助沿原用户操作 |
+| useHallCampaignGrant | identity watch已有HALL_ENTERED事件，非纯GET | 保留原身份激活的活动事件；恢复重试不重建该composable、不再发一次。不能用“无业务副作用”误称全程零POST；禁止的是新增发送、上传、点将、执行和自动关联 |
+| taskWorkspaceBinding、scene debug/geometry | workspace只有明确actor才open，单改selectedTask不等于用户选择actor；scene派生不等于网络启动 | 不调用selectExplicitActor、不新增workspace会话；纯几何计算和debug投影不扩成必改文件。权限/任务订阅属于目标实际依赖，不按首页数据误删 |
+
+关闭冷启动直达议事时，在closePanel/实际离开过渡中显式激活首页；不可等已不存在的首页ref去触发。handlePanelAfterLeave仍负责清frame及合法焦点，不对已失效generation恢复焦点。返回新页面即取消当前恢复flight，但保留尚未结束的本地交接供主动恢复。
+
+#### Q.2 唯一正确的恢复顺序
+
+```text
+setup判定明确返回 → 中性启动壳
+→ token/profile就绪 → owner与记录校验 → 解析并持久化wire结果
+→ 目标基础数据成功 → 设置mode/subject（允许原scope watch完成重置）
+→ 精确history定位/原conversation读取（禁止latest/new）
+→ 目标组件挂载、身份重置watch完成、receiver注册
+→ 比对真实当前草稿与sourceRevision，必要时用户选择冲突处理
+→ 先恢复正文/讨论目标，再恢复picker当前现场与资料作用范围
+→ 持久checkpoint（resultApplied=true） → 按固定版本核验并显示引用状态
+→ 用户编辑/移除/完成/取消；仅明确完成才授权关联写入
+```
+
+receiver身份使用owner+canonicalTarget，不把正文/当前暂选放在接收键或generation条件里，否则用户编辑一个字就会取消合法恢复。scope字段由现有适配器生成：home为owner；chat沿现有`owner+NUL+taskId字符串+NUL+conversationId`。规范target的null与组件现有空字符串在边界转换，不直接拿null构造scope；新版归一化全链一致，旧snapshot按旧格式校验后迁移。
+
+同名册找不到原agent仅报“原好汉暂不可用”，不能断言服务端已撤权；当前名册第一页上限是既有能力边界，不猜其他agent。历史分页不设置随意页数/等待上限，必须检查hasMore、错误、游标/数量无进展及generation，找不到原会话明确失败。
+
+#### Q.3 草稿只有一个写入者，初始化不是编辑
+
+- 来源页面分别拥有正文与选择；公共记录工具只落盘。chat的scopeDrafts/threadDrafts是内存Map，不能当刷新后仍存在的草稿；useHallDrafts是服务端办事草稿/提交恢复，不可拿来存普通聊天正文。
+- 恢复开始先捕获已有真实现场，再进入`hydrating`；scope切换、初次mount、props初始化产生的空值不写持久checkpoint、不生成用户编辑revision。ready后启用同步持久化，出发/完成/取消前显式flush+readback。不是依赖卸载时才能保存。
+- 首页sessionStorage文字与本链路checkpoint共同由HallOverview更新；若会话文字与已保存恢复稿不同，视为可能的新编辑，不能无条件以localStorage获胜。正常未进入过本链路的首页保持原保存行为。
+- 三种议事包装组件通过discussionPanelContract传同一恢复能力到ChatPanel；只有ChatPanel注册receiver。setDraft只由既有正文所有者调用；picker不得再独立重读URL、再次恢复正文。
+- 普通sendHallMessage原本发送前清稿，typed发送在accepted后清稿；两条路径都同步保存真实当前状态。typed发送捕获目标+draftRevision，回执仅清仍相同revision的正文，防止await期间新编辑被清。正文为空也保存revision/acceptedRequestId，不因空字符串删掉防重放凭据。
+- 当前任务已只读/会话仍有活动回复：保留正文恢复，但不等待一个根本不会挂载的可写picker。显示“原现场已保存，当前不可编辑”，可只读核对、离开；可写条件恢复时同ID重新注册继续。只读不自动结束交接、不自动关联，不无限loading。
+
+#### Q.4 “完成”不是一次本地赋值：跨刷新保留必要写入意图
+
+源码事实：HallMaterialPicker.confirmQuickMaterials先改model并关闭；ChatPanel.completeMaterials随后fire-and-forget调用attachMaterials；后者逐项attach再detach。usePersonalWorkspaceWriteIntent明确为实例内Map，dispose会clear，不能承诺仅复用它就有跨刷新幂等恢复。
+
+**最小修正，不建新日志系统：**
+
+1. picker增加可选可等待的确认回调（例如`confirmSelection(selection)`），本返回链使用；未提供时保留既有model行为。回调返回`confirmed/failed/unknown/stale`，confirmed并且本地checkpoint保存成功才关闭/FINISHED。确认中禁重复完成/取消和第二次微信选取，组件禁用watch只能暂停，不能转成用户取消。
+2. checkpoint增`writeIntents:WriteIntent[]`，默认[]。每项纯数据为`{key:string, parentKind:'task'|'conversation', parentId:string, action:'CREATE'|'DELETE', fileId:string, version:string, role:'REFERENCE'|'INPUT', relationId:string|null, ifMatch:string|null, state:'PREPARED'|'SENDING'|'UNKNOWN'|'PROCESSING'|'COMMITTED'|'REJECTED'}`。DELETE带原relationId和If-Match；CREATE两者为null。身份来自外层owner，禁止存执行闭包、token、原生文件路径或任意请求URL。
+3. 复用现有write-intent模块，增加可选纯数据保存/恢复接口；在请求前生成原key并保存readback，失败不发请求。两种links适配器只为已绑定本requestId的调用提供序列化信息及固定execute工厂，重新挂载重建闭包。其他消费者默认保持实例内行为，不全项目改持久化。
+4. 自动恢复只读目录，绝不自动调用run/retry。持久SENDING/PROCESSING按未知处理。用户明确点“核对/重试原操作”才用**原key、原input和原If-Match**继续；不得为未知操作生成新key。现有API CREATE/DELETE有幂等记录及requestHash校验，复用，不增加API。返回已COMMITTED但当前关系后来被改变的情况，以当前关系展示冲突，不能重新制造旧关系。
+5. 原已选集合记为B，用户确认集合为S。只计划本次差量S−B新增、B−S移除，**不遍历当前所有关联去删除不在S里的项**，避免将离开期间别人新加的资料移除。操作前沿原列表分页读取有关关联；列表不完整/读取失败不能判“没有关联”。已有关系版本/角色/状态与预期不同提示冲突，不自动变更，移除仍保留原版本前提。
+6. 每个真实成功更新意图状态及当前事实；原内存Map不能在持久确认前删除唯一可重试意图。业务已成功但checkpoint保存失败记为本地保存错误，不把已知成功伪报成服务端未知；磁盘仍留原SENDING时，刷新后用原key对账即可。部分成功不回滚已成功项、不清整批。刷新后显示已确认项和未决项；没有未知项后，用户才能明确继续未执行差量或结束选择。取消不能宣称已经回滚服务器事实。整个确认过程无需服务端批量事务，本设计不承诺原子全成全败。
+7. 请求已发但落盘成功状态失败时，保留原key的UNKNOWN记录；重试同key对账。若最初key未保存则禁止发出请求。记录过期/身份清除不再重放，只允许用户从正常资料目录核对当前事实；不把24小时恢复窗口承诺扩大成无限期恢复。
+
+#### Q.5 关闭原因、读取失败和冲突的确定行为
+
+- 关闭原因分`user-cancel/navigation/disabled/identity-change/dispose`：只有用户取消走保存来源并结束交接。导航/禁用/卸载暂停且保留；身份退出沿原清理。不得继续复用当前cancelQuickMaterialPicker包办所有关闭原因。
+- 固定引用不可读时保留原引用占位，不回退最新版；已读正文和其他资料可显示。resultApplied标记合并已发生，重试只重新核验，不重加用户删掉的文件。用户明确移除失败项后可继续；有未处理不可读项禁止完成，不能无限等待或默认忽略。
+- 草稿冲突提供“保留当前稿并放弃此次恢复”或“采用恢复稿”，不混合两个来源；放弃不删服务器上传文件、不改当前选择。恢复失败页“返回首页”是暂停并清当前URL的返回参数，记录留待主动恢复；“放弃此次恢复”才ABANDONED清本交接。两按钮语义不能混用。
+- auth缺token的正常OAuth往返保留returnTo，认证后重验owner；显式注销/clearIdentity会按既有策略清交接，之后返回只能报告现场不存在，不承诺注销后仍恢复私人草稿。不得为此削弱身份清理。
+- unknown写入状态禁止静默当作取消；过期、无权限、只读、未知结果均有可离开路径，不以新建议事或上传来“修复”。
+
+#### Q.6 同一个选择器连续两次微信选取
+
+同一选择器允许在第一次资料暂选后继续选择微信，不强迫先关联。第二次出发仍用新requestId，快照为**当前**暂选（含保留的第一次结果），不是最初snapshot。
+
+写入顺序：保存新交接B → 保存来源checkpoint.activeRequestId=B → 将旧A标ABANDONED并设supersededBy=B → 才允许native离开。任何关键写入失败不离页；B在active指针写入前只是未发出的准备记录。若中断，指针=A则继续A；指针=B则A回调明确为已被后继替代，不套用A、不自动跳B，用户通过未恢复入口选择B。ABANDONED A可保留最小ID/owner/target/supersededBy到原有效期，不保存多余旧正文；不把它列入未恢复候选。
+
+B失败或取消保留B快照中的第一次暂选，不复活已删除资料。存在未决关联写入时不允许发起B。activeRequestId只是单目标交接归属，不是按时间猜最近的恢复规则；跨标签强一致仍不承诺。
+
+#### Q.7 改齐范围与分析结论
+
+**一次实现必须包含**：M的Shell/入口、两个公共模块、微信适配、picker、home/ChatPanel及三个包装层、正文所有者、两个links和现有write-intent的小范围扩展、相关loader身份fence、既有原型/回归。不包含API/数据库/Runtime/小程序wire变更、分享链接、全站路由或全站草稿重构。
+
+最小反例集纳入N对应组，而非新增测试流程：横屏首帧stage=0；catalog慢返回遇身份切换；bounty准备不瞬挂public；恢复期间新手引导不抢焦点；资料保存导致disabled不变成取消；两次微信选择仍保留当前暂选；部分attach成功后刷新保留原幂等key；并发新增关联不被差量删除；资料读取失败被用户移除后不再加回；typed发送期间编辑不被清；只读task不死等receiver；注销后不越权恢复；旧格式缺讨论选择只按明确缺省恢复。
+
+**结论：** 当前已识别的调用链、状态分支、责任归属和兼容取舍有明确实现决定，没有需要先发布生产才能决定的逻辑，也没有必须分两期上线的依赖。尚未运行的行为不能称已验证；网络、存储故障和跨窗口极端并发有明确失败边界，不承诺绝对无缺陷。分析目标是一次改齐上述真实依赖，不是增加环境或用发布后补丁代替设计。
+
+
+#### Q.8 实施核对（2026-11-16）
+
+Web `d52f808e` 已实现上述责任边界；源码映射、固定tree、测试selector、异常诊断与构建回执统一见[PAGE-RETURN交接](../../../docs/implementation/handoffs/PAGE-RETURN-20261116.md)。协调器使用Hall组件树内provide/inject，不引入全局事件或重复包装层状态。暂停关闭与取消分开；未决写入可以“暂存离开”，回到原选择器继续核对。正文所有者同步保存真实编辑和清稿，初始化不生成编辑事实。新手引导自动弹出受返回状态约束，明确打开帮助仍允许。当前仅本地实现/验证完成，不等同远端发布、真实微信验收或全局回归通过。
