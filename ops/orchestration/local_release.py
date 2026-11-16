@@ -93,11 +93,14 @@ def main():
     parser.add_argument('--api-regression-arg', action='append', default=[])
     parser.add_argument('--web-regression-test', action='append', default=[])
     parser.add_argument('--install', action='store_true')
+    parser.add_argument('--web-runtime-config', type=Path, help='expected public VITE configuration; required for SSH release')
     parser.add_argument('--build-host', help='explicit configured SSH worker; installation stays on this host')
     parser.add_argument('--remote-root', type=Path, help='fresh worker sources below /home/isp/wsps/cyf-build/')
     parser.add_argument('--ssh-known-hosts', type=Path, default=Path('/home/isp/conf/cyf-build/known_hosts'))
     parser.add_argument('--ssh-auth-file', type=Path, default=Path('/root/.codex/auth.json'))
     args = parser.parse_args()
+    if args.build_host and not args.web_runtime_config:
+        raise ValueError('SSH release requires an explicit expected public Web runtime configuration')
     if bool(args.build_host) != bool(args.remote_root):
         raise ValueError('--build-host and --remote-root must be supplied together')
     start = time.monotonic()
@@ -197,6 +200,12 @@ def main():
             result['remoteBuild'] = {'host': args.build_host, 'root': str(args.remote_root),
                 'transportReceipt': str(args.evidence_dir / 'ssh/transport.json'),
                 'preparationSeconds': round(time.monotonic() - preparation_start, 3)}
+        public_runtime_config = None
+        if args.web_runtime_config:
+            public_runtime_config = json.loads(args.web_runtime_config.read_text())
+            if not public_runtime_config or any(not k.startswith('VITE_') for k in public_runtime_config):
+                raise ValueError('expected Web runtime config must contain only public VITE keys')
+            result['webRuntimeConfigInput'] = {'path': str(args.web_runtime_config), 'sha256': sha(args.web_runtime_config)}
         before_api = sha(API_JAR)
         previous_api = json.loads(API_RECORD.read_text())
         if previous_api['status'] != 'installed' or previous_api['candidate_sha256'] != before_api:
@@ -215,6 +224,8 @@ def main():
             web_command += ['--regression-test', test]
         run('web-build', web_command, build=True)
         web_result = json.loads((web / 'result.json').read_text())
+        if public_runtime_config is not None and json.loads((web / 'runtime-config.json').read_text()) != public_runtime_config:
+            raise ValueError('remote Web public runtime config differs from the explicitly pinned production input')
         if web_result['status'] != 'BUILT' or not web_result['sourceUnchanged']:
             raise ValueError('Web build not publishable')
         api = args.output / 'api'

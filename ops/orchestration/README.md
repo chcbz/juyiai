@@ -227,6 +227,7 @@ systemd-run --unit="cyf-${BATCH}" --wait --pipe --collect \
 
 ```bash
 --build-host 203.32.84.239 \
+--web-runtime-config /ABS/PINNED/PUBLIC/runtime-config.json \
 --remote-root /home/isp/wsps/cyf-build/NEW_BATCH \
 --ssh-known-hosts /home/isp/conf/cyf-build/known_hosts
 ```
@@ -234,7 +235,7 @@ systemd-run --unit="cyf-${BATCH}" --wait --pipe --collect \
 - `remote_build.py` 只提供 SSH 传输，不能独立发布；只接受授权配置 `JYT_BUILD_SERVER` 的主机，并使用已固定的 SSH host key，拒绝自动信任新密钥。登录凭据由控制机 `/root/.codex/auth.json` 读取，不进入 argv、Git、源快照或回执；askpass 私有脚本只引用凭据文件，正常结束删除。
 - 每个候选只有一套远端干净源码快照：controller/API/Web 使用原始完整 commit/tree 的浅 Git 克隆，**不复制脏工作区**。远端任务台账显式携带实际 Owner、任务ID、源码身份和允许验证状态；远端写入不能覆盖控制机其他任务状态。
 - 执行前远端原 API builder 的 `--plan-only` 核对工具/命令/输出；Gradle 仍经现有编排器串行执行。API 使用已核验、私有的持久 cache-home，仅复用依赖/脚本/JavaCompile缓存，不复制项目buildDir、测试结果或最终JAR当作新批次成功。初次迁移缓存的输入、摘要、日志独立保存，不算应用构建通过。
-- SSH worker 使用 `/home/isp/apps` 中固定 Node/JDK/Gradle，`/home/isp/state` 放缓存与每批输出、临时目录；`/tmp`为tmpfs，不用于构建。Maven消费凭据只在worker私有 `conf/cyf-build/maven.env` 中提供；不复制整个 Codex auth、全局 Gradle init 或生产凭据。
+- SSH worker 使用 `/home/isp/apps` 中固定 Node/JDK/Gradle，`/home/isp/state` 放缓存与每批输出、临时目录；`/tmp`为tmpfs，不用于构建。Web仅加载单独的 `conf/cyf-build/web.env` 公开VITE配置，并与控制机显式固定的 `--web-runtime-config` 内容比较后才允许安装；Maven消费凭据只在worker私有 `conf/cyf-build/maven.env` 中提供；不复制整个 Codex auth、全局 Gradle init 或生产凭据。
 - Web/API测试、构建、打包各在**远端** task-owned systemd单元执行，第二阶段只拿到同一次执行的剩余600秒；不会因SSH断线让构建无限继续。SSH/归档回传耗时也计入该次构建阶段记录；不把worker安装、缓存迁移或回归验收伪装成应用构建成功。不向生产安装/服务下传构建deadline，不本机自动回退构建。
 - 原始包、构建输入、日志、XML、JAR及proof回传到控制机同名批次输出路径；SSH传输、原制品SHA和安装器原验证共同保证来源。`evidence/ssh/transport.json` 记录构建主机、控制器/API/Web完整commit/tree、传输摘要及大小；source_kind仍为真实LOCAL，不虚构CI/Flow Run。
 - 本入口不自动配置SSH、安装工具、恢复缓存或取得发布授权。worker连接/构建失败停止该次交付、保存真实失败；归因后才以新批次重试。不复用正在运行的一次执行来续时，不抢他人锁。

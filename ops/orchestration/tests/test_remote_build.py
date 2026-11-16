@@ -62,6 +62,12 @@ class RemoteBuildTest(unittest.TestCase):
             self.assertIn(str(worker.root / 'controller/ops/orchestration/local_build.py'), script)
             self.assertIn(str(worker.root / 'api'), script)
             self.assertIn('/home/isp/state/batch/api', script)
+            self.assertIn('source /home/isp/conf/cyf-build/maven.env;', script)
+            web_command = worker.build_command(['/python', '-u', '/controller/ops/orchestration/local_web_build.py',
+                '--source', '/source/web'], 'own-web-build', 600, Path('/source/api'), Path('/source/web'))
+            web_script = shlex.split(web_command[-1])[-1]
+            self.assertIn('source /home/isp/conf/cyf-build/web.env;', web_script)
+            self.assertNotIn('maven.env', web_script)
             self.assertNotIn('fixture-secret', script)
             self.assertNotIn('flow-ci', script)
             self.assertNotIn('deploy', script)

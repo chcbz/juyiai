@@ -43,6 +43,13 @@ class ReleaseRunnerTest(unittest.TestCase):
                      "result['buildSeconds']", "ARTIFACT_ATTESTATION=MATCH"):
             self.assertIn(text, SOURCE.read_text())
 
+    def test_remote_public_web_configuration_is_pinned_before_install(self):
+        text = SOURCE.read_text()
+        self.assertIn("parser.add_argument('--web-runtime-config'", text)
+        self.assertIn('SSH release requires an explicit expected public Web runtime configuration', text)
+        self.assertIn("json.loads((web / 'runtime-config.json').read_text()) != public_runtime_config", text)
+        self.assertLess(text.index('remote Web public runtime config differs'), text.index("run('api-install'"))
+
     def test_budget_excludes_installation_preflight_and_smoke(self):
         spec = importlib.util.spec_from_file_location('local_release_budget', SOURCE)
         runner = importlib.util.module_from_spec(spec)

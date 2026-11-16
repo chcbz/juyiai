@@ -159,7 +159,8 @@ a.unlink()
         mapped[0] = '/usr/bin/python3'
         # Credentials are read only by the remote build process, never in argv,
         # controller logs, source snapshots, receipts or archive transfers.
-        script = ('set -euo pipefail; set -a; source /home/isp/conf/cyf-build/maven.env; set +a; exec ' +
+        environment_file = 'maven.env' if any(v.endswith('/local_build.py') for v in mapped) else 'web.env'
+        script = ('set -euo pipefail; set -a; source /home/isp/conf/cyf-build/' + environment_file + '; set +a; exec ' +
                   shlex.join(['/home/isp/bin/cyf-build-env'] + mapped))
         return self.command(['systemd-run', '--quiet', '--wait', '--pipe', '--collect',
             '--unit=' + unit, '--property=RuntimeMaxSec=' + str(int(budget)),
