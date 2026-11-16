@@ -221,7 +221,7 @@ systemd-run --unit="cyf-${BATCH}" --wait --pipe --collect \
 
 ## SSH 构建服务器（2026-11-16：迁移入口）
 
-根AGENTS已将 Web/API 默认构建位置迁到用户指定的 `203.32.84.239`；该主机只测试、构建、打包，不接收生产安装权限、不启动 Flow。生产机继续执行原 LOCAL 安装器，版本、身份/ACL、锁、备份、恢复、健康及线上资源摘要检查不变。Runtime 正在其他任务中变更，不随本次 Web/API 迁移发布。
+根AGENTS已将 Web/API 默认构建位置迁到用户指定的 `203.32.84.239`；该主机只测试、构建、打包，不接收生产安装权限、不启动 Flow。生产机继续执行原 LOCAL 安装器，版本、身份/ACL、锁、备份、恢复、健康及线上资源摘要检查不变。该段原批次仅涵盖 Web/API；Runtime 后续补齐见下方专节，生产发布仍由既有受控事务负责。
 
 复用 `local_release.py`，在原固定源码参数上追加：
 
@@ -243,3 +243,28 @@ systemd-run --unit="cyf-${BATCH}" --wait --pipe --collect \
 本次实际安装、固定候选、测试、尝试和发布状态见 `docs/implementation/handoffs/REMOTE-BUILD-MIGRATION-20261116.md`；2026-11-16批次remote-20261116-03已实测构建与回传316.679秒并完成原受控安装，前两批FAIL原样保留；不代表全冷/任意负载均保证此耗时。后续Web/API任务继续显式选择SSH参数，不自动回落生产机重型构建。
 
 缓存准备注意：Gradle不可变Groovy DSL缓存的空目录也是输入，快照必须保留并核验目录清单；只校验文件不代表缓存结构完整。控制机使用已验证的Python3.11（当前 `/root/.local/bin/python3.11`），不以系统默认Python3.6执行控制器。
+
+### Runtime 远程构建（2026-11-16补齐）
+
+`runtime_build.py` 是原 Runtime114 LOCAL 代码包脚本的参数化提升，不是新的生产安装器。保留原34个测试文件与 `collateExecutionPayload`；`--regression-test` 可追加本次变更的源内 `.test.mjs`，不能替换/减少基线。代码包不携带生产 HOME、auth、身份、会话或目标 ABI 依赖；实际安装主机继续验证既有依赖及固定实体 app。
+
+1. 沿原任务登记唯一 Owner、固定完整 commit/tree、版本及实际发布授权；不要跟随其他任务的新 HEAD。`RemoteBuild.prepare(..., revisions={'controller': controller_commit, 'runtime': runtime_commit})` 可浅传输精确提交，不复位/覆盖活动工作区。
+2. worker 在 `/home/isp/state/cyf-local-build/runtime-dependencies/<精确锁SHA>/` 准备同候选 `package.json`/`package-lock.json`，用既有 npm 缓存运行 `npm ci`；不用生产 node_modules，不读取 Maven/Web 配置。原生测试工具闭包为 Node、bwrap、slirp4netns、nft、nsenter/unshare，以及已核验的 Runtime 专用 Codex0.167.0 原生 binary **和同发行版 codex-resources**。
+3. 先在 worker 用下列参数加 `--plan-only` 核对路径及追加selector（计划不构成构建成功），再经原 `RemoteBuild.build_command` 调用 task-owned systemd 单元。示意路径须换为本次干净快照和全新输出：
+
+   ```sh
+   /usr/bin/python3 /ABS/CONTROLLER/ops/orchestration/runtime_build.py \
+     --source /ABS/RUNTIME --commit FULL_COMMIT --tree FULL_TREE \
+     --output /home/isp/state/cyf-build/NEW_BATCH --build-id REAL_BUILD_ID \
+     --node /home/isp/apps/node/bin/node \
+     --codex-bin /home/isp/apps/cyf-runtime-build-codex-0.167.0/bin/codex \
+     --dependencies /home/isp/state/cyf-local-build/runtime-dependencies/EXACT_LOCK_SHA \
+     --regression-test conf/codex-bridge/test/image-input.test.mjs \
+     --regression-test conf/codex-bridge/test/typed-inspection-input-carriers.test.mjs
+   ```
+
+4. 本 worker 是 Ubuntu26/uutils，原测试会把 cat/sleep 复制成不同名称后验证原生 inode；用 `build_command(..., runtime_source=..., native_fixtures=[('/usr/bin/gnucat','/usr/lib/cargo/bin/coreutils/cat'),('/usr/bin/gnusleep','/usr/lib/cargo/bin/coreutils/sleep')])`，只在该 systemd mount namespace 绑定 GNU 工具，不改系统命令。原生沙箱需要的 AppArmor profile 仅匹配隔离视图 `/runtime/codex-resources/bwrap` 并授予 userns；配置 `/home/isp/conf/cyf-build/runtime-bwrap.apparmor`，系统链接 `/etc/apparmor.d/cyf-runtime-build-bwrap`。**不关闭全局 AppArmor/userns 限制，不以跳过真实隔离用例替代依赖准备。** 其它主机按实际工具/内核决定，不机械安装该兼容绑定。
+5. `build_command` 的远端期限与 `collect('runtime', ..., timeout=remaining)` 共用600秒。源码/依赖准备另计，不能拆测试与打包续时；`build-result.json`、原 TAP、package manifest、原 tgz、工具/binary/resources SHA均回传，重复源码/payload及 scratch 不回传。包仍是 LOCAL 来源，不伪造 Flow Run。
+6. 构建不是安装授权。按既有 Runtime 发布锁、前代 CAS、固定目录/备份/forward-only 边界发布；若另一 Owner 正发布，告警并等待，不抢锁/降级。已验证上线的**同一源码及全部 portable 字节/模式、原安装清单/依赖和实时通道**均一致时可锁内幂等确认，不重复搬文件、重启、认证迁移或收费回归；保留原安装来源，只新增精确远程验证回执，不把包 SHA 不同但代码相等伪称为同一原包。
+
+实测及失败原始回执见[迁移handoff](../../docs/implementation/handoffs/REMOTE-BUILD-MIGRATION-20261116.md)。本入口不编译 Runtime 专用 Codex 源码补丁，不修改全机 Codex，也不自动部署其他任务最新候选。

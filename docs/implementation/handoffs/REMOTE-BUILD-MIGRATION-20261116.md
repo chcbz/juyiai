@@ -73,3 +73,19 @@ Ubuntu26内核审计明确拒绝隔离视图`/runtime/codex-resources/bwrap`的�
 原失败用例最终诊断05为8PASS/0FAIL/0SKIP（包含另一spawn负例，独立诊断不冒充完整套件）。第三完整尝试`runtime-remote-20261116-03`在测试前0.515秒因源码断言安全FAIL：另一Owner已将Runtime HEAD提交为4d763777/1.3.115，传输层原只克隆当时HEAD，builder正确拒绝与本次固定4fd0951候选不一致。未跟随发布、未复位/覆盖他人工作区。传输新增可选完整commit固定快照，以浅fetch准确对象构造snapshot，不改变本地HEAD或脏字节；新增回归13项通过（含并发Owner新HEAD保持不变/仍输出原候选）。下一完整批固定原线上4fd0951及精确lock，不顺带发布1.3.115或另一任务新API。
 
 第四批`runtime-remote-20261116-04`**BUILT_NOT_PUBLISHED**：固定4fd0951，完整783项773PASS/0FAIL/10原skip，worker138.124秒、含回传144.823秒；包SHA96b6f8b1487e5fb6ffa4119625ba9bb2e9f471833ac6cff327bd9f728c8625e1。实际portable manifest为152项、与原114包逐项完全相同。生产幂等确认在原发布锁处1.022秒安全拒绝：另一Owner正受控部署115（MATERIAL任务，PID1110067持锁），本任务没有抢锁/停进程/覆盖新版本。原BUILT及publication FAIL分别保留；经原conflict-alert告警，不向另一聊天发消息或改变归属。为与该任务即将发布的实际候选一致，接续仅远程构建同固定115/bridge77源码4d763777/treef51cce51，并在原完整34文件上额外加入image-input及typed-inspection-input-carriers；不减少测试、不替另一Owner进行部署/数据恢复。115的生产发布/业务验收仍由原任务负责；本任务后续只在其完成且源/清单一致时作幂等核验，绝不降回114。
+
+第五批`runtime-remote-20261116-05`**BUILT_NOT_PUBLISHED**：精确115/bridge77（4d763777 / f51cce51），36文件807项：**797PASS/0FAIL/10原SKIP**；worker138.258秒、含回传143.939秒，准备46.071秒另计。包SHA `cda994cb32e5e92aa07e065c3b141897e7dc03c9a795cbbc93a290f49c1b07b6`，controller固定94d3cf0d（完整SHA/tree见transport.json）。新增两个载体selector不替换原34文件；完整工具/锁/binary/resources摘要、TAP、manifest及原包在 `/home/isp/state/cyf-build/rt-r05/`，包外证据另存本任务`runtime-05/package-evidence/`。未伪称由本任务安装：原MATERIAL Owner正将同源115受控安装，2026-11-16 11:42只读回执为INSTALLED_CHANNEL_PENDING/PID1116103，804.118秒是其独立安装阶段，不计入本次远程构建143.939秒。
+
+本任务此时只等待原Owner完成实时通道核验，随后作原锁/CAS下同源幂等确认，不回放认证迁移、不改变当前安装来源或业务事实、不重启服务。远程原10容器身份/启动时间/重启计数/健康不变，主机cat仍uutils、AppArmor全局限制均1；证据`runtime-worker-supplement-verification.json`。worker架构/工具说明已先备份后追加Runtime实际闭包与构建结果，备份在worker`/home/isp/baks/cyf-build-migration/20261116-runtime/`，修改摘要回执`runtime-remote-documentation-update.json`。文档不是生产健康通过证据。
+
+工具定向验证13 transport +32 local +7 storage +2 CLI计划/路径用例，54项通过；实际应用测试单独见807项结果。`./sddw check-docs --all-docs`仍因导出缺`docs/sdd-document-map.json`返回2，未伪称全库检查通过。包114完成登记；包115先登记后在后续核验复用前用原mark-active撤回，完成后须重新登记。原失败和锁冲突均保留。
+
+## Runtime迁移与发布核验完成（2026-11-16 11:50 CST）
+
+- 原MATERIAL Owner已将Runtime1.3.115/bridge1.1.77、4d763777/f51cce51受控安装并标verified-active；其原制品SHA `973b8edc3c33b1574178ab4e29c0ae6906629995a8622c9307a7b9b5ed37529a`及安装来源保持原样，不伪改成远程包。
+- 本任务最终在原发布锁内做 **IDEMPOTENT_NO_REINSTALL / PASS**：远程第五批807项797PASS/0FAIL/10SKIP、143.939秒的代码包与原115候选及实际安装程序**全部152项文件/目录、字节与模式匹配**，安装baseline（含原派生缓存证明）、目标依赖及原validate.sh通过。当前PID1116103、5/5主体connected/registered/ready，健康文件新鲜；前后PID及程序清单不变。未重复安装/重启/认证迁移、未改当前安装record或恢复state。
+- 当前新增发布验证回执 `/home/isp/apps/cyf-agent-runtime-v1/release-records/remote-build-20261116.json`；完整结果 `/home/isp/state/cyf-remote-build-migration-20261116/runtime-05/publication/publication-result.json`。独立发布核验148.151秒；等待另一Owner安装/通道核验及本次验证共720.920秒，**不计入已完成的远程构建143.939秒，不续600秒构建期限、不给生产进程下传deadline**。原114包构建成功及原锁冲突仍各保留，前三批真实失败不重标。
+- 真实115安装、备份与业务验收由原任务留证；本任务仅声明远程完整必要selector、代码/依赖、发布幂等及5通道健康，不声明FULL119全过、原用户事项689恢复或新增付费Provider调用。API/Web及其后续业务发布归各原任务，本次不重建/重发它们。
+- Runtime默认worker位置、参数化原builder、固定revision浅快照、追加回归及Ubuntu原生闭包/私有GNU挂载已收口根AGENTS与既有编排README；代码/工具定向54项通过，与应用807项结果分开。根提交仅本任务文件、本地develop，不自动push混合历史。
+- 两个成功Runtime包均按原保留入口mark-complete登记，115在核验复用前mark-active、核验后重新登记，未清共享缓存。仅本任务五批远端源码/重复build及scratch、本机重复Git/传输/engine seed归档已清理；worker原controller ledger在清理前另存，原包、TAP、metadata、完整测试/失败/锁冲突证据、安装状态、缓存和备份全部保留。清理回执 `/home/isp/state/cyf-remote-build-migration-20261116/runtime-cleanup/receipt.json`，13项worker临时目录及26个本机重复副本，不包含生产app/状态。
+- 文档全库检查仍因已知导出缺map返回2，空白与本次直接链接检查单独通过；不把这个既有文档阻塞称为应用发布失败或全库文档PASS。
