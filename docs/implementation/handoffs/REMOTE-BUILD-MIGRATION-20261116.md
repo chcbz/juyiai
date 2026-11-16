@@ -22,6 +22,17 @@
 - 初次工具/缓存准备、真实构建批次、测试XML、制品SHA、安装及验收分别保留于同任务证据和构建批次目录。准备成功不代表应用构建通过。
 - 未执行全局119项、真实Provider收费调用或故障注入；发布后验收限定原安装器全资源核对、API健康/签名/认证边界，以及明确记录的只读冒烟。
 
+## 执行批次与故障归因
+
+- controller 固定 `19c59363bc5ca211a02ebc18acada1a109db164d` / tree `eef01b0ddc03e2d886b6be4fbe53d6bb404b686d`；45项工具定向测试通过，日志 `/home/isp/state/cyf-remote-build-migration-20261116/final-transport-tests.log`。
+- worker已安装 Node24.22.1/npm11.19.1、Dragonwell21.0.11、Gradle9.3.1，均在`/home/isp/apps`；Gradle迁移6688项缓存逐hash核验，通过原API plan-only与orchestrator preflight。缓存迁移不是应用验证。
+- 首批 `remote-20261116-01`：源码准备197.675秒，单独记录；Web构建阶段414.446秒后Owner受控停止，`FAIL` / exit143，API未开始，生产未安装。Canvas GNU原生tarball从npm官方源持续低速下载，六分多钟仍未完成；预计余下必要构建/打包超600秒，未续时。不是单元测试失败，也不重标为成功。
+- 首批证据 `/home/isp/state/cyf-remote-build-migration-20261116/release-01/release.json`，网络/停止现场和npm原日志在同根 `failure-01/`。修复选择迁入本机已有、逐blob匹配锁文件SRI的npm内容缓存，不改锁文件/依赖版本/测试要求。准备脚本曾因控制机默认Python3.6及残留准备目录失败，原日志另存；控制器正式执行必须用现有 `/root/.local/bin/python3.11`。
+
+- npm缓存迁入554个锁定SRI内容blob，远端553项已有、1项新增（Canvas GNU）；完整锁文件不在本机cache的82项为其它平台等未缓存包，不伪称全部依赖已迁入。新批Web依赖11.568秒、53通过/2pending、构建12.464秒，worker全程41.431秒。
+- 第二批 `remote-20261116-02`：Web（含回传）207.789秒通过；API 8.028秒失败，Gradle在测试前报告Groovy DSL不可变workspace缺失 `cp_init`/report输出。根因是迁移快照只归档文件而漏掉有语义的空目录，不是代码/测试失败；总构建215.817秒，生产未安装。已按原缓存目录清单补齐1224个目录并核验9752目录、6688原文件，未清空缓存。证据同根 `release-02/`、`gradle-cache-directories*.{json,log}`。
+- 同期观察到回传约5Mbps，API原JAR约241MiB，不能仅靠热缓存承诺600秒。传输适配为SSH固定密钥的rsync块差量：旧程序/包仅作字节basis，接收完整归档SHA/大小必须匹配worker原归档后才解包；不复用测试结果、不改变原包。传输受本阶段剩余预算约束，不给生产进程下传deadline。9项transport及32项local工具测试通过，日志同根 `delta-{transport,local}-tests.log`。
+
 ## 接续
 
-待完成worker Gradle/依赖缓存准备，固定工具候选，执行API plan-only与任务状态检查，再在600秒单次构建预算内执行Web/API原必要基线及fresh打包，回传校验后受控安装。任何异常保留失败及原因，不覆写历史、不自动降级本机构建；精确完整制品可复用于安装重试。
+核验npm缓存迁移完成后启动独立新批次，Web/API继续共用单次600秒预算，回传后原受控安装。任何异常保留失败及原因，不覆写历史、不自动降级本机构建；精确完整制品可复用于安装重试。

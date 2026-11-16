@@ -157,7 +157,8 @@ def main():
                 rc = subprocess.call(argv, env=remote.environment() if build and remote is not None else env,
                                      stdout=log, stderr=subprocess.STDOUT)
             if build and remote is not None:
-                remote.collect(name.split('-')[0], args.output / name.split('-')[0])
+                remote.collect(name.split('-')[0], args.output / name.split('-')[0],
+                               timeout=max(0, budget - (time.monotonic() - t)))
         finally:
             stage.update(seconds=time.monotonic() - t, exitCode=rc)
             save()

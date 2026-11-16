@@ -236,8 +236,10 @@ systemd-run --unit="cyf-${BATCH}" --wait --pipe --collect \
 - 每个候选只有一套远端干净源码快照：controller/API/Web 使用原始完整 commit/tree 的浅 Git 克隆，**不复制脏工作区**。远端任务台账显式携带实际 Owner、任务ID、源码身份和允许验证状态；远端写入不能覆盖控制机其他任务状态。
 - 执行前远端原 API builder 的 `--plan-only` 核对工具/命令/输出；Gradle 仍经现有编排器串行执行。API 使用已核验、私有的持久 cache-home，仅复用依赖/脚本/JavaCompile缓存，不复制项目buildDir、测试结果或最终JAR当作新批次成功。初次迁移缓存的输入、摘要、日志独立保存，不算应用构建通过。
 - SSH worker 使用 `/home/isp/apps` 中固定 Node/JDK/Gradle，`/home/isp/state` 放缓存与每批输出、临时目录；`/tmp`为tmpfs，不用于构建。Web仅加载单独的 `conf/cyf-build/web.env` 公开VITE配置，并与控制机显式固定的 `--web-runtime-config` 内容比较后才允许安装；Maven消费凭据只在worker私有 `conf/cyf-build/maven.env` 中提供；不复制整个 Codex auth、全局 Gradle init 或生产凭据。
-- Web/API测试、构建、打包各在**远端** task-owned systemd单元执行，第二阶段只拿到同一次执行的剩余600秒；不会因SSH断线让构建无限继续。SSH/归档回传耗时也计入该次构建阶段记录；不把worker安装、缓存迁移或回归验收伪装成应用构建成功。不向生产安装/服务下传构建deadline，不本机自动回退构建。
-- 原始包（内含fresh JAR）、构建输入、日志、XML及proof回传到控制机同名批次输出路径；SSH传输、原制品SHA和安装器原验证共同保证来源。`evidence/ssh/transport.json` 记录构建主机、控制器/API/Web完整commit/tree、传输摘要及大小；source_kind仍为真实LOCAL，不虚构CI/Flow Run。
+- Web/API测试、构建、打包各在**远端** task-owned systemd单元执行，第二阶段只拿到同一次执行的剩余600秒；不会因SSH断线让构建无限继续。SSH/归档回传耗时也计入该次构建阶段记录，归档与rsync只使用该阶段剩余预算；不把worker安装、缓存迁移或回归验收伪装成应用构建成功。不向生产安装/服务下传构建deadline，不本机自动回退构建。
+- 原始包（内含fresh JAR）、构建输入、日志、XML及proof回传到控制机同名批次输出路径；SSH固定host key的rsync块差量只减少网络字节，可用当前API JAR/Web包作字节basis，但不复用测试或产物成功事实。worker原归档与接收端完整SHA-256/大小必须一致，之后才安全解包；不重新压缩/改写待发布包。SSH传输、原制品SHA和安装器原验证共同保证来源。`evidence/ssh/transport.json` 记录构建主机、控制器/API/Web完整commit/tree、传输摘要及大小；source_kind仍为真实LOCAL，不虚构CI/Flow Run。
 - 本入口不自动配置SSH、安装工具、恢复缓存或取得发布授权。worker连接/构建失败停止该次交付、保存真实失败；归因后才以新批次重试。不复用正在运行的一次执行来续时，不抢他人锁。
 
 本次实际安装、固定候选、测试、尝试和发布状态见 `docs/implementation/handoffs/REMOTE-BUILD-MIGRATION-20261116.md`；入口代码存在不等于迁移发布已通过。后续任务继续显式选择SSH参数，不默认为可回落生产机重型构建。
+
+缓存准备注意：Gradle不可变Groovy DSL缓存的空目录也是输入，快照必须保留并核验目录清单；只校验文件不代表缓存结构完整。控制机使用已验证的Python3.11（当前 `/root/.local/bin/python3.11`），不以系统默认Python3.6执行控制器。

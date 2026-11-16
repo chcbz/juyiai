@@ -119,6 +119,68 @@ class RemoteBuildTest(unittest.TestCase):
             self.assertEqual('dirty', (source / 'tracked').read_text())
             worker.close()
 
+    def collect_fixture(self, root, corrupt=False):
+        worker = self.make(root)
+        remote = root / 'worker-output'; remote.mkdir()
+        (remote / 'package').mkdir(); (remote / 'build').mkdir()
+        payload = b'unchanged-JAR-library' * 65536
+        (remote / 'package/api.tar').write_bytes(payload + b'fresh-tests')
+        (remote / 'build/old.jar').write_bytes(b'must-not-transfer')
+        (remote / 'build/TEST-critical.xml').write_text('<testsuite tests="1"/>')
+        (remote / 'result.json').write_text('{"status":"BUILT"}')
+        basis = root / 'basis.jar'; basis.write_bytes(payload)
+        remote_tar = root / 'worker-transport.tar'
+        def local_call(argv, **kw):
+            command = list(map(str, argv)); command[0] = sys.executable
+            if 'tarfile' in command[2]:
+                command[-2:] = [str(remote), str(remote_tar)]
+            else:
+                command[-1] = str(remote_tar)
+            return subprocess.run(command, check=True, **kw)
+        worker.call = local_call
+        worker.transfer_basis = lambda component: basis
+        def download(source, archive, timeout):
+            self.assertGreater(timeout, 0)
+            result = subprocess.run(['rsync', '--no-whole-file', '--stats', str(remote_tar), str(archive)],
+                                    stdout=subprocess.PIPE, check=True, text=True, timeout=timeout)
+            (root / 'rsync.log').write_text(result.stdout)
+            if corrupt:
+                with archive.open('ab') as stream:
+                    stream.write(b'corruption')
+        worker.download = download
+        return worker
+
+    def test_delta_collection_reconstructs_exact_bytes_and_only_evidence(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d); worker = self.collect_fixture(root)
+            output = root / 'received'; worker.collect('api', output, timeout=20)
+            self.assertEqual(b'unchanged-JAR-library' * 65536 + b'fresh-tests',
+                             (output / 'package/api.tar').read_bytes())
+            self.assertTrue((output / 'build/TEST-critical.xml').exists())
+            self.assertFalse((output / 'build/old.jar').exists())
+            transfer = worker.receipt['transfers'][-1]
+            self.assertEqual('rsync-block-delta', transfer['algorithm'])
+            self.assertIn('Matched data:', (root / 'rsync.log').read_text())
+            self.assertFalse((root / 'worker-transport.tar').exists())
+            worker.close()
+
+    def test_delta_collection_rejects_corruption_before_extraction(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d); worker = self.collect_fixture(root, corrupt=True)
+            with self.assertRaisesRegex(ValueError, 'digest/size'):
+                worker.collect('api', root / 'received', timeout=20)
+            self.assertFalse((root / 'received').exists())
+            self.assertTrue((root / 'worker-transport.tar').exists())
+            worker.close()
+
+    def test_transfer_has_only_remaining_build_budget(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d); worker = self.make(root)
+            with self.assertRaisesRegex(TimeoutError, 'budget'):
+                worker.collect('api', root / 'received', timeout=0)
+            self.assertFalse((root / 'received').exists())
+            worker.close()
+
     def test_collection_refuses_existing_output(self):
         with tempfile.TemporaryDirectory() as d:
             worker = self.make(Path(d)); existing = Path(d) / 'existing'; existing.mkdir()
