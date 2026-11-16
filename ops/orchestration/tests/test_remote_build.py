@@ -196,9 +196,12 @@ class RemoteBuildTest(unittest.TestCase):
             root = Path(d); worker = self.collect_fixture(root)
             (root / 'worker-output/build/source').mkdir()
             (root / 'worker-output/build/source/package.json').write_text('{}')
+            (root / 'worker-output/t').mkdir()
+            (root / 'worker-output/t/temporary-fixture.json').write_text('{}')
             worker.collect('runtime', root / 'received', timeout=20)
             self.assertTrue((root / 'received/result.json').exists())
             self.assertFalse((root / 'received/build').exists())
+            self.assertFalse((root / 'received/t').exists())
             worker.close()
 
     def test_delta_collection_rejects_corruption_before_extraction(self):

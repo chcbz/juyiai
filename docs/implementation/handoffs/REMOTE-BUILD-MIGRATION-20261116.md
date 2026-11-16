@@ -65,3 +65,7 @@
 首批`runtime-remote-20261116-01`在测试前0.415秒FAIL：worker首次没有`/home/isp/state/cyf-build`父目录，旧脚本只mkdir末级。原日志和result保留于`/home/isp/state/cyf-remote-build-migration-20261116/runtime-01/`；失败证据收集因没有生成输出另安全拒绝，未打包/未安装。修正为普通盘父目录递归创建，并让传输临时包按输出批次命名，避免不同批次相互冲突；独立第二批重新计600秒，不改写原FAIL。
 
 第二批`runtime-remote-20261116-02`完整测试135.501秒FAIL：783项766PASS/7FAIL/10SKIP，无包。7项分别来自构建机缺/usr/bin/bwrap（5项）及Ubuntu26 uutils多调用二进制按新文件名复制后退出（cat进程身份及sleep存活清理2项）；均为真实失败，不忽略或补绿。安装系统依赖bubblewrap0.11.1；GNU coreutils9.7已随主机存在，下一次Runtime任务仅用systemd BindReadOnlyPaths将gnucat/gnusleep映射到私有mount namespace内原路径，主机默认命令及其它服务不变。源代码/测试selector不变，先跑原失败用例诊断，独立新完整构建仍600秒。工具12项测试通过，日志同证据根runtime-transport-tests-03.log。
+
+原失败用例诊断逐步暴露完整原生工具闭包：先补同版本Codex0.167.0原生二进制（SHA cdcb45aaa01d0f14e298985e09465aebccd47f64ecd298aea44814af7b62bbda），再补slirp4netns及同发行版codex-resources/codex-path（40文件逐hash验证），均在worker专用apps目录，不复制任何HOME/auth或使用Provider。各次原诊断日志保留，不是新完整构建或PASS。
+
+Ubuntu26内核审计明确拒绝隔离视图`/runtime/codex-resources/bwrap`的嵌套userns。仅为该确切沙箱helper安装AppArmor attachment，位于`/home/isp/conf/cyf-build/runtime-bwrap.apparmor`，系统入口为`/etc/apparmor.d/cyf-runtime-build-bwrap`链接；授予userns以运行真实嵌套bwrap，不关闭sandbox/实际只读或网络探针，两个全局AppArmor限制sysctl均未更改。没有为其它程序/全局userns解除限制。原生测试必须真实通过后才启动完整第三批。

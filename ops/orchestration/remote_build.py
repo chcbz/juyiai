@@ -224,7 +224,7 @@ a.unlink()
 p=pathlib.Path(sys.argv[1]); a=pathlib.Path(sys.argv[2]); assert p.is_dir()
 with a.open('xb') as raw, tarfile.open(fileobj=raw,mode='w|') as tf:
  for f in sorted(p.rglob('*')):
-  if sys.argv[3]=='runtime' and str(f.relative_to(p)).startswith('build/'):continue
+  if sys.argv[3]=='runtime' and f.relative_to(p).parts[0] in ('build','t'):continue
   if f.is_file() and not f.is_symlink() and (not str(f.relative_to(p)).startswith('build/') or f.suffix in ('.json','.xml','.log')):
    tf.add(f,arcname=str(f.relative_to(p)),recursive=False)
 h=hashlib.sha256()
