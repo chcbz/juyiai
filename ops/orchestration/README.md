@@ -99,7 +99,7 @@ python3 -B -m unittest discover -s ops/orchestration/tests -p 'test_preflight.py
 
 ## SDD文档链路（轻量只读）
 
-文档整理后复用 `./sddw check-docs [feature-id]`，全目录默认覆盖规则、当前索引和特性主文档，检查范围及历史例外见 [SDD说明](../../docs/sdd-workflow.md#sdd-document-check)。该命令不执行应用测试/构建、不修改pin/台账、不比较历史SHA与当前checkout；不能作为发布验收。既有 `sddw verify` 保留模板候选核验语义。工具自身定向回归：`python3 -B -m unittest discover -s ops/orchestration/tests -p test_sdd_docs.py -v`。
+文档整理后复用 `./sddw check-docs [feature-id]`，全目录默认覆盖规则、当前索引和特性主文档，检查范围及历史例外见 [SDD说明](../../docs/sdd-workflow.md#sdd-document-check)。该命令不执行应用测试/构建、不修改pin/台账、不比较历史SHA与当前checkout；不能作为发布验收。 2026-11-16已恢复原导航映射并适配公开导出：只有 `sdd-document-map.json` 的 `export_profile.omitted` 精确列出的内部集成清单/历史来源/附件缺失可报告为 `unavailable_exported_references`（未包含、未验证）；不能豁免现行文档/源码或目录通配。已存在文件仍检查，未列出的断链仍失败，不以导航PASS宣称缺失证据有效。既有 `sddw verify` 保留模板候选核验语义。工具自身定向回归：`python3 -B -m unittest discover -s ops/orchestration/tests -p test_sdd_docs.py -v`。
 
 ## 本地快速构建与受控发布（2026-11-07）
 

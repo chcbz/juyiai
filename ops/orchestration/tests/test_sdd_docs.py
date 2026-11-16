@@ -318,5 +318,100 @@ class DocumentDiscoveryTest(unittest.TestCase):
         self.assertEqual(result['documents'], sum(result['role_counts'].values()))
 
 
+class PublicExportNavigationTest(unittest.TestCase):
+    setUp = DocumentDiscoveryTest.setUp
+    put = DocumentDiscoveryTest.put
+    save_mapping = DocumentDiscoveryTest.save_mapping
+    check = DocumentDiscoveryTest.check
+
+    def omit(self, path, kind):
+        self.mapping.setdefault('export_profile', {}).setdefault('omitted', {})[path] = {
+            'kind': kind, 'reason': 'Not included in the public export; not validated.'}
+        self.save_mapping()
+
+    def test_missing_exported_manifest_is_visible_not_fabricated(self):
+        path = 'specs/example/integration.yaml'
+        (self.root / path).unlink()
+        self.omit(path, 'integration_manifest')
+        result = self.check()
+        self.assertFalse(result['errors'])
+        self.assertEqual(result['unavailable_exported_references'][0]['path'], path)
+        self.assertIn('NOT_VALIDATED', result['unavailable_exported_references'][0]['status'])
+        self.assertFalse((self.root / path).exists())
+
+    def test_unlisted_missing_manifest_still_fails(self):
+        (self.root / 'specs/example/integration.yaml').unlink()
+        self.assertTrue(any('Missing/empty artifact: specs/example/integration.yaml' in e
+                            for e in self.check()['errors']))
+
+    def test_exported_history_link_is_visible_but_new_missing_link_fails(self):
+        path = 'docs/implementation/handoffs/OLD-20260101.md'
+        self.omit(path, 'historical_source')
+        self.put('docs/README.md', '[index](../specs/INDEX.md) [old](implementation/handoffs/OLD-20260101.md)')
+        self.assertFalse(self.check()['errors'])
+        self.put('docs/README.md', '[index](../specs/INDEX.md) [other](implementation/handoffs/OTHER.md)')
+        self.assertTrue(any('missing target' in e for e in self.check()['errors']))
+
+    def test_exported_evidence_keeps_current_spec_links_strict(self):
+        path = 'specs/example/evidence/report.json'
+        self.omit(path, 'historical_evidence')
+        self.put('specs/example/spec.md', '[design](design.md) [tasks](tasks.md) [acceptance](acceptance.md) [receipt](evidence/report.json)')
+        self.assertFalse(self.check()['errors'])
+        self.put('specs/example/design.md', '[bad](missing-current.md)')
+        self.assertTrue(any('missing target missing-current.md' in e for e in self.check()['errors']))
+
+    def test_present_manifest_is_checked_even_when_listed_as_exported(self):
+        self.omit('specs/example/integration.yaml', 'integration_manifest')
+        self.put('specs/example/integration.yaml', 'current_design: missing.md')
+        self.assertTrue(any('missing target missing.md' in e for e in self.check()['errors']))
+        self.assertFalse(self.check()['unavailable_exported_references'])
+
+    def test_empty_manifest_cannot_be_exempted(self):
+        self.omit('specs/example/integration.yaml', 'integration_manifest')
+        self.put('specs/example/integration.yaml', '')
+        self.assertTrue(any('Missing/empty artifact' in e for e in self.check()['errors']))
+
+    def test_missing_required_current_document_cannot_be_exempted(self):
+        for path in ('specs/example/spec.md', 'specs/example/tasks.md', 'docs/README.md',
+                     'api/src/main/Example.java', 'docs/implementation/handoffs/TEMPLATE.md'):
+            with self.subTest(path=path):
+                self.mapping.pop('export_profile', None)
+                self.omit(path, 'historical_source')
+                with self.assertRaises(ValueError):
+                    self.check()
+
+    def test_selected_current_detail_cannot_be_exempted_as_history(self):
+        path = 'docs/implementation/handoffs/CURRENT-20260101.md'
+        self.mapping['discovery']['selected_details'] = [path]
+        self.omit(path, 'historical_source')
+        with self.assertRaises(ValueError):
+            self.check()
+
+    def test_export_omissions_are_canonical_exact_paths_only(self):
+        for path in ('specs/example/evidence/*.json', '../specs/example/evidence/x.json',
+                     '/specs/example/evidence/x.json', 'specs/example/evidence/../spec.md', ''):
+            with self.subTest(path=path):
+                self.mapping.pop('export_profile', None)
+                self.omit(path, 'historical_evidence')
+                with self.assertRaises(ValueError):
+                    self.check()
+
+    def test_missing_exported_successor_remains_unavailable(self):
+        path = 'specs/example/integration.yaml'
+        (self.root / path).unlink()
+        self.mapping['removed'] = {'specs/example/old.yaml': path}
+        self.omit(path, 'integration_manifest')
+        self.assertFalse(self.check()['errors'])
+        self.assertEqual(len(self.check()['unavailable_exported_references']), 1)
+
+    def test_omission_requires_reason(self):
+        path = 'specs/example/integration.yaml'
+        self.omit(path, 'integration_manifest')
+        del self.mapping['export_profile']['omitted'][path]['reason']
+        self.save_mapping()
+        with self.assertRaises(ValueError):
+            self.check()
+
+
 if __name__ == '__main__':
     unittest.main()

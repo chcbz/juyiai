@@ -1,0 +1,878 @@
+{
+  "date": "2026-10-23",
+  "backup": "/home/isp/baks/cyf-sdd-documents/20261023-124647",
+  "scope": "All CYF specs feature directories reviewed for document role/supersession; not an implementation or production revalidation",
+  "removed": {
+    "specs/juyiting-ui-baseline-20261006/optimization/change-plan.md": "specs/juyiting-ui-baseline-20261006/optimization/spec.md",
+    "specs/juyiting-ui-baseline-20261006/optimization/execution-plan.md": "specs/juyiting-ui-baseline-20261006/optimization/spec.md",
+    "specs/juyiting-ui-baseline-20261006/optimization/implementation-ready.md": "specs/juyiting-ui-baseline-20261006/optimization/detailed-design.md",
+    "specs/juyiting-external-commission-mvp/delivery-acceptance-change-plan.md": "specs/juyiting-external-commission-mvp/spec.md",
+    "specs/juyiting-external-commission-mvp/history/D3/design.md": "specs/juyiting-external-commission-mvp/spec.md",
+    "specs/juyiting-external-commission-mvp/history/D3/README.md": "specs/juyiting-external-commission-mvp/spec.md",
+    "specs/juyiting-external-commission-mvp/history/D3/tasks.md": "specs/juyiting-external-commission-mvp/spec.md",
+    "specs/juyiting-external-commission-mvp/history/D3/spec.md": "specs/juyiting-external-commission-mvp/spec.md",
+    "specs/juyiting-external-commission-mvp/history/D3/acceptance.md": "specs/juyiting-external-commission-mvp/spec.md",
+    "specs/juyiting-external-commission-mvp/history/D3/impact.md": "specs/juyiting-external-commission-mvp/impact.md",
+    "specs/juyiting-external-commission-mvp/history/D3/integration.yaml": "specs/juyiting-external-commission-mvp/integration.yaml",
+    "specs/juyiting-external-commission-mvp/history/D2.1/design.md": "specs/juyiting-external-commission-mvp/spec.md",
+    "specs/juyiting-external-commission-mvp/history/D2.1/README.md": "specs/juyiting-external-commission-mvp/spec.md",
+    "specs/juyiting-external-commission-mvp/history/D2.1/tasks.md": "specs/juyiting-external-commission-mvp/spec.md",
+    "specs/juyiting-external-commission-mvp/history/D2.1/spec.md": "specs/juyiting-external-commission-mvp/spec.md",
+    "specs/juyiting-external-commission-mvp/history/D2.1/acceptance.md": "specs/juyiting-external-commission-mvp/spec.md",
+    "specs/juyiting-external-commission-mvp/history/D2.1/impact.md": "specs/juyiting-external-commission-mvp/impact.md",
+    "specs/juyiting-external-commission-mvp/history/D2.1/integration.yaml": "specs/juyiting-external-commission-mvp/integration.yaml",
+    "specs/juyiting-ui-baseline-20261006/style-optimization-plan-20261016.md": "specs/juyiting-ui-baseline-20261006/optimization/spec.md",
+    "specs/juyiting-ui-baseline-20261006/handling-flow-optimization-plan-20261016.md": "specs/juyiting-ui-baseline-20261006/optimization/spec.md",
+    "specs/juyiting-agent-skill-display/design-d2.md": "specs/juyiting-agent-skill-display/spec.md",
+    "specs/juyiting-agent-skill-display/design-d3.md": "specs/juyiting-agent-skill-display/spec.md",
+    "specs/juyiting-agent-skill-display/design-d4.md": "specs/juyiting-agent-skill-display/spec.md",
+    "specs/juyiting-agent-skill-display/acceptance-d2.md": "specs/juyiting-agent-skill-display/spec.md",
+    "specs/juyiting-agent-skill-display/acceptance-d3.md": "specs/juyiting-agent-skill-display/spec.md",
+    "specs/juyiting-agent-skill-display/acceptance-d4.md": "specs/juyiting-agent-skill-display/spec.md",
+    "specs/juyiting-agent-skill-display/plan-d2.md": "specs/juyiting-agent-skill-display/spec.md",
+    "specs/juyiting-agent-skill-display/plan-d3.md": "specs/juyiting-agent-skill-display/spec.md",
+    "specs/juyiting-agent-skill-display/plan-d4.md": "specs/juyiting-agent-skill-display/spec.md",
+    "specs/juyiting-agent-skill-display/optimization-d4.md": "specs/juyiting-agent-skill-display/spec.md",
+    "specs/juyiting-skill-execution/design-se2.md": "specs/juyiting-skill-execution/spec.md",
+    "specs/juyiting-skill-execution/clarifications.md": "specs/juyiting-skill-execution/spec.md",
+    "specs/juyiting-creative-delivery-mvp/v1-10-implementation-plan.md": "specs/juyiting-creative-delivery-mvp/spec.md",
+    "specs/juyiting-creative-delivery-mvp/v1-10-acceptance.md": "specs/juyiting-creative-delivery-mvp/spec.md",
+    "specs/juyiting-unified-experience/estimation.md": "specs/juyiting-unified-experience/spec.md",
+    "specs/juyiting-unified-experience/estimate.csv": "specs/juyiting-unified-experience/spec.md",
+    "specs/juyiting-multimedia-deliberation/tasks-history-before-20261004.md": "specs/juyiting-multimedia-deliberation/spec.md",
+    "specs/juyiting-multimedia-deliberation/versioned-delivery-plan-20260928.md": "specs/juyiting-multimedia-deliberation/spec.md",
+    "specs/juyiting-mobile-flow-ux-v2-20260924/design.md": "specs/juyiting-ui-baseline-20261006/optimization/spec.md",
+    "specs/juyiting-conversation-first-v4-20260924/design.md": "specs/juyiting-ui-baseline-20261006/optimization/spec.md",
+    "specs/juyiting-agent-skill-display/acceptance.md": "specs/juyiting-agent-skill-display/spec.md",
+    "specs/juyiting-agent-skill-display/design.md": "specs/juyiting-agent-skill-display/spec.md",
+    "specs/juyiting-agent-skill-display/tasks.md": "specs/juyiting-agent-skill-display/spec.md",
+    "specs/juyiting-agent-skill-display/handoff.md": "specs/juyiting-agent-skill-display/spec.md",
+    "specs/juyiting-agent-skill-display/release-1.16.8.md": "specs/juyiting-agent-skill-display/spec.md",
+    "specs/juyiting-agent-skill-display/release-1.16.9.md": "specs/juyiting-agent-skill-display/spec.md",
+    "specs/juyiting-agent-skill-display/ui-review.md": "specs/juyiting-agent-skill-display/spec.md",
+    "specs/juyiting-agent-skill-display/visual-audit-20261017.md": "specs/juyiting-agent-skill-display/spec.md",
+    "specs/juyiting-ui-optimization/acceptance.md": "specs/juyiting-ui-optimization/spec.md",
+    "specs/juyiting-ui-optimization/design.md": "specs/juyiting-ui-optimization/spec.md",
+    "specs/juyiting-ui-optimization/tasks.md": "specs/juyiting-ui-optimization/spec.md",
+    "specs/agent-client-skill-refresh/acceptance.md": "specs/agent-client-skill-refresh/spec.md",
+    "specs/agent-client-skill-refresh/design.md": "specs/agent-client-skill-refresh/spec.md",
+    "specs/agent-client-skill-refresh/tasks.md": "specs/agent-client-skill-refresh/spec.md",
+    "specs/agent-workspace-capability-refresh/acceptance.md": "specs/agent-workspace-capability-refresh/spec.md",
+    "specs/agent-workspace-capability-refresh/design.md": "specs/agent-workspace-capability-refresh/spec.md",
+    "specs/agent-workspace-capability-refresh/tasks.md": "specs/agent-workspace-capability-refresh/spec.md",
+    "specs/oauth-public-client-hardening/acceptance.md": "specs/oauth-public-client-hardening/spec.md",
+    "specs/oauth-public-client-hardening/design.md": "specs/oauth-public-client-hardening/spec.md",
+    "specs/oauth-public-client-hardening/tasks.md": "specs/oauth-public-client-hardening/spec.md"
+  },
+  "historical_reference_policy": "Evidence, hashes, JSON baselines and conversation inventories keep original names; use this mapping or external backup to resolve removed source documents.",
+  "rounds": [
+    {
+      "scope": "Reviewed superseded CYF UI optimization plans and external-commission D2.1/D3; not all dated SDDs",
+      "backup": "/home/isp/baks/cyf-sdd-documents/20261023-124647",
+      "removed_count": 20
+    },
+    {
+      "scope": "All CYF specs SDD documents; no component source/runtime/deploy or other project cleanup",
+      "backup": "/home/isp/baks/cyf-sdd-documents/full-20261023-125754",
+      "removed_count": 20
+    },
+    {
+      "scope": "按用户要求删除 5 个已闭环专题过程文档，仅保留最终 spec；补 removed→spec 映射与失效引用收口",
+      "backup": "/home/isp/state/cyf-spec-revision-20261111/before8",
+      "removed_count": 63
+    }
+  ],
+  "latest_backup": "/home/isp/baks/cyf-sdd-documents/full-20261023-125754",
+  "feature_dispositions": {
+    "account-security-foundation": {
+      "category": "账号与权限",
+      "decision": "保留独立安全合同及撤销/迁移未完成验收；不因Cookie修复收口整项。"
+    },
+    "agent-client-skill-refresh": {
+      "category": "已闭环专题",
+      "decision": "已闭环（released；2026-08-23 生产部署并核验 Agent 运行时技能刷新）。仅保留最终 spec；过程文档已删除。"
+    },
+    "agent-economy-marketplace": {
+      "category": "经济与市场",
+      "decision": "现行资金/成本合同仅由beta-wen-billing.md维护，统一WEN且无SILVER兼容；V0/bundle及原交易/安装证据只作固定版本历史，不当作今天已实现或验收。"
+    },
+    "agent-workspace-capability-refresh": {
+      "category": "已闭环专题",
+      "decision": "已闭环（released；工作目录能力刷新已生产发布并核验）。仅保留最终 spec；过程文档已删除。"
+    },
+    "api-performance-3s-slo": {
+      "category": "性能与交付",
+      "decision": "保留性能观测/热点治理和证据；不把3秒目标恢复成拒绝/截流门禁。"
+    },
+    "archive-agent-maintenance": {
+      "category": "知识库",
+      "decision": "保留D2数据/权限/版本与待核项；后续通用Runtime/技能解耦方向不等于已实现。"
+    },
+    "archive-pavilion-reader-mvp": {
+      "category": "知识库",
+      "decision": "保留阅读器、进度/书签/私人手札和内容样本；不因旧pending重复判定后续已测场景。"
+    },
+    "command-observability-v1-9": {
+      "category": "性能与交付",
+      "decision": "保留独立只读运维看板合同；1.9.2发布及用户验收边界查acceptance。"
+    },
+    "economy-readonly-preview-v1-7": {
+      "category": "已退役专题",
+      "decision": "旧SILVER、合成预览报价和TTL已由WEN合同接替；历史预览不作为真实收费或免费凭证。只读操作不产生订单/资金/安装副作用，接口失败不伪装零余额。",
+      "successor": "specs/agent-economy-marketplace/spec.md"
+    },
+    "juyiting-agent-model-governance": {
+      "category": "Agent与运行端",
+      "decision": "保留模型/价格簿/技能治理未交付目标；旧外部邀请规则的同范围实现以接外单D3.1为准。"
+    },
+    "juyiting-agent-skill-display": {
+      "category": "已闭环专题",
+      "decision": "已闭环（accepted；1.16.8/1.16.9 已部署并完成范围内在线验收）。仅保留最终 spec 与 evidence/integration.yaml；设计/任务/验收过程文档已删除。"
+    },
+    "juyiting-codex-fast-context-20260925": {
+      "category": "任务与议事",
+      "decision": "保留上下文/恢复/性能约束与未证实范围；普通议事与执行融合入口看多媒体及技能执行，不重建第二聊天引擎。"
+    },
+    "juyiting-conversation-sessions": {
+      "category": "任务与议事",
+      "decision": "保留业务会话到各Agent会话隔离合同；旧Reviewer/分配安排不是当前执行规则。"
+    },
+    "juyiting-creative-delivery-mvp": {
+      "category": "多媒体与资料",
+      "decision": "合并1.10实施/验收临时文档；保留文件库合同/未验格式；PPT在线预览已取消，生成下载保留。"
+    },
+    "juyiting-dual-orientation-experience": {
+      "category": "界面与导航",
+      "decision": "保留方向/资源生命周期和真实设备回归；旧布局目标不覆盖最新原型。"
+    },
+    "juyiting-execution-recovery": {
+      "category": "任务与议事",
+      "decision": "保留执行回执只读核对合同、contract-pilot工具及证据，不清未知执行。"
+    },
+    "juyiting-external-commission-mvp": {
+      "category": "任务与议事",
+      "decision": "上一轮已合并旧D2.1/D3和成果验收临时方案；保留当前D3.1与跨账号证据。"
+    },
+    "juyiting-flow-repair-20261008": {
+      "category": "已退役专题",
+      "decision": "一次性闭环修复转为整体体验和全局回归维护；旧样本不自动重放，旧Flow发布步骤不再生效。",
+      "successor": "specs/juyiting-unified-experience/spec.md"
+    },
+    "juyiting-formal-flow-bugfix-20260923": {
+      "category": "已退役专题",
+      "decision": "旧BF缺陷/版本计划保留追溯；派发、固定资料、正式交付和返工由整体体验/技能执行合同及全局回归承接，不重开旧版本发布。",
+      "successor": "specs/juyiting-unified-experience/spec.md"
+    },
+    "juyiting-lightweight-workbench": {
+      "category": "界面与导航",
+      "decision": "保留63条功能追踪、组件/控件定义和已发布证据；旧布局仅回归参考，不是当前UI方案。"
+    },
+    "juyiting-live-map-preview": {
+      "category": "界面与导航",
+      "decision": "保留动态地图适配P2合同与P1/P2源码检查点；地图/名册数据流不合并。"
+    },
+    "juyiting-multimedia-deliberation": {
+      "category": "多媒体与资料",
+      "decision": "删除旧任务快照/过期版本预留；保留分层合同、增量约束和不可变证据，不误删基础+补充契约。"
+    },
+    "juyiting-skill-execution": {
+      "category": "Agent与运行端",
+      "decision": "SE-2收敛至design.md并合并澄清；SE-1不再作为实施入口，fixtures/实际结果不改。"
+    },
+    "juyiting-task-collaboration": {
+      "category": "任务与议事",
+      "decision": "保留通讯协作详设与M4/M5未交付目标，单承办UI不是多Agent整体完成。"
+    },
+    "juyiting-ui-baseline-20261006": {
+      "category": "界面与导航",
+      "decision": "当前入口为optimization；旧原型快照/审计/代码差异只作证据，实际原型在web。"
+    },
+    "juyiting-ui-optimization": {
+      "category": "已闭环专题",
+      "decision": "已闭环（accepted；软键盘/导航/可访问性发布验收通过）。仅保留最终 spec；设计/任务/验收过程文档已删除。"
+    },
+    "juyiting-unified-experience": {
+      "category": "界面与导航",
+      "decision": "删除过期工期估算；DRAFT/SUBMISSION/RESULTS冻结契约与发布证据保留，旧调度/本地构建不生效。"
+    },
+    "juyiting-voice-conversation": {
+      "category": "多媒体与资料",
+      "decision": "保留语音基础合同/历史发布与未验边界，Realtime增量单列，不重复建旧STT/TTS接入。"
+    },
+    "juyiting-voice-realtime": {
+      "category": "多媒体与资料",
+      "decision": "保留Realtime适配及启用证据；真实麦克风/扬声器验收不因离线通过而完成。"
+    },
+    "oauth-public-client-hardening": {
+      "category": "已闭环专题",
+      "decision": "已闭环（released；OAuth 公共客户端加固已生产发布）。仅保留最终 spec；过程文档已删除。"
+    },
+    "personal-center-navigation-v1-8": {
+      "category": "界面与导航",
+      "decision": "保留个人中心/身份导航合同与随1.9.2发布证据；旧1.8未部署是历史阶段。"
+    },
+    "public-beta-release": {
+      "category": "性能与交付",
+      "decision": "保留跨功能公测安全与实际onboarding未完成验收，不当作单次版本发布临时稿。"
+    },
+    "runtime-self-host-onboarding": {
+      "category": "Agent与运行端",
+      "decision": "保留自托管文书/登记合同及E2E未验；CYF程序路径遵循固定app规则，不恢复旧releases/current安装。"
+    },
+    "single-tenant-role-isolation": {
+      "category": "已退役专题",
+      "decision": "字面tenant0归零迁移已被环境租户合同接替；个人owner/角色授权保留，不重跑旧迁移，不恢复冻结剩余整改。",
+      "successor": "specs/full-tenant-gray/spec.md"
+    },
+    "username-encoding-integrity": {
+      "category": "账号与权限",
+      "decision": "保留编码/身份合同、源码审计及未授权数据修复方案；它不是可删除的已完成临时修复。"
+    },
+    "codex-history-closeout-20261023": {
+      "category": "历史来源",
+      "decision": "保留已删除会话的唯一摘要/来源索引与清理回执，不再删除。"
+    }
+  },
+  "current_round_removals": {
+    "specs/juyiting-agent-skill-display/design-d2.md": {
+      "replacement": "specs/juyiting-agent-skill-display/spec.md",
+      "reason": "已闭环专题只保留最终 spec；过程文档删除，历史发布/验收证据见同专题 evidence 与 integration.yaml"
+    },
+    "specs/juyiting-agent-skill-display/design-d3.md": {
+      "replacement": "specs/juyiting-agent-skill-display/spec.md",
+      "reason": "已闭环专题只保留最终 spec；过程文档删除，历史发布/验收证据见同专题 evidence 与 integration.yaml"
+    },
+    "specs/juyiting-agent-skill-display/design-d4.md": {
+      "replacement": "specs/juyiting-agent-skill-display/spec.md",
+      "reason": "已闭环专题只保留最终 spec；过程文档删除，历史发布/验收证据见同专题 evidence 与 integration.yaml"
+    },
+    "specs/juyiting-agent-skill-display/acceptance-d2.md": {
+      "replacement": "specs/juyiting-agent-skill-display/spec.md",
+      "reason": "已闭环专题只保留最终 spec；过程文档删除，历史发布/验收证据见同专题 evidence 与 integration.yaml"
+    },
+    "specs/juyiting-agent-skill-display/acceptance-d3.md": {
+      "replacement": "specs/juyiting-agent-skill-display/spec.md",
+      "reason": "已闭环专题只保留最终 spec；过程文档删除，历史发布/验收证据见同专题 evidence 与 integration.yaml"
+    },
+    "specs/juyiting-agent-skill-display/acceptance-d4.md": {
+      "replacement": "specs/juyiting-agent-skill-display/spec.md",
+      "reason": "已闭环专题只保留最终 spec；过程文档删除，历史发布/验收证据见同专题 evidence 与 integration.yaml"
+    },
+    "specs/juyiting-agent-skill-display/plan-d2.md": {
+      "replacement": "specs/juyiting-agent-skill-display/spec.md",
+      "reason": "已闭环专题只保留最终 spec；过程文档删除，历史发布/验收证据见同专题 evidence 与 integration.yaml"
+    },
+    "specs/juyiting-agent-skill-display/plan-d3.md": {
+      "replacement": "specs/juyiting-agent-skill-display/spec.md",
+      "reason": "已闭环专题只保留最终 spec；过程文档删除，历史发布/验收证据见同专题 evidence 与 integration.yaml"
+    },
+    "specs/juyiting-agent-skill-display/plan-d4.md": {
+      "replacement": "specs/juyiting-agent-skill-display/spec.md",
+      "reason": "已闭环专题只保留最终 spec；过程文档删除，历史发布/验收证据见同专题 evidence 与 integration.yaml"
+    },
+    "specs/juyiting-agent-skill-display/optimization-d4.md": {
+      "replacement": "specs/juyiting-agent-skill-display/spec.md",
+      "reason": "已闭环专题只保留最终 spec；过程文档删除，历史发布/验收证据见同专题 evidence 与 integration.yaml"
+    },
+    "specs/juyiting-skill-execution/design-se2.md": {
+      "replacement": "specs/juyiting-skill-execution/design.md",
+      "reason": "SE-2 promoted to canonical design.md; SE-1 original backed up"
+    },
+    "specs/juyiting-skill-execution/clarifications.md": {
+      "replacement": "specs/juyiting-skill-execution/design.md",
+      "reason": "Determined engineering boundaries merged into design, no remaining clarification request"
+    },
+    "specs/juyiting-creative-delivery-mvp/v1-10-implementation-plan.md": {
+      "replacement": "specs/juyiting-creative-delivery-mvp/tasks.md",
+      "reason": "Technical boundaries moved to design, WBS/risk to tasks; expired estimates retired"
+    },
+    "specs/juyiting-creative-delivery-mvp/v1-10-acceptance.md": {
+      "replacement": "specs/juyiting-creative-delivery-mvp/acceptance.md",
+      "reason": "Historical case definitions consolidated into acceptance; JSON fixture unchanged"
+    },
+    "specs/juyiting-unified-experience/estimation.md": {
+      "replacement": "specs/juyiting-unified-experience/tasks.md",
+      "reason": "Expired effort/calendar estimate; WBS and substantive risks retained, no current schedule inferred"
+    },
+    "specs/juyiting-unified-experience/estimate.csv": {
+      "replacement": "specs/juyiting-unified-experience/tasks.md",
+      "reason": "Expired effort/calendar estimate; WBS and substantive risks retained, no current schedule inferred"
+    },
+    "specs/juyiting-multimedia-deliberation/tasks-history-before-20261004.md": {
+      "replacement": "specs/juyiting-multimedia-deliberation/tasks.md",
+      "reason": "Explicitly superseded by 2026-10-04 tasks; unique result facts moved to acceptance"
+    },
+    "specs/juyiting-multimedia-deliberation/versioned-delivery-plan-20260928.md": {
+      "replacement": "specs/juyiting-multimedia-deliberation/acceptance.md",
+      "reason": "Occupied version reservations and obsolete local-build plan retired; milestones and dated evidence retained"
+    },
+    "specs/juyiting-mobile-flow-ux-v2-20260924/design.md": {
+      "replacement": "specs/juyiting-ui-baseline-20261006/optimization/spec.md",
+      "reason": "Superseded mobile proposal; unique read-only observations retained in optimization/acceptance"
+    },
+    "specs/juyiting-conversation-first-v4-20260924/design.md": {
+      "replacement": "specs/juyiting-ui-baseline-20261006/optimization/spec.md",
+      "reason": "Superseded conversation-first V4 proposal; bounded original release declaration retained in acceptance"
+    },
+    "specs/juyiting-agent-skill-display/acceptance.md": {
+      "replacement": "specs/juyiting-agent-skill-display/spec.md",
+      "reason": "已闭环专题只保留最终 spec；过程文档删除，历史发布/验收证据见同专题 evidence 与 integration.yaml"
+    },
+    "specs/juyiting-agent-skill-display/design.md": {
+      "replacement": "specs/juyiting-agent-skill-display/spec.md",
+      "reason": "已闭环专题只保留最终 spec；过程文档删除，历史发布/验收证据见同专题 evidence 与 integration.yaml"
+    },
+    "specs/juyiting-agent-skill-display/tasks.md": {
+      "replacement": "specs/juyiting-agent-skill-display/spec.md",
+      "reason": "已闭环专题只保留最终 spec；过程文档删除，历史发布/验收证据见同专题 evidence 与 integration.yaml"
+    },
+    "specs/juyiting-agent-skill-display/handoff.md": {
+      "replacement": "specs/juyiting-agent-skill-display/spec.md",
+      "reason": "已闭环专题只保留最终 spec；过程文档删除，历史发布/验收证据见同专题 evidence 与 integration.yaml"
+    },
+    "specs/juyiting-agent-skill-display/release-1.16.8.md": {
+      "replacement": "specs/juyiting-agent-skill-display/spec.md",
+      "reason": "已闭环专题只保留最终 spec；过程文档删除，历史发布/验收证据见同专题 evidence 与 integration.yaml"
+    },
+    "specs/juyiting-agent-skill-display/release-1.16.9.md": {
+      "replacement": "specs/juyiting-agent-skill-display/spec.md",
+      "reason": "已闭环专题只保留最终 spec；过程文档删除，历史发布/验收证据见同专题 evidence 与 integration.yaml"
+    },
+    "specs/juyiting-agent-skill-display/ui-review.md": {
+      "replacement": "specs/juyiting-agent-skill-display/spec.md",
+      "reason": "已闭环专题只保留最终 spec；过程文档删除，历史发布/验收证据见同专题 evidence 与 integration.yaml"
+    },
+    "specs/juyiting-agent-skill-display/visual-audit-20261017.md": {
+      "replacement": "specs/juyiting-agent-skill-display/spec.md",
+      "reason": "已闭环专题只保留最终 spec；过程文档删除，历史发布/验收证据见同专题 evidence 与 integration.yaml"
+    },
+    "specs/juyiting-ui-optimization/acceptance.md": {
+      "replacement": "specs/juyiting-ui-optimization/spec.md",
+      "reason": "已闭环专题只保留最终 spec；过程文档删除，历史发布/验收证据见同专题 evidence 与 integration.yaml"
+    },
+    "specs/juyiting-ui-optimization/design.md": {
+      "replacement": "specs/juyiting-ui-optimization/spec.md",
+      "reason": "已闭环专题只保留最终 spec；过程文档删除，历史发布/验收证据见同专题 evidence 与 integration.yaml"
+    },
+    "specs/juyiting-ui-optimization/tasks.md": {
+      "replacement": "specs/juyiting-ui-optimization/spec.md",
+      "reason": "已闭环专题只保留最终 spec；过程文档删除，历史发布/验收证据见同专题 evidence 与 integration.yaml"
+    },
+    "specs/agent-client-skill-refresh/acceptance.md": {
+      "replacement": "specs/agent-client-skill-refresh/spec.md",
+      "reason": "已闭环专题只保留最终 spec；过程文档删除，历史发布/验收证据见同专题 evidence 与 integration.yaml"
+    },
+    "specs/agent-client-skill-refresh/design.md": {
+      "replacement": "specs/agent-client-skill-refresh/spec.md",
+      "reason": "已闭环专题只保留最终 spec；过程文档删除，历史发布/验收证据见同专题 evidence 与 integration.yaml"
+    },
+    "specs/agent-client-skill-refresh/tasks.md": {
+      "replacement": "specs/agent-client-skill-refresh/spec.md",
+      "reason": "已闭环专题只保留最终 spec；过程文档删除，历史发布/验收证据见同专题 evidence 与 integration.yaml"
+    },
+    "specs/agent-client-skill-refresh/delivery-status.md": {
+      "replacement": "specs/agent-client-skill-refresh/spec.md",
+      "reason": "已闭环专题只保留最终 spec；过程文档删除，历史发布/验收证据见同专题 evidence 与 integration.yaml"
+    },
+    "specs/agent-workspace-capability-refresh/acceptance.md": {
+      "replacement": "specs/agent-workspace-capability-refresh/spec.md",
+      "reason": "已闭环专题只保留最终 spec；过程文档删除，历史发布/验收证据见同专题 evidence 与 integration.yaml"
+    },
+    "specs/agent-workspace-capability-refresh/design.md": {
+      "replacement": "specs/agent-workspace-capability-refresh/spec.md",
+      "reason": "已闭环专题只保留最终 spec；过程文档删除，历史发布/验收证据见同专题 evidence 与 integration.yaml"
+    },
+    "specs/agent-workspace-capability-refresh/tasks.md": {
+      "replacement": "specs/agent-workspace-capability-refresh/spec.md",
+      "reason": "已闭环专题只保留最终 spec；过程文档删除，历史发布/验收证据见同专题 evidence 与 integration.yaml"
+    },
+    "specs/agent-workspace-capability-refresh/delivery-status.md": {
+      "replacement": "specs/agent-workspace-capability-refresh/spec.md",
+      "reason": "已闭环专题只保留最终 spec；过程文档删除，历史发布/验收证据见同专题 evidence 与 integration.yaml"
+    },
+    "specs/oauth-public-client-hardening/acceptance.md": {
+      "replacement": "specs/oauth-public-client-hardening/spec.md",
+      "reason": "已闭环专题只保留最终 spec；过程文档删除，历史发布/验收证据见同专题 evidence 与 integration.yaml"
+    },
+    "specs/oauth-public-client-hardening/design.md": {
+      "replacement": "specs/oauth-public-client-hardening/spec.md",
+      "reason": "已闭环专题只保留最终 spec；过程文档删除，历史发布/验收证据见同专题 evidence 与 integration.yaml"
+    },
+    "specs/oauth-public-client-hardening/tasks.md": {
+      "replacement": "specs/oauth-public-client-hardening/spec.md",
+      "reason": "已闭环专题只保留最终 spec；过程文档删除，历史发布/验收证据见同专题 evidence 与 integration.yaml"
+    },
+    "specs/oauth-public-client-hardening/delivery-status.md": {
+      "replacement": "specs/oauth-public-client-hardening/spec.md",
+      "reason": "已闭环专题只保留最终 spec；过程文档删除，历史发布/验收证据见同专题 evidence 与 integration.yaml"
+    }
+  },
+  "discovery": {
+    "revision": "2026-11-10",
+    "scope": "Live document navigation and role classification, not a task ledger or implementation/production certification; original mapping fields retain their historical meaning",
+    "entrypoints": [
+      "AGENTS.md",
+      "README.md",
+      "docs/README.md",
+      "docs/AGENTS.md",
+      "docs/codex-project-map.md",
+      "docs/sdd-workflow.md",
+      "docs/knowledge-base/README.md",
+      "docs/juyiting-runbook.md",
+      "specs/AGENTS.md",
+      "specs/README.md",
+      "specs/INDEX.md"
+    ],
+    "current_guides": [
+      "docs/DEPLOYMENT.md",
+      "docs/aliyun-flow-cicd-strategy.md",
+      "docs/aliyun-flow-gate-policy.md",
+      "docs/aliyun-flow-release-scheduling.md",
+      "docs/workspace-git.md",
+      "docs/juyiting-feature-guide.md",
+      "docs/juyiting-occlusion-system-design.md",
+      "docs/water-margin-style-reference.md",
+      "docs/implementation/README.md",
+      "specs/juyiting-execution-recovery/contract-pilot/README.md"
+    ],
+    "selected_details": [
+      "specs/architecture-convergence/development-principles.md",
+      "specs/agent-economy-marketplace/beta-wen-billing.md",
+      "specs/juyiting-skill-execution/responsibility-boundaries.md",
+      "specs/juyiting-skill-execution/native-execution-technical-design-20261027.md",
+      "specs/juyiting-skill-execution/native-execution-extensions-20261028.md",
+      "specs/juyiting-skill-execution/native-execution-4plus1-20261028.md",
+      "specs/juyiting-skill-execution/skill-economy-responsibility-separation.md",
+      "specs/juyiting-skill-execution/management-mvp.md",
+      "specs/juyiting-ui-baseline-20261006/optimization/README.md",
+      "specs/juyiting-ui-baseline-20261006/optimization/spec.md",
+      "specs/juyiting-ui-baseline-20261006/optimization/detailed-design.md",
+      "specs/juyiting-ui-baseline-20261006/optimization/tasks.md",
+      "specs/juyiting-ui-baseline-20261006/optimization/acceptance.md",
+      "specs/juyiting-unified-experience/global-regression.md",
+      "specs/username-encoding-integrity/data-repair-plan.md"
+    ],
+    "selected_versioned_contracts": [
+      "specs/juyiting-skill-execution/management-contract.md",
+      "specs/juyiting-creative-delivery-mvp/workspace-contract-v1.md"
+    ],
+    "baseline_references": [
+      "docs/codex-ws-agent.md",
+      "docs/knowledge-base/01-system-overview.md",
+      "docs/knowledge-base/02-repositories-build-and-delivery.md",
+      "docs/knowledge-base/03-backend-architecture.md",
+      "docs/knowledge-base/04-backend-api-index.md",
+      "docs/knowledge-base/04-backend-api-inventory.md",
+      "docs/knowledge-base/05-frontend-architecture.md",
+      "docs/knowledge-base/06-juyiting-end-to-end.md",
+      "docs/knowledge-base/07-data-security-and-boundaries.md",
+      "docs/knowledge-base/08-operations-testing-and-change-guide.md",
+      "docs/knowledge-base/appendix-static-inventory.md",
+      "specs/juyiting-skill-execution/reusable-packages-20261102.md"
+    ],
+    "history_routes": {
+      "docs/aliyun-flow-host-cleanup.md": "ops/maintenance/LOCAL_ARTIFACT_RETENTION.md",
+      "docs/juyiting-occlusion-system-execution-plan.md": "docs/juyiting-occlusion-system-design.md",
+      "docs/juyiting-occlusion-visual-review-v0.md": "docs/juyiting-occlusion-system-design.md",
+      "docs/juyiting-collaboration-implementation-plan.md": "specs/juyiting-task-collaboration/spec.md",
+      "docs/juyiting-multi-agent-collaboration-design.md": "specs/juyiting-task-collaboration/spec.md",
+      "docs/project-feature-implementation-checklist.md": "specs/INDEX.md",
+      "docs/project-markdown-coverage-matrix.md": "docs/README.md",
+      "docs/project-api-endpoint-audit.md": "api/docs/interface-standard.md",
+      "docs/project-plan-task-audit.md": "specs/INDEX.md",
+      "specs/juyiting-skill-execution/management-design.md": "specs/juyiting-skill-execution/management-mvp.md",
+      "specs/juyiting-skill-execution/management-requirements.md": "specs/juyiting-skill-execution/management-mvp.md",
+      "specs/juyiting-skill-execution/management-plan.md": "specs/juyiting-skill-execution/management-mvp.md",
+      "docs/aliyun-flow-migration-assessment.md": "docs/DEPLOYMENT.md",
+      "docs/juyiting-immersive-fullscreen-map-design.md": "web/prototypes/juyiting/specs/prototype-spec.md",
+      "specs/agent-economy-marketplace/v0-plan.md": "specs/agent-economy-marketplace/beta-wen-billing.md",
+      "specs/agent-economy-marketplace/v0-hosting-rent.md": "specs/agent-economy-marketplace/beta-wen-billing.md",
+      "specs/juyiting-creative-delivery-mvp/workspace-design.md": "specs/juyiting-creative-delivery-mvp/design.md",
+      "specs/juyiting-lightweight-workbench/ui-detail.md": "web/prototypes/juyiting/specs/prototype-spec.md",
+      "specs/juyiting-lightweight-workbench/ui-computed-attributes.md": "web/prototypes/juyiting/specs/prototype-spec.md",
+      "specs/juyiting-lightweight-workbench/ui-control-attributes.md": "web/prototypes/juyiting/specs/prototype-spec.md",
+      "specs/juyiting-lightweight-workbench/functional-trace-63.md": "specs/juyiting-unified-experience/global-regression.md",
+      "specs/juyiting-lightweight-workbench/no-deploy-amd64-qa.md": "specs/juyiting-unified-experience/global-regression.md",
+      "specs/juyiting-lightweight-workbench/real-service-qa.md": "specs/juyiting-unified-experience/global-regression.md",
+      "specs/juyiting-unified-experience/agent-execution-plan.md": "docs/implementation/README.md",
+      "specs/juyiting-unified-experience/acceptance-guide-1.13.10.md": "specs/juyiting-unified-experience/global-regression.md",
+      "specs/archive-agent-maintenance/impact-assessment.md": "specs/archive-agent-maintenance/spec.md",
+      "specs/juyiting-external-commission-mvp/impact.md": "specs/juyiting-external-commission-mvp/spec.md",
+      "specs/juyiting-formal-flow-bugfix-20260923/remaining-bugfixes.md": "specs/juyiting-unified-experience/spec.md",
+      "specs/juyiting-multimedia-deliberation/controlled-image-followup-owner-context-v1.1.md": "specs/juyiting-multimedia-deliberation/spec.md",
+      "specs/juyiting-multimedia-deliberation/controlled-image-grant-start-bridge-design-v1.md": "specs/juyiting-multimedia-deliberation/spec.md",
+      "specs/juyiting-multimedia-deliberation/current-state.md": "specs/juyiting-multimedia-deliberation/spec.md",
+      "specs/juyiting-multimedia-deliberation/fusion-detailed-design-v2.md": "specs/juyiting-multimedia-deliberation/spec.md",
+      "specs/juyiting-multimedia-deliberation/fusion-implementation-plan-v2.md": "specs/juyiting-multimedia-deliberation/spec.md",
+      "specs/juyiting-multimedia-deliberation/multiround-followup-design-notes-v1.md": "specs/juyiting-multimedia-deliberation/spec.md",
+      "specs/juyiting-multimedia-deliberation/ordinary-request-actions-v3.md": "specs/juyiting-multimedia-deliberation/spec.md",
+      "specs/juyiting-multimedia-deliberation/point-and-start-entry-design-v1.md": "specs/juyiting-multimedia-deliberation/spec.md",
+      "specs/juyiting-multimedia-deliberation/provider-authority-and-precall-enforcement-design-v1.md": "specs/juyiting-multimedia-deliberation/spec.md",
+      "specs/juyiting-ui-baseline-20261006/coverage.md": "specs/juyiting-ui-baseline-20261006/optimization/detailed-design.md",
+      "specs/juyiting-ui-baseline-20261006/optimization/code-backend-design.md": "specs/juyiting-ui-baseline-20261006/optimization/detailed-design.md",
+      "specs/juyiting-ui-baseline-20261006/optimization/code-execution-checklist.md": "specs/juyiting-ui-baseline-20261006/optimization/detailed-design.md",
+      "specs/juyiting-ui-baseline-20261006/optimization/code-frontend-design.md": "specs/juyiting-ui-baseline-20261006/optimization/detailed-design.md",
+      "specs/juyiting-unified-experience/ui-detail.md": "web/prototypes/juyiting/specs/prototype-spec.md",
+      "specs/economy-readonly-preview-v1-7/design.md": "specs/agent-economy-marketplace/spec.md",
+      "specs/economy-readonly-preview-v1-7/tasks.md": "specs/agent-economy-marketplace/spec.md",
+      "specs/economy-readonly-preview-v1-7/spec.md": "specs/agent-economy-marketplace/spec.md",
+      "specs/economy-readonly-preview-v1-7/acceptance.md": "specs/agent-economy-marketplace/spec.md",
+      "specs/single-tenant-role-isolation/design.md": "specs/full-tenant-gray/spec.md",
+      "specs/single-tenant-role-isolation/tasks.md": "specs/full-tenant-gray/spec.md",
+      "specs/single-tenant-role-isolation/spec.md": "specs/full-tenant-gray/spec.md",
+      "specs/single-tenant-role-isolation/acceptance.md": "specs/full-tenant-gray/spec.md",
+      "specs/juyiting-flow-repair-20261008/design.md": "specs/juyiting-unified-experience/spec.md",
+      "specs/juyiting-flow-repair-20261008/tasks.md": "specs/juyiting-unified-experience/spec.md",
+      "specs/juyiting-flow-repair-20261008/spec.md": "specs/juyiting-unified-experience/spec.md",
+      "specs/juyiting-flow-repair-20261008/acceptance.md": "specs/juyiting-unified-experience/spec.md",
+      "specs/juyiting-flow-repair-20261008/coordination-20261008.md": "specs/juyiting-unified-experience/spec.md",
+      "specs/juyiting-formal-flow-bugfix-20260923/design.md": "specs/juyiting-unified-experience/spec.md",
+      "specs/juyiting-formal-flow-bugfix-20260923/tasks.md": "specs/juyiting-unified-experience/spec.md",
+      "specs/juyiting-formal-flow-bugfix-20260923/spec.md": "specs/juyiting-unified-experience/spec.md",
+      "specs/juyiting-formal-flow-bugfix-20260923/acceptance.md": "specs/juyiting-unified-experience/spec.md"
+    },
+    "regression": {
+      "global": "specs/juyiting-unified-experience/global-regression.md",
+      "case_data": "specs/juyiting-unified-experience/global-regression-cases.json",
+      "frozen_core": "specs/juyiting-skill-execution/core-ui-regression.md"
+    },
+    "validity_policy": "Current entry/contract is an intended rule, not proof of deployed implementation. Baselines require exact-source verification. Unselected versioned contracts, plans and reports are traceability only; never infer completion or production authorization from filename/date. Unknown supporting notes remain unverified, never silently promoted.",
+    "known_stale_baseline_links": {
+      "docs/knowledge-base/04-backend-api-inventory.md": [
+        "../../api/oauth/jia-oauth-resource/src/main/java/cn/jia/oauth/api/AuthenticationController.java"
+      ]
+    },
+    "unverified_policy": "Supporting material without explicit current selection stays REFERENCE_UNVERIFIED and routes to its current topic; no implementation validity is inferred.",
+    "source_attributions": [
+      "specs/archive-pavilion-reader-mvp/content/ATTRIBUTION.md"
+    ]
+  },
+  "export_profile": {
+    "revision": "2026-11-16",
+    "mapping_source_commit": "046fed0d2c9c637f0a61250bbb3f5d792fb0e190",
+    "scope": "Recovered original navigation metadata for the public tree; exact omitted paths remain visible as unavailable, never deployment/test evidence. No directory-wide exemptions.",
+    "retained_historical_paths": {
+      "specs/agent-client-skill-refresh/delivery-status.md": "specs/agent-client-skill-refresh/spec.md",
+      "specs/agent-workspace-capability-refresh/delivery-status.md": "specs/agent-workspace-capability-refresh/spec.md",
+      "specs/oauth-public-client-hardening/delivery-status.md": "specs/oauth-public-client-hardening/spec.md"
+    },
+    "omitted": {
+      "docs/implementation/archive/2026-11-10-documentation/docs__DEPLOYMENT.md": {
+        "kind": "historical_source",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "docs/implementation/archive/2026-11-10-documentation/docs__aliyun-flow-cicd-strategy.md": {
+        "kind": "historical_source",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "docs/implementation/archive/2026-11-10-documentation/docs__aliyun-flow-gate-policy.md": {
+        "kind": "historical_source",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "docs/implementation/archive/2026-11-10-documentation/docs__aliyun-flow-release-scheduling.md": {
+        "kind": "historical_source",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "docs/implementation/archive/2026-11-10-documentation/docs__codex-project-map.md": {
+        "kind": "historical_source",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "docs/implementation/archive/2026-11-10-documentation/docs__juyiting-feature-guide.md": {
+        "kind": "historical_source",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "docs/implementation/archive/2026-11-10-documentation/docs__juyiting-runbook.md": {
+        "kind": "historical_source",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "docs/implementation/archive/2026-11-10-documentation/docs__knowledge-base__README.md": {
+        "kind": "historical_source",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "docs/implementation/handoffs/BETA-WEN-BILLING-20261105.md": {
+        "kind": "historical_source",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "docs/implementation/handoffs/CODEX-BRIDGE-REPAIR-20261026.md": {
+        "kind": "historical_source",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "docs/implementation/handoffs/CODEX-NATIVE-SKILLS-20261027.md": {
+        "kind": "historical_source",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "docs/implementation/handoffs/DOCS-DISCOVERY-20261110.md": {
+        "kind": "historical_source",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "docs/implementation/handoffs/EXECUTION-HISTORY-BROWSER-20261008.md": {
+        "kind": "historical_source",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "docs/implementation/handoffs/FLOW-RESOURCE-SPLIT-20261022.md": {
+        "kind": "historical_source",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "docs/implementation/handoffs/FULL-TENANT-GRAY-20261030-ANALYSIS.md": {
+        "kind": "historical_source",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "docs/implementation/handoffs/FULL-TENANT-GRAY-20261030-CODE-REMAINDER.md": {
+        "kind": "historical_source",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "docs/implementation/handoffs/HALL-LIGHTWEIGHT-P1-20261009.md": {
+        "kind": "historical_source",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "docs/implementation/handoffs/HALL-PROTOCOL-CONVERGENCE-20261009.md": {
+        "kind": "historical_source",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "docs/implementation/handoffs/HALL-THREE-FIXES-20261106.md": {
+        "kind": "historical_source",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "docs/implementation/handoffs/JUYITING-POLLING-20261102.md": {
+        "kind": "historical_source",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "docs/implementation/handoffs/JYT-MODEL-RECOMMEND-20261028.md": {
+        "kind": "historical_source",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "docs/implementation/handoffs/MATTER-EDIT-20261104.md": {
+        "kind": "historical_source",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "docs/implementation/handoffs/NATIVE-READINESS-DECOUPLE-20261108.md": {
+        "kind": "historical_source",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "docs/implementation/handoffs/RUNTIME-FIXED-DIR-20261023.md": {
+        "kind": "historical_source",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "docs/implementation/handoffs/SKILL-MANAGEMENT-20261023.md": {
+        "kind": "historical_source",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "docs/implementation/handoffs/SPEC-FULL-REFRESH-20261107.md": {
+        "kind": "historical_source",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "docs/implementation/handoffs/TASK-SCHEDULING-UNIFICATION-20261109.md": {
+        "kind": "historical_source",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "specs/account-security-foundation/integration.yaml": {
+        "kind": "integration_manifest",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "specs/agent-client-skill-refresh/integration.yaml": {
+        "kind": "integration_manifest",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "specs/agent-economy-marketplace/integration.yaml": {
+        "kind": "integration_manifest",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "specs/agent-workspace-capability-refresh/integration.yaml": {
+        "kind": "integration_manifest",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "specs/api-performance-3s-slo/integration.yaml": {
+        "kind": "integration_manifest",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "specs/architecture-convergence/evidence/document-check.json": {
+        "kind": "historical_evidence",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "specs/architecture-convergence/evidence/runtime59-artifact.json": {
+        "kind": "historical_evidence",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "specs/architecture-convergence/evidence/runtime59-tests.tap": {
+        "kind": "historical_evidence",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "specs/architecture-convergence/evidence/web319-artifact.json": {
+        "kind": "historical_evidence",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "specs/architecture-convergence/evidence/web319-report-audit.json": {
+        "kind": "historical_evidence",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "specs/architecture-convergence/integration.yaml": {
+        "kind": "integration_manifest",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "specs/archive-agent-maintenance/integration.yaml": {
+        "kind": "integration_manifest",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "specs/archive-pavilion-reader-mvp/integration.yaml": {
+        "kind": "integration_manifest",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "specs/codex-history-closeout-20261023/spec.md": {
+        "kind": "historical_source",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "specs/codex-history-closeout-20261023/summary-20261107.md": {
+        "kind": "historical_source",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "specs/command-observability-v1-9/integration.yaml": {
+        "kind": "integration_manifest",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "specs/full-tenant-gray/integration.yaml": {
+        "kind": "integration_manifest",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "specs/juyiting-agent-model-governance/integration.yaml": {
+        "kind": "integration_manifest",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "specs/juyiting-agent-skill-display/integration.yaml": {
+        "kind": "integration_manifest",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "specs/juyiting-assignee-recommendation/integration.yaml": {
+        "kind": "integration_manifest",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "specs/juyiting-codex-fast-context-20260925/integration.yaml": {
+        "kind": "integration_manifest",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "specs/juyiting-conversation-sessions/integration.yaml": {
+        "kind": "integration_manifest",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "specs/juyiting-creative-delivery-mvp/integration.yaml": {
+        "kind": "integration_manifest",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "specs/juyiting-dual-orientation-experience/integration.yaml": {
+        "kind": "integration_manifest",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "specs/juyiting-execution-recovery/integration.yaml": {
+        "kind": "integration_manifest",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "specs/juyiting-external-commission-mvp/integration.yaml": {
+        "kind": "integration_manifest",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "specs/juyiting-lightweight-workbench/integration.yaml": {
+        "kind": "integration_manifest",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "specs/juyiting-live-map-preview/integration.yaml": {
+        "kind": "integration_manifest",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "specs/juyiting-multimedia-deliberation/implementation-evidence-20261004/chcbz-history-cleanup-20261005/manifest.json": {
+        "kind": "historical_evidence",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "specs/juyiting-multimedia-deliberation/integration.yaml": {
+        "kind": "integration_manifest",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "specs/juyiting-multimedia-deliberation/ordinary-request-source-evidence.json": {
+        "kind": "historical_evidence",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "specs/juyiting-skill-execution/evidence/current-installation-20261025/authorized-release/summary.json": {
+        "kind": "historical_evidence",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "specs/juyiting-skill-execution/evidence/management-contract-20261023/source-baseline.json": {
+        "kind": "historical_evidence",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "specs/juyiting-skill-execution/fixtures/core-ui-shapes.png": {
+        "kind": "historical_evidence",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "specs/juyiting-skill-execution/integration.yaml": {
+        "kind": "integration_manifest",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "specs/juyiting-task-collaboration/integration.yaml": {
+        "kind": "integration_manifest",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "specs/juyiting-ui-baseline-20261006/evidence/production-image-regression-20261023/report.md": {
+        "kind": "historical_evidence",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "specs/juyiting-ui-baseline-20261006/evidence/release-1.0.6-20261008/release.json": {
+        "kind": "historical_evidence",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "specs/juyiting-ui-baseline-20261006/evidence/reply-stop-fix-20261019/verification.md": {
+        "kind": "historical_evidence",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "specs/juyiting-ui-baseline-20261006/evidence/reply-stop-release-20261019/verification.md": {
+        "kind": "historical_evidence",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "specs/juyiting-ui-baseline-20261006/evidence/reply-stop-ui-20261019/verification.md": {
+        "kind": "historical_evidence",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "specs/juyiting-ui-baseline-20261006/integration.yaml": {
+        "kind": "integration_manifest",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "specs/juyiting-ui-optimization/integration.yaml": {
+        "kind": "integration_manifest",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "specs/juyiting-unified-experience/integration.yaml": {
+        "kind": "integration_manifest",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "specs/juyiting-voice-conversation/integration.yaml": {
+        "kind": "integration_manifest",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "specs/juyiting-voice-realtime/integration.yaml": {
+        "kind": "integration_manifest",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "specs/oauth-public-client-hardening/integration.yaml": {
+        "kind": "integration_manifest",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "specs/personal-center-navigation-v1-8/integration.yaml": {
+        "kind": "integration_manifest",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "specs/public-beta-release/integration.yaml": {
+        "kind": "integration_manifest",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "specs/runtime-self-host-onboarding/integration.yaml": {
+        "kind": "integration_manifest",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "specs/task-scheduling/integration.yaml": {
+        "kind": "integration_manifest",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      },
+      "specs/username-encoding-integrity/integration.yaml": {
+        "kind": "integration_manifest",
+        "reason": "Internal integration pins/receipts, historical sources or regression fixtures omitted from the 2026-11-12 public export; unavailable, not validated or restored by this repair."
+      }
+    }
+  }
+}

@@ -7,7 +7,7 @@ import sys
 import os
 import subprocess
 from collections import Counter
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from urllib.parse import unquote, urlsplit
 
 REQUIRED = ('spec.md', 'design.md', 'tasks.md', 'acceptance.md', 'integration.yaml')
@@ -123,6 +123,39 @@ def search(root, pattern, include_history=False):
     return subprocess.call(['rg', '-n', '-i', '--', pattern] + files, cwd=str(root))
 
 
+def export_omissions(mapping):
+    """Exact public-export absences, never exemptions for current guidance/code."""
+    omitted = mapping.get('export_profile', {}).get('omitted', {})
+    if not isinstance(omitted, dict):
+        raise ValueError('Public-export omissions must be an exact-path object')
+    selected = {name for key in ('entrypoints', 'current_guides', 'selected_details',
+                                'selected_versioned_contracts')
+                for name in mapping.get('discovery', {}).get(key, [])}
+    for name, metadata in omitted.items():
+        path = PurePosixPath(name)
+        if not isinstance(metadata, dict):
+            raise ValueError('Invalid public-export omission metadata: ' + name)
+        kind = metadata.get('kind')
+        canonical = (not path.is_absolute() and '..' not in path.parts
+                     and str(path) == name and not any(c in name for c in '*?[]'))
+        manifest = (len(path.parts) == 3 and path.parts[0] == 'specs'
+                    and path.name == 'integration.yaml')
+        evidence = (bool(path.parts) and path.parts[0] == 'specs' and
+                    (bool(set(path.parts) & {'evidence', 'fixtures'}) or
+                     any(v.startswith('implementation-evidence-') for v in path.parts) or
+                     path.name == 'ordinary-request-source-evidence.json'))
+        history = (path.suffix == '.md' and
+                   (path.parts[:3] in (('docs', 'implementation', 'archive'),
+                                      ('docs', 'implementation', 'handoffs')) or
+                    path.parts[:2] == ('specs', 'codex-history-closeout-20261023'))
+                   and path.name != 'TEMPLATE.md')
+        if (not canonical or name in selected or not metadata.get('reason') or
+                not {'integration_manifest': manifest, 'historical_evidence': evidence,
+                     'historical_source': history}.get(kind, False)):
+            raise ValueError('Invalid public-export omission (current routes cannot be exempted): ' + name)
+    return omitted
+
+
 def check(root, feature=None, all_docs=False):
     root = Path(root).resolve()
     errors, exceptions = [], []
@@ -132,10 +165,23 @@ def check(root, feature=None, all_docs=False):
     mapping_path = root / 'docs/sdd-document-map.json'
     mapping = json.loads(mapping_path.read_text())
     removed = mapping['removed']
+    omitted = export_omissions(mapping)
+    unavailable = set()
+
+    def exported_absence(path):
+        try:
+            name = str(path.resolve().relative_to(root))
+        except ValueError:
+            return False
+        if name in omitted and not path.exists():
+            unavailable.add(name)
+            return True
+        return False
+
     for old, new in removed.items():
         if (root / old).exists():
             errors.append('Removed path reappeared: ' + old)
-        if not (root / new).exists():
+        if not (root / new).exists() and not exported_absence(root / new):
             errors.append('Missing successor: ' + new)
     if feature:
         if not re.fullmatch(r'[a-z0-9][a-z0-9-]*', feature):
@@ -155,6 +201,8 @@ def check(root, feature=None, all_docs=False):
         links += 1
         dest = p.parent / unquote(url.path)
         if not dest.exists():
+            if exported_absence(dest):
+                return
             source = str(p.relative_to(root))
             discovery = mapping.get('discovery', {})
             known = discovery.get('known_stale_baseline_links', {}).get(source, [])
@@ -183,7 +231,8 @@ def check(root, feature=None, all_docs=False):
                     r'^(?:docs/|api/docs/|ops/|specs/|web/prototypes/|\.\./|'
                     + re.escape(str(root)) + r'/)', path):
                 if not any(c in path for c in (' ', '*', '<', '>')):
-                    if not (p.parent / path).exists() and not (root / path).exists():
+                    if (not (p.parent / path).exists() and not (root / path).exists()
+                            and not exported_absence(root / path)):
                         errors.append('{}: missing inline path {}'.format(p.relative_to(root), path))
             if relative in removed:
                 errors.append('{}: deleted reference {} -> {}'.format(
@@ -201,6 +250,8 @@ def check(root, feature=None, all_docs=False):
             continue
         for name in REQUIRED:
             p = folder / name
+            if not p.is_file() and exported_absence(p):
+                continue
             if not p.is_file() or not p.stat().st_size:
                 errors.append('Missing/empty artifact: ' + str(p.relative_to(root)))
             elif name.endswith('.md'):
@@ -293,12 +344,16 @@ def check(root, feature=None, all_docs=False):
                 errors.append('Not discoverable from AGENTS.md: ' + name)
     return {'scope': ('all docs/specs Markdown roles, current links and root-rule reachability; '
                       if all_docs else 'current document entries and scalar navigation only; ') +
+                     'explicit export omissions are reported unavailable, not validated; '
                      'not YAML schema, historical snapshot link validity, full content/source verification, '
                      'candidate matching or release acceptance',
             'features_checked': len(dirs), 'markdown_files_checked': len(checked),
             'local_targets_checked': links, 'exceptions': exceptions, 'errors': sorted(set(errors)),
             'result': 'FAIL' if errors else 'DOCUMENT_NAVIGATION_PASS',
-            'stale_reference_links': stale_reference_links, **extra}
+            'stale_reference_links': stale_reference_links,
+            'unavailable_exported_references': [dict(path=name,
+                status='NOT_INCLUDED_IN_EXPORT; NOT_VALIDATED', **omitted[name])
+                for name in sorted(unavailable)], **extra}
 
 
 def main():
