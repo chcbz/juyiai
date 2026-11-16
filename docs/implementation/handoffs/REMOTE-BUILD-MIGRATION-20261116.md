@@ -15,7 +15,7 @@
 
 本次责任在既有编排/传输边界：local_release委托原Web/API builder，SSH传输不复制API业务权限/状态机。无接口、持久化或执行合同变化，不要求Web/API/Runtime业务代码联动。统一接口规范路径 `/home/isp/wsps/cyf/api/docs/interface-standard.md`，固定版本为上述API commit；RB-1职责与根AGENTS显式随controller快照携带。
 
-## 实施与验证（进行中）
+## 实施与验证
 
 - 现有 `local_release.py` 添加显式SSH worker参数，远端systemd控制构建deadline，原生产安装保持独立；`remote_build.py`仅传输/源固定，不另造发布runner。
 - 固定host key、浅Git快照排除脏字节、禁止覆盖接收目录、安全归档解包及deadline职责的隔离工具测试通过；原构建、安全/分层/fresh JAR与时限测试保留。完整日志在 `/home/isp/state/cyf-remote-build-migration-20261116/transport-tests.log`。
@@ -33,6 +33,25 @@
 - 第二批 `remote-20261116-02`：Web（含回传）207.789秒通过；API 8.028秒失败，Gradle在测试前报告Groovy DSL不可变workspace缺失 `cp_init`/report输出。根因是迁移快照只归档文件而漏掉有语义的空目录，不是代码/测试失败；总构建215.817秒，生产未安装。已按原缓存目录清单补齐1224个目录并核验9752目录、6688原文件，未清空缓存。证据同根 `release-02/`、`gradle-cache-directories*.{json,log}`。
 - 同期观察到回传约5Mbps，API原JAR约241MiB，不能仅靠热缓存承诺600秒。传输适配为SSH固定密钥的rsync块差量：旧程序/包仅作字节basis，接收完整归档SHA/大小必须匹配worker原归档后才解包；不复用测试结果、不改变原包。传输受本阶段剩余预算约束，不给生产进程下传deadline。9项transport及32项local工具测试通过，日志同根 `delta-{transport,local}-tests.log`。
 
-## 接续
+## 已完成发布（2026-11-16，约10:49 CST）
 
-核验npm缓存迁移完成后启动独立新批次，Web/API继续共用单次600秒预算，回传后原受控安装。任何异常保留失败及原因，不覆写历史、不自动降级本机构建；精确完整制品可复用于安装重试。
+- 成功批次 `remote-20261116-03`，controller `c8e91ee5`（完整身份见SSH transport.json）。与前两批独立执行、独立计时，不重标原FAIL。
+- 真实构建与回传 **316.679秒**：Web208.608秒，API108.071秒；worker API99.121秒、Gradle95.018秒，**202任务/75 FROM-CACHE**。源码准备200.768秒单独记录；原API安装101.234秒、Web安装16.661秒、健康/签名/匿名拒绝检查单独记录。控制器总墙钟646.569秒不是构建计时，也未把生产JVM放入deadline单元。
+- **Web1.16.150**：55项定向基线中53 PASS、2 pending、0失败；**API1.1.56-SNAPSHOT**：7份本批XML、96测试、0失败/错误/跳过，保留validateLayering及fresh bootJar。不是沿用历史95测试数量。
+- API包SHA-256 `63103f191d83cbc2a99ffe358350b9ea6f4f20cd3997b885250dfbcf2a047a14`；生产JAR `7c552971f7ecd69cb17a5fcdae2db414fe166bd86854422f0be712dc2adb8745`。Web包 `71c2f52413a3af22a4de307bcb762c0c5c8f9792d747f3e438306941741f2205`。完整commit/tree沿本文件固定候选；无业务源码变化。
+- API安装record `installed` / LOCAL，PID1092219、HEALTH=UP、ARTIFACT_ATTESTATION=MATCH；Web `online_verified` / LOCAL，原安装器核对全资源线上摘要。原API前代JAR备份摘要匹配构建前记录，Web前代备份由原事务记录；没有绕锁/改恢复入口。
+- `/actuator/health`200且UP、`/oauth2/jwks`200且有keys、聚义厅真实scene snapshot匿名请求401。这里只证明健康/签名/认证边界及资源上线，不是已认证业务闭环或全局119项/UI回归通过；无收费Provider/资金写操作。
+- rsync API归档252,641,280字节中251,872,768字节由basis匹配，仅768,512字节literal；接收完整归档摘要仍匹配worker。Web匹配17,449,344字节，literal93,582,976字节；如实记录网络仍占主要耗时，不承诺任意版本都能高命中。
+- 现有10个NewAPI/StarAI容器的ID、启动时间、重启次数、健康状态对比工具安装前均不变。Runtime未发布、其活动工作区与状态未改；其它任务脏修改保留。
+- 构建包路径 `/home/isp/state/cyf-local-build/tasks/cyf-remote-20261116-03/{api/package/api.tar,web/package/web.tgz}`，已按既有保留策略登记。原缓存保留；worker未安装生产主机清理定时任务，不能在没有跨机当前/回退绑定保护时盲目照搬清理。
+
+## 证据与后续使用
+
+- 完整成功回执、阶段日志、XML、测试摘要、工具及制品摘要：`/home/isp/state/cyf-remote-build-migration-20261116/release-03/`；控制器日志同根 `release-controller-03.log`。失败原证据分别为 `release-01/` 和 `release-02/`。
+- 工具测试9 transport +32 local +7 storage，48项通过；同根`delta-{transport,local,storage}-tests.log`。不将工具测试当作应用业务回归。
+- 根AGENTS收口Web/API后续默认worker位置；CLI仍须显式传入固定SSH主机、全新remote-root、公开runtime-config等参数，不是将默认无参数入口偷偷重定向，也不允许自动回落生产机重构建。
+- 后续有新业务候选时固定新的完整commit/tree，按变更加入必要回归。Runtime及远端自动清理适配不在本轮完成范围。根提交仅本任务文件、未push（保留无关未发布历史），工具源码、安装与业务验收边界分别记录。
+
+收尾补记：最终独立摘要/源码/测试/备份/容器审计为 `/home/isp/state/cyf-remote-build-migration-20261116/completion-audit.json`（PASS）。仅本任务的三批远端临时源码/裸快照、本机重复source/output传输归档及缓存seed归档已清理，原批次输出、包、原始日志/XML、完整传输摘要、缓存和备份保留；worker生成的ledger/evidence变更另存后再删源码暂存。清理回执同根 `temporary-cleanup.json/.log`，未清他人工作区。
+
+文档检查：Git空白检查通过；本次引用的既有工具说明与handoff路径存在。`./sddw check-docs --all-docs` 返回2，原因是开源导出既有缺失 `docs/sdd-document-map.json`，日志同根 `docs-check.log`；不宣称全库文档检查通过，也不为本次构建迁移生成替代全库索引。

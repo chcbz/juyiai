@@ -221,7 +221,7 @@ systemd-run --unit="cyf-${BATCH}" --wait --pipe --collect \
 
 ## SSH 构建服务器（2026-11-16：迁移入口）
 
-用户指定 Web/API 构建机 `203.32.84.239`；该主机只测试、构建、打包，不接收生产安装权限、不启动 Flow。生产机继续执行原 LOCAL 安装器，版本、身份/ACL、锁、备份、恢复、健康及线上资源摘要检查不变。Runtime 正在其他任务中变更，不随本次 Web/API 迁移发布。
+根AGENTS已将 Web/API 默认构建位置迁到用户指定的 `203.32.84.239`；该主机只测试、构建、打包，不接收生产安装权限、不启动 Flow。生产机继续执行原 LOCAL 安装器，版本、身份/ACL、锁、备份、恢复、健康及线上资源摘要检查不变。Runtime 正在其他任务中变更，不随本次 Web/API 迁移发布。
 
 复用 `local_release.py`，在原固定源码参数上追加：
 
@@ -240,6 +240,6 @@ systemd-run --unit="cyf-${BATCH}" --wait --pipe --collect \
 - 原始包（内含fresh JAR）、构建输入、日志、XML及proof回传到控制机同名批次输出路径；SSH固定host key的rsync块差量只减少网络字节，可用当前API JAR/Web包作字节basis，但不复用测试或产物成功事实。worker原归档与接收端完整SHA-256/大小必须一致，之后才安全解包；不重新压缩/改写待发布包。SSH传输、原制品SHA和安装器原验证共同保证来源。`evidence/ssh/transport.json` 记录构建主机、控制器/API/Web完整commit/tree、传输摘要及大小；source_kind仍为真实LOCAL，不虚构CI/Flow Run。
 - 本入口不自动配置SSH、安装工具、恢复缓存或取得发布授权。worker连接/构建失败停止该次交付、保存真实失败；归因后才以新批次重试。不复用正在运行的一次执行来续时，不抢他人锁。
 
-本次实际安装、固定候选、测试、尝试和发布状态见 `docs/implementation/handoffs/REMOTE-BUILD-MIGRATION-20261116.md`；入口代码存在不等于迁移发布已通过。后续任务继续显式选择SSH参数，不默认为可回落生产机重型构建。
+本次实际安装、固定候选、测试、尝试和发布状态见 `docs/implementation/handoffs/REMOTE-BUILD-MIGRATION-20261116.md`；2026-11-16批次remote-20261116-03已实测构建与回传316.679秒并完成原受控安装，前两批FAIL原样保留；不代表全冷/任意负载均保证此耗时。后续Web/API任务继续显式选择SSH参数，不自动回落生产机重型构建。
 
 缓存准备注意：Gradle不可变Groovy DSL缓存的空目录也是输入，快照必须保留并核验目录清单；只校验文件不代表缓存结构完整。控制机使用已验证的Python3.11（当前 `/root/.local/bin/python3.11`），不以系统默认Python3.6执行控制器。
