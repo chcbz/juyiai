@@ -22,6 +22,7 @@ import urllib.error
 import urllib.request
 
 from build_storage import require_disk
+from remote_build import RemoteBuild
 
 ROOT = Path(__file__).resolve().parents[2]
 API_BUILDER = ROOT / 'ops/orchestration/local_build.py'
@@ -92,8 +93,15 @@ def main():
     parser.add_argument('--api-regression-arg', action='append', default=[])
     parser.add_argument('--web-regression-test', action='append', default=[])
     parser.add_argument('--install', action='store_true')
+    parser.add_argument('--build-host', help='explicit configured SSH worker; installation stays on this host')
+    parser.add_argument('--remote-root', type=Path, help='fresh worker sources below /home/isp/wsps/cyf-build/')
+    parser.add_argument('--ssh-known-hosts', type=Path, default=Path('/home/isp/conf/cyf-build/known_hosts'))
+    parser.add_argument('--ssh-auth-file', type=Path, default=Path('/root/.codex/auth.json'))
     args = parser.parse_args()
+    if bool(args.build_host) != bool(args.remote_root):
+        raise ValueError('--build-host and --remote-root must be supplied together')
     start = time.monotonic()
+    remote = None
     os.umask(0o077)
     if not args.install or os.geteuid() != 0:
         raise ValueError('root and explicit --install required; builders alone never deploy')
@@ -130,7 +138,10 @@ def main():
     def run(name, argv, build=False):
         if build:
             budget = remaining_build_seconds(result['stages'])
-            argv = ['systemd-run', '--quiet', '--wait', '--pipe', '--collect',
+            if remote is not None:
+                argv = remote.build_command(argv, args.batch_id + '-' + name, budget, args.api_source, args.web_source)
+            else:
+                argv = ['systemd-run', '--quiet', '--wait', '--pipe', '--collect',
                     '--unit=' + args.batch_id + '-' + name,
                     '--property=RuntimeMaxSec=' + str(int(budget)), '--property=KillMode=control-group'] + argv
         stage = dict(name=name, build=build, startedAfterSeconds=round(time.monotonic() - start, 3), argv=argv)
@@ -140,7 +151,10 @@ def main():
         rc = None
         try:
             with (args.evidence_dir / (name + '.log')).open('w') as log:
-                rc = subprocess.call(argv, env=env, stdout=log, stderr=subprocess.STDOUT)
+                rc = subprocess.call(argv, env=remote.environment() if build and remote is not None else env,
+                                     stdout=log, stderr=subprocess.STDOUT)
+            if build and remote is not None:
+                remote.collect(name.split('-')[0], args.output / name.split('-')[0])
         finally:
             stage.update(seconds=time.monotonic() - t, exitCode=rc)
             save()
@@ -153,7 +167,36 @@ def main():
         result['source'] = dict(api=fixed_source(args.api_source, args.expected_api_commit),
                                 web=fixed_source(args.web_source, args.expected_web_commit))
         result['tools'] = {str(p): sha(p) for p in (Path(__file__).resolve(), API_BUILDER, WEB_BUILDER,
-                            ROOT / 'ops/orchestration/local-web-build.mjs', API_HELPER, WEB_HELPER, args.jdk / 'bin/java')}
+                            ROOT / 'ops/orchestration/local-web-build.mjs', ROOT / 'ops/orchestration/remote_build.py',
+                            ROOT / 'ops/orchestration/build_storage.py', ROOT / 'ops/orchestration/web_dependencies.py',
+                            API_HELPER, WEB_HELPER, args.jdk / 'bin/java')}
+        if args.build_host:
+            preparation_start = time.monotonic()
+            remote = RemoteBuild(args.build_host, args.remote_root, ROOT, args.evidence_dir / 'ssh',
+                                 args.ssh_known_hosts, args.ssh_auth_file)
+            remote.prepare({'controller': ROOT, 'api': args.api_source, 'web': args.web_source},
+                           ROOT / 'docs/implementation/TASKS.yaml')
+            for name in ('api', 'web'):
+                if any(remote.receipt['sources'][name][k] != result['source'][name][k] for k in ('commit', 'tree')):
+                    raise ValueError('remote source differs from the explicitly pinned candidate')
+            plan = ['/home/isp/bin/cyf-build-env', '/usr/bin/python3',
+                    str(remote.root / 'controller/ops/orchestration/local_build.py'),
+                    '--task-id', args.task_id, '--source', str(remote.root / 'api'),
+                    '--output', str(args.output / 'api'), '--cache-home', str(args.cache_home),
+                    '--jdk', str(args.jdk), '--version', args.api_version,
+                    '--batch-id', args.batch_id + '-api', '--package', '--offline', '--plan-only']
+            for item in args.api_regression_arg:
+                plan += ['--regression-arg', item]
+            with (args.evidence_dir / 'api-plan.json').open('w') as stream:
+                remote.call(plan, stdout=stream)
+            with (args.evidence_dir / 'api-preflight.json').open('w') as stream:
+                remote.call(['/home/isp/bin/cyf-build-env', '/usr/bin/python3',
+                    str(remote.root / 'controller/ops/orchestration/cyf_orchestrator.py'),
+                    'preflight', args.task_id, '--cwd', str(remote.root / 'api'),
+                    '--component', 'api', '--baseline', 'HEAD'], stdout=stream)
+            result['remoteBuild'] = {'host': args.build_host, 'root': str(args.remote_root),
+                'transportReceipt': str(args.evidence_dir / 'ssh/transport.json'),
+                'preparationSeconds': round(time.monotonic() - preparation_start, 3)}
         before_api = sha(API_JAR)
         previous_api = json.loads(API_RECORD.read_text())
         if previous_api['status'] != 'installed' or previous_api['candidate_sha256'] != before_api:
@@ -270,6 +313,8 @@ def main():
             if component == 'web' and (folder / 'test-reports/mochawesome.json').exists():
                 shutil.copyfile(folder / 'test-reports/mochawesome.json', dest / 'test-report.json')
         save()
+        if remote is not None:
+            remote.close()
     print(json.dumps(dict(status=result['status'], wallSeconds=result['wallSeconds'],
                          buildSeconds=result['buildSeconds'], under600Seconds=result['under600Seconds'], evidence=str(args.evidence_dir / 'release.json')), indent=2))
     return 0 if result['under600Seconds'] else 1

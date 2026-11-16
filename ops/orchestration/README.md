@@ -218,3 +218,25 @@ systemd-run --unit="cyf-${BATCH}" --wait --pipe --collect \
 ### 2026-11-13 全新批次不维护增量编译分析
 
 本地入口强制全新buildDir，未命中标准JavaCompile缓存时本来就需要全量javac。专用init将JavaCompile.options.incremental设为false，避免生成后续批次无法复用的增量依赖/类路径分析；不改项目开发构建、不关闭标准内容寻址build-cache，不改javac/注解处理器输入及必要测试/分层/fresh JAR。真实隔离fixture已验证原模式与新模式缓存键相同、跨新输出命中、无缓存重新编译的生成源码/class摘要及运行结果一致；这不是完整应用构建达标证明，完整批次另计。
+
+## SSH 构建服务器（2026-11-16：迁移入口）
+
+用户指定 Web/API 构建机 `203.32.84.239`；该主机只测试、构建、打包，不接收生产安装权限、不启动 Flow。生产机继续执行原 LOCAL 安装器，版本、身份/ACL、锁、备份、恢复、健康及线上资源摘要检查不变。Runtime 正在其他任务中变更，不随本次 Web/API 迁移发布。
+
+复用 `local_release.py`，在原固定源码参数上追加：
+
+```bash
+--build-host 203.32.84.239 \
+--remote-root /home/isp/wsps/cyf-build/NEW_BATCH \
+--ssh-known-hosts /home/isp/conf/cyf-build/known_hosts
+```
+
+- `remote_build.py` 只提供 SSH 传输，不能独立发布；只接受授权配置 `JYT_BUILD_SERVER` 的主机，并使用已固定的 SSH host key，拒绝自动信任新密钥。登录凭据由控制机 `/root/.codex/auth.json` 读取，不进入 argv、Git、源快照或回执；askpass 私有脚本只引用凭据文件，正常结束删除。
+- 每个候选只有一套远端干净源码快照：controller/API/Web 使用原始完整 commit/tree 的浅 Git 克隆，**不复制脏工作区**。远端任务台账显式携带实际 Owner、任务ID、源码身份和允许验证状态；远端写入不能覆盖控制机其他任务状态。
+- 执行前远端原 API builder 的 `--plan-only` 核对工具/命令/输出；Gradle 仍经现有编排器串行执行。API 使用已核验、私有的持久 cache-home，仅复用依赖/脚本/JavaCompile缓存，不复制项目buildDir、测试结果或最终JAR当作新批次成功。初次迁移缓存的输入、摘要、日志独立保存，不算应用构建通过。
+- SSH worker 使用 `/home/isp/apps` 中固定 Node/JDK/Gradle，`/home/isp/state` 放缓存与每批输出、临时目录；`/tmp`为tmpfs，不用于构建。Maven消费凭据只在worker私有 `conf/cyf-build/maven.env` 中提供；不复制整个 Codex auth、全局 Gradle init 或生产凭据。
+- Web/API测试、构建、打包各在**远端** task-owned systemd单元执行，第二阶段只拿到同一次执行的剩余600秒；不会因SSH断线让构建无限继续。SSH/归档回传耗时也计入该次构建阶段记录；不把worker安装、缓存迁移或回归验收伪装成应用构建成功。不向生产安装/服务下传构建deadline，不本机自动回退构建。
+- 原始包、构建输入、日志、XML、JAR及proof回传到控制机同名批次输出路径；SSH传输、原制品SHA和安装器原验证共同保证来源。`evidence/ssh/transport.json` 记录构建主机、控制器/API/Web完整commit/tree、传输摘要及大小；source_kind仍为真实LOCAL，不虚构CI/Flow Run。
+- 本入口不自动配置SSH、安装工具、恢复缓存或取得发布授权。worker连接/构建失败停止该次交付、保存真实失败；归因后才以新批次重试。不复用正在运行的一次执行来续时，不抢他人锁。
+
+本次实际安装、固定候选、测试、尝试和发布状态见 `docs/implementation/handoffs/REMOTE-BUILD-MIGRATION-20261116.md`；入口代码存在不等于迁移发布已通过。后续任务继续显式选择SSH参数，不默认为可回落生产机重型构建。
