@@ -11,6 +11,7 @@
 | 全部技能、修订子轮、文件产物 | [技能执行主spec](../specs/juyiting-skill-execution/spec.md)、[职责RB-1](../specs/juyiting-skill-execution/responsibility-boundaries.md) |
 | 资料上传/固定版本、预览和验收选版 | [个人资料](../specs/juyiting-creative-delivery-mvp/spec.md)、[UI细则](../specs/juyiting-ui-baseline-20261006/optimization/spec.md) |
 | 微信聊天资料选取（2026-11-16源码，未发布） | [小程序配套、配置和平台验收](../web/miniprogram/README.md#微信聊天资料导入2026-11-16待平台验收)、[交互规格](../web/prototypes/juyiting/specs/prototype-spec.md#微信资料选择2026-11-16) |
+| 跨页面返回与原现场恢复（Web `d52f808e`，本地验证、未部署） | [详设A–Q](../specs/juyiting-ui-baseline-20261006/optimization/detailed-design.md#cross-page-return-design-20261116)、[实现/验证交接](implementation/handoffs/PAGE-RETURN-20261116.md)；显式交接、按需挂载、草稿/暂选及原幂等写入恢复；不含分享直达 |
 | WEN钱包/预占/结算/人民币成本 | [文钱包合同](../specs/agent-economy-marketplace/beta-wen-billing.md) |
 | 岗位/技能管理/托管 | [技能管理合同](../specs/juyiting-skill-execution/management-contract.md)、[托管责任](../specs/agent-economy-marketplace/spec.md) |
 | 典籍维护/阅读器/手札 | [维护](../specs/archive-agent-maintenance/spec.md)、[阅读器](../specs/archive-pavilion-reader-mvp/spec.md) |
