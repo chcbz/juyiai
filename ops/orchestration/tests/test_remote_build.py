@@ -86,6 +86,20 @@ class RemoteBuildTest(unittest.TestCase):
             self.assertIsNone(worker.transfer_basis('runtime'))
             worker.close()
 
+    def test_native_fixtures_are_task_namespace_only_and_runtime_only(self):
+        with tempfile.TemporaryDirectory() as d:
+            worker = self.make(Path(d))
+            command = worker.build_command(['/python', '/controller/ops/orchestration/runtime_build.py'],
+                'own-runtime', 600, Path('/api'), Path('/web'), native_fixtures=[('/usr/bin/gnucat', '/usr/lib/cargo/bin/coreutils/cat')])
+            self.assertIn('--property=BindReadOnlyPaths=/usr/bin/gnucat:/usr/lib/cargo/bin/coreutils/cat', shlex.split(command[-1]))
+            with self.assertRaises(ValueError):
+                worker.build_command(['/python', '/controller/ops/orchestration/local_web_build.py'],
+                    'own-web', 600, Path('/api'), Path('/web'), native_fixtures=[('/gnu', '/cat')])
+            with self.assertRaises(ValueError):
+                worker.build_command(['/python', '/controller/ops/orchestration/runtime_build.py'],
+                    'own-runtime', 600, Path('/api'), Path('/web'), native_fixtures=[('/gnu;evil', '/cat')])
+            worker.close()
+
     def test_archive_filter_rejects_path_and_link_escape(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)

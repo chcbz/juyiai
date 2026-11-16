@@ -63,3 +63,5 @@
 沿唯一Owner build_migration_owner，使用原orchestrator将同任务从done重新转claimed（claim命令不接受done，安全拒绝后走transition，未手改ledger）。将原Runtime114完整34组selector构建脚本提升为参数化`ops/orchestration/runtime_build.py`，复用`remote_build.py`固定源及SSH回传，不新造生产安装事务。目标是同源完整测试、远端代码包与已安装内容精确匹配时受原发布锁作幂等确认，不重启、不覆盖身份/状态或重放迁移；如不匹配须停下归因，不能宣称已经发布。
 
 首批`runtime-remote-20261116-01`在测试前0.415秒FAIL：worker首次没有`/home/isp/state/cyf-build`父目录，旧脚本只mkdir末级。原日志和result保留于`/home/isp/state/cyf-remote-build-migration-20261116/runtime-01/`；失败证据收集因没有生成输出另安全拒绝，未打包/未安装。修正为普通盘父目录递归创建，并让传输临时包按输出批次命名，避免不同批次相互冲突；独立第二批重新计600秒，不改写原FAIL。
+
+第二批`runtime-remote-20261116-02`完整测试135.501秒FAIL：783项766PASS/7FAIL/10SKIP，无包。7项分别来自构建机缺/usr/bin/bwrap（5项）及Ubuntu26 uutils多调用二进制按新文件名复制后退出（cat进程身份及sleep存活清理2项）；均为真实失败，不忽略或补绿。安装系统依赖bubblewrap0.11.1；GNU coreutils9.7已随主机存在，下一次Runtime任务仅用systemd BindReadOnlyPaths将gnucat/gnusleep映射到私有mount namespace内原路径，主机默认命令及其它服务不变。源代码/测试selector不变，先跑原失败用例诊断，独立新完整构建仍600秒。工具12项测试通过，日志同证据根runtime-transport-tests-03.log。

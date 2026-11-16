@@ -148,7 +148,7 @@ a.unlink()
         self.call(['python3', '-c', code, str(self.root), '/home/isp/state/cyf-local-build'])
         self.save()
 
-    def build_command(self, command, unit, budget, api_source, web_source, runtime_source=None):
+    def build_command(self, command, unit, budget, api_source, web_source, runtime_source=None, native_fixtures=()):
         mapped = []
         for value in command:
             if runtime_source is not None and str(value) == str(runtime_source):
@@ -167,7 +167,15 @@ a.unlink()
         credentials = '' if any(v.endswith('/runtime_build.py') for v in mapped) else 'set -a; source /home/isp/conf/cyf-build/' + environment_file + '; set +a; '
         script = ('set -euo pipefail; ' + credentials + 'exec ' +
                   shlex.join(['/home/isp/bin/cyf-build-env'] + mapped))
-        return self.command(['systemd-run', '--quiet', '--wait', '--pipe', '--collect',
+        fixture_properties = []
+        if native_fixtures:
+            if not any(v.endswith('/runtime_build.py') for v in mapped):
+                raise ValueError('native test fixtures are Runtime-only')
+            for source, target in native_fixtures:
+                if any(not re.fullmatch(r'/[A-Za-z0-9_./-]+', str(p)) or '..' in Path(p).parts for p in (source, target)):
+                    raise ValueError('invalid native fixture path')
+            fixture_properties = ['--property=BindReadOnlyPaths=' + ' '.join(str(s) + ':' + str(t) for s, t in native_fixtures)]
+        return self.command(['systemd-run', '--quiet', '--wait', '--pipe', '--collect'] + fixture_properties + [
             '--unit=' + unit, '--property=RuntimeMaxSec=' + str(int(budget)),
             '--property=KillMode=control-group', '/bin/bash', '-c', script])
 

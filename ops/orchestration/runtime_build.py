@@ -42,6 +42,10 @@ def manifest(root):
  return rows
 save()
 try:
+ tool_paths=[a.node,Path('/bin/cat'),Path('/bin/sleep'),Path('/usr/bin/bwrap')]
+ if os.environ.get('CYF_CODEX_BIN'):tool_paths.append(Path(os.environ['CYF_CODEX_BIN']))
+ tool_inputs=[{'path':str(p),'realpath':str(p.resolve()),'sha256':sha(p)} for p in tool_paths]
+ r['externalTools']=tool_inputs;save()
  with (B/'source.tar').open('wb') as f:run(['git','-c','tar.umask=0077','-C',repo,'archive',commit],stdout=f)
  run(['tar','-xf',B/'source.tar','-C',src]);(B/'source.tar').unlink()
  run(['cp','--archive','--link',a.dependencies/'node_modules',src/'conf/codex-bridge/node_modules'])
@@ -57,6 +61,7 @@ try:
  run([node,'--input-type=module','-e',"import{pathToFileURL}from'node:url';let m=await import(pathToFileURL(process.argv[1]));await m.collateExecutionPayload(process.argv[2],process.argv[3])",src/'conf/cyf-agent-runtime-v1/lib/execution-adapter.mjs',src/'conf/codex-bridge',payload/'codex-bridge'])
  entries=manifest(payload);(out/'artifact.manifest.json').write_text(json.dumps(entries,indent=2)+'\n')
  archive=out/('runtime-code-'+runtime_version+'.tgz');run(['tar','--numeric-owner','-I','gzip -1','-cf',archive,'-C',payload,'.'])
+ assert all(sha(Path(row['path']))==row['sha256'] for row in tool_inputs), 'external build tool changed'
  assert manifest(payload)==entries and not git('status','--porcelain') and git('rev-parse','HEAD')==commit
  r.update(status='PACKAGED_NOT_INSTALLED',artifactPath=str(archive),artifactSha256=sha(archive),artifactBytes=archive.stat().st_size,manifestSha256=sha(out/'artifact.manifest.json'),runtimeVersion=runtime_version,bridgeVersion=json.loads((payload/'codex-bridge/package.json').read_text())['version'],payloadPath=str(payload))
 except BaseException as e:r.update(status='FAIL',error=type(e).__name__+': '+str(e));raise
