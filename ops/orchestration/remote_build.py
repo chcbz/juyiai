@@ -110,14 +110,26 @@ a.unlink()
             'sha256': digest, 'size': Path(archive).stat().st_size})
         self.save()
 
-    def prepare(self, sources, ledger_path):
+    def prepare(self, sources, ledger_path, revisions=None):
         """Stage one snapshot per candidate; never include dirty working bytes."""
         for name, source in sources.items():
             source = Path(source)
-            expected = subprocess.check_output(['git', '-C', str(source), 'rev-parse', 'HEAD'], text=True).strip()
+            revision = (revisions or {}).get(name)
+            if revision is not None and not re.fullmatch(r'[0-9a-f]{40}', revision):
+                raise ValueError('source revision must be a full fixed commit')
+            expected = subprocess.check_output(['git', '-C', str(source), 'rev-parse',
+                                                (revision or 'HEAD') + '^{commit}'], text=True).strip()
             bare = self.evidence / (name + '.git')
-            subprocess.run(['git', 'clone', '--quiet', '--bare', '--depth=1', '--no-local',
-                            str(source), str(bare)], check=True)
+            if revision is None:
+                subprocess.run(['git', 'clone', '--quiet', '--bare', '--depth=1', '--no-local',
+                                str(source), str(bare)], check=True)
+            else:
+                # Pin without checking out/resetting another Owner's active workspace.
+                subprocess.run(['git', 'init', '--quiet', '--bare', str(bare)], check=True)
+                git = ['git', '--git-dir=' + str(bare)]
+                subprocess.run(git + ['fetch', '--quiet', '--depth=1', '--no-tags', str(source), expected], check=True)
+                subprocess.run(git + ['update-ref', 'refs/heads/snapshot', expected], check=True)
+                subprocess.run(git + ['symbolic-ref', 'HEAD', 'refs/heads/snapshot'], check=True)
             actual = subprocess.check_output(['git', '--git-dir=' + str(bare), 'rev-parse', 'HEAD'], text=True).strip()
             if actual != expected:
                 raise ValueError('source HEAD changed while staging ' + name)

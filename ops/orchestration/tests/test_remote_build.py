@@ -115,7 +115,7 @@ class RemoteBuildTest(unittest.TestCase):
                     safe_extract(a, root / 'out')
             self.assertFalse((root / 'escape').exists())
 
-    def test_source_snapshot_is_exact_commit_and_excludes_dirty_files(self):
+    def source_snapshot_fixture(self, pinned=False):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d); source = root / 'source'; source.mkdir()
             def git(*argv):
@@ -126,6 +126,10 @@ class RemoteBuildTest(unittest.TestCase):
             (source / 'tracked').write_text('committed')
             git('add', '.'); git('commit', '-qm', 'fixture')
             expected = git('rev-parse', 'HEAD')
+            if pinned:
+                (source / 'tracked').write_text('other-owner-later-commit')
+                git('add', 'tracked');git('commit', '-qm', 'other owner')
+            local_head = git('rev-parse', 'HEAD')
             (source / 'tracked').write_text('dirty')
             (source / 'secret.env').write_text('must-not-transfer')
             ledger.write_text('real-current-owner-ledger')
@@ -137,14 +141,21 @@ class RemoteBuildTest(unittest.TestCase):
                     argv[0] = sys.executable
                 return subprocess.run(argv, check=True, **kw)
             worker.call = local_call
-            worker.prepare({'controller': source}, ledger)
+            worker.prepare({'controller': source}, ledger, revisions={'controller':expected} if pinned else None)
             self.assertEqual(expected, worker.receipt['sources']['controller']['commit'])
             checkout = worker.root / 'controller'
             self.assertEqual('committed', (checkout / 'tracked').read_text())
             self.assertFalse((checkout / 'secret.env').exists())
             self.assertEqual('real-current-owner-ledger', (checkout / 'docs/implementation/TASKS.yaml').read_text())
             self.assertEqual('dirty', (source / 'tracked').read_text())
+            self.assertEqual(local_head, git('rev-parse','HEAD'))
             worker.close()
+
+    def test_source_snapshot_is_exact_commit_and_excludes_dirty_files(self):
+        self.source_snapshot_fixture()
+
+    def test_fixed_revision_does_not_follow_or_reset_another_owners_head(self):
+        self.source_snapshot_fixture(pinned=True)
 
     def collect_fixture(self, root, corrupt=False):
         worker = self.make(root)

@@ -69,3 +69,5 @@
 原失败用例诊断逐步暴露完整原生工具闭包：先补同版本Codex0.167.0原生二进制（SHA cdcb45aaa01d0f14e298985e09465aebccd47f64ecd298aea44814af7b62bbda），再补slirp4netns及同发行版codex-resources/codex-path（40文件逐hash验证），均在worker专用apps目录，不复制任何HOME/auth或使用Provider。各次原诊断日志保留，不是新完整构建或PASS。
 
 Ubuntu26内核审计明确拒绝隔离视图`/runtime/codex-resources/bwrap`的嵌套userns。仅为该确切沙箱helper安装AppArmor attachment，位于`/home/isp/conf/cyf-build/runtime-bwrap.apparmor`，系统入口为`/etc/apparmor.d/cyf-runtime-build-bwrap`链接；授予userns以运行真实嵌套bwrap，不关闭sandbox/实际只读或网络探针，两个全局AppArmor限制sysctl均未更改。没有为其它程序/全局userns解除限制。原生测试必须真实通过后才启动完整第三批。
+
+原失败用例最终诊断05为8PASS/0FAIL/0SKIP（包含另一spawn负例，独立诊断不冒充完整套件）。第三完整尝试`runtime-remote-20261116-03`在测试前0.515秒因源码断言安全FAIL：另一Owner已将Runtime HEAD提交为4d763777/1.3.115，传输层原只克隆当时HEAD，builder正确拒绝与本次固定4fd0951候选不一致。未跟随发布、未复位/覆盖他人工作区。传输新增可选完整commit固定快照，以浅fetch准确对象构造snapshot，不改变本地HEAD或脏字节；新增回归13项通过（含并发Owner新HEAD保持不变/仍输出原候选）。下一完整批固定原线上4fd0951及精确lock，不顺带发布1.3.115或另一任务新API。
