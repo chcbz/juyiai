@@ -13,13 +13,16 @@ parser.add_argument('--commit',required=True)
 parser.add_argument('--tree',required=True)
 parser.add_argument('--build-id',required=True)
 parser.add_argument('--plan-only',action='store_true')
+parser.add_argument('--regression-test',action='append',default=[],help='Additional source-relative Node test file; base selectors are always retained')
 a=parser.parse_args()
+for relative in a.regression_test:
+ if Path(relative).is_absolute() or '..' in Path(relative).parts or not relative.endswith('.test.mjs'):parser.error('regression tests must be source-relative .test.mjs files')
 repo=a.source;B=a.output;src=B/'build/source';out=B/'package';start=time.monotonic()
 sys.path.insert(0,str(Path(__file__).resolve().parent))
 from build_storage import require_disk,build_environment
 os.umask(0o077);[require_disk(p) for p in (B,repo,a.dependencies)];
 if a.plan_only:
- print(json.dumps({'source':str(repo),'output':str(B),'node':str(a.node),'dependencies':str(a.dependencies),'codexBin':str(a.codex_bin),'commit':a.commit,'tree':a.tree,'limitSeconds':600}));sys.exit(0)
+ print(json.dumps({'source':str(repo),'output':str(B),'node':str(a.node),'dependencies':str(a.dependencies),'codexBin':str(a.codex_bin),'commit':a.commit,'tree':a.tree,'limitSeconds':600,'additionalTests':a.regression_test}));sys.exit(0)
 B.mkdir(mode=0o700,parents=True);src.mkdir(parents=True);out.mkdir();env=build_environment(B/'t',os.environ.copy());env['PYTHONDONTWRITEBYTECODE']='1';env['CYF_NATIVE_EXECUTION_ISOLATION_PROBE']='1';env['CYF_CODEX_BIN']=str(a.codex_bin)
 git=lambda *a:subprocess.check_output(['git','-C',repo,*a],text=True).strip()
 assert not git('status','--porcelain')
@@ -56,11 +59,11 @@ try:
  run(['cp','--archive','--link',a.dependencies/'node_modules',src/'conf/codex-bridge/node_modules'])
  tests=['hosting-control', 'runtime-host', 'hosting-lifecycle', 'hosting-readmission-integration', 'unified-runtime-acceptance', 'hosting-config', 'hosting-adoption', 'hosting-outbound-host', 'hosting-outbound', 'hosting-setup-cli', 'hosting-tls', 'private-home-cleanup', 'private-data-cleanup', 'private-state-cleanup', 'provider-environments', 'model-auth-migration']
  node=a.node
- with (B/'test.log').open('w') as log:run([node,'--test','--test-concurrency=1','--test-reporter=tap',*[src/'conf/cyf-agent-runtime-v1/test'/(t+'.test.mjs') for t in tests],*[src/'conf/codex-bridge/test'/(t+'.test.mjs') for t in ['native-readiness', 'managed-chat-scope-config', 'juyiting-typed-outcome', 'juyiting-action-outcome', 'juyiting-typed-runtime', 'chat-runtime', 'agent-client', 'materials-chat', 'chat-context-retry', 'registration-footprint', 'model-auth', 'typed-inspection-profile', 'native-execution-profile', 'native-image-execution-profile', 'native-browser-execution-profile', 'skill-inventory', 'app-server-native-handshake', 'config-runtime']]],stdout=log,stderr=subprocess.STDOUT)
+ with (B/'test.log').open('w') as log:run([node,'--test','--test-concurrency=1','--test-reporter=tap',*[src/'conf/cyf-agent-runtime-v1/test'/(t+'.test.mjs') for t in tests],*[src/'conf/codex-bridge/test'/(t+'.test.mjs') for t in ['native-readiness', 'managed-chat-scope-config', 'juyiting-typed-outcome', 'juyiting-action-outcome', 'juyiting-typed-runtime', 'chat-runtime', 'agent-client', 'materials-chat', 'chat-context-retry', 'registration-footprint', 'model-auth', 'typed-inspection-profile', 'native-execution-profile', 'native-image-execution-profile', 'native-browser-execution-profile', 'skill-inventory', 'app-server-native-handshake', 'config-runtime']],*[src/relative for relative in a.regression_test]],stdout=log,stderr=subprocess.STDOUT)
  counts={k:int(v) for k,v in re.findall(r'^# (tests|pass|fail|cancelled|skipped|todo) (\d+)$',(B/'test.log').read_text(),re.M)}
  assert counts.get('tests',0)>0 and not any(counts.get(k,0) for k in ['fail','cancelled','todo'])
  r['toolchain']={'python':sys.version,'nodeVersion':subprocess.check_output([str(node),'--version'],text=True).strip(),'builderSha256':sha(Path(__file__)),'lockSha256':sha(a.dependencies/'package-lock.json')}
- r['tests']={'counts':counts,'files':tests+['native-readiness', 'managed-chat-scope-config', 'juyiting-typed-outcome', 'juyiting-action-outcome', 'juyiting-typed-runtime', 'chat-runtime', 'agent-client', 'materials-chat', 'chat-context-retry', 'registration-footprint', 'model-auth', 'typed-inspection-profile', 'native-execution-profile', 'native-image-execution-profile', 'native-browser-execution-profile', 'skill-inventory', 'app-server-native-handshake', 'config-runtime'],'logSha256':sha(B/'test.log'),'nodeSha256':sha(node)};save()
+ r['tests']={'counts':counts,'files':tests+['native-readiness', 'managed-chat-scope-config', 'juyiting-typed-outcome', 'juyiting-action-outcome', 'juyiting-typed-runtime', 'chat-runtime', 'agent-client', 'materials-chat', 'chat-context-retry', 'registration-footprint', 'model-auth', 'typed-inspection-profile', 'native-execution-profile', 'native-image-execution-profile', 'native-browser-execution-profile', 'skill-inventory', 'app-server-native-handshake', 'config-runtime']+a.regression_test,'logSha256':sha(B/'test.log'),'nodeSha256':sha(node)};save()
  payload=B/'build/payload';payload.mkdir()
  shutil.copytree(src/'conf/cyf-agent-runtime-v1',payload/'runtime',ignore=shutil.ignore_patterns('test','.gitignore'))
  run([node,'--input-type=module','-e',"import{pathToFileURL}from'node:url';let m=await import(pathToFileURL(process.argv[1]));await m.collateExecutionPayload(process.argv[2],process.argv[3])",src/'conf/cyf-agent-runtime-v1/lib/execution-adapter.mjs',src/'conf/codex-bridge',payload/'codex-bridge'])
