@@ -211,7 +211,7 @@ a.unlink()
         archive = self.evidence / (component + '-output.tar')
         if archive.exists():
             raise ValueError('do not overwrite an existing transport archive')
-        remote_archive = output.parent / ('.' + component + '-transport.tar')
+        remote_archive = output.parent / ('.' + output.name + '-' + component + '-transport.tar')
         code = '''import pathlib,tarfile,sys,hashlib,json
 p=pathlib.Path(sys.argv[1]); a=pathlib.Path(sys.argv[2]); assert p.is_dir()
 with a.open('xb') as raw, tarfile.open(fileobj=raw,mode='w|') as tf:

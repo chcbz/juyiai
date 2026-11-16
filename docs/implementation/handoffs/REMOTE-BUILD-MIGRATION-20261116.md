@@ -55,3 +55,11 @@
 收尾补记：最终独立摘要/源码/测试/备份/容器审计为 `/home/isp/state/cyf-remote-build-migration-20261116/completion-audit.json`（PASS）。仅本任务的三批远端临时源码/裸快照、本机重复source/output传输归档及缓存seed归档已清理，原批次输出、包、原始日志/XML、完整传输摘要、缓存和备份保留；worker生成的ledger/evidence变更另存后再删源码暂存。清理回执同根 `temporary-cleanup.json/.log`，未清他人工作区。
 
 文档检查：Git空白检查通过；本次引用的既有工具说明与handoff路径存在。`./sddw check-docs --all-docs` 返回2，原因是开源导出既有缺失 `docs/sdd-document-map.json`，日志同根 `docs-check.log`；不宣称全库文档检查通过，也不为本次构建迁移生成替代全库索引。
+
+## Runtime补齐（2026-11-16，执行中）
+
+用户“继续完成”授权扩展原任务到Runtime；原Web/API成功记录不变。只读核实另一任务已在2026-11-15发布Runtime1.3.114/bridge1.1.76，源码4fd0951fec5d5a89c05985b96465169ff7e39e39/tree c6e7f6e0b5713e738fa5153115d13ec1a4a84566，当前PID873209、record verified-active。此前“Runtime未发布”仅指本迁移批次，不能当作全机最新状态。认证迁移和原业务验收按原handoff独立保留，不重复迁移/收费。
+
+沿唯一Owner build_migration_owner，使用原orchestrator将同任务从done重新转claimed（claim命令不接受done，安全拒绝后走transition，未手改ledger）。将原Runtime114完整34组selector构建脚本提升为参数化`ops/orchestration/runtime_build.py`，复用`remote_build.py`固定源及SSH回传，不新造生产安装事务。目标是同源完整测试、远端代码包与已安装内容精确匹配时受原发布锁作幂等确认，不重启、不覆盖身份/状态或重放迁移；如不匹配须停下归因，不能宣称已经发布。
+
+首批`runtime-remote-20261116-01`在测试前0.415秒FAIL：worker首次没有`/home/isp/state/cyf-build`父目录，旧脚本只mkdir末级。原日志和result保留于`/home/isp/state/cyf-remote-build-migration-20261116/runtime-01/`；失败证据收集因没有生成输出另安全拒绝，未打包/未安装。修正为普通盘父目录递归创建，并让传输临时包按输出批次命名，避免不同批次相互冲突；独立第二批重新计600秒，不改写原FAIL。

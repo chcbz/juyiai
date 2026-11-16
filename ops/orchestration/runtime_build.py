@@ -19,7 +19,7 @@ from build_storage import require_disk,build_environment
 os.umask(0o077);[require_disk(p) for p in (B,repo,a.dependencies)];
 if a.plan_only:
  print(json.dumps({'source':str(repo),'output':str(B),'node':str(a.node),'dependencies':str(a.dependencies),'commit':a.commit,'tree':a.tree,'limitSeconds':600}));sys.exit(0)
-B.mkdir(mode=0o700);src.mkdir(parents=True);out.mkdir();env=build_environment(B/'t',os.environ.copy());env['PYTHONDONTWRITEBYTECODE']='1';env['CYF_NATIVE_EXECUTION_ISOLATION_PROBE']='1'
+B.mkdir(mode=0o700,parents=True);src.mkdir(parents=True);out.mkdir();env=build_environment(B/'t',os.environ.copy());env['PYTHONDONTWRITEBYTECODE']='1';env['CYF_NATIVE_EXECUTION_ISOLATION_PROBE']='1'
 git=lambda *a:subprocess.check_output(['git','-C',repo,*a],text=True).strip()
 assert not git('status','--porcelain')
 commit=git('rev-parse','HEAD');tree=git('rev-parse','HEAD^{tree}');assert commit==a.commit and tree==a.tree
