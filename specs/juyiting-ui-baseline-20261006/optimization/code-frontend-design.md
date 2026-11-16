@@ -468,3 +468,163 @@ Web仍1.16.34/19a322a（未因后端事务修复重复发布）；配合API1.16.
 - 原型沿用`projection-recovery`和“重取回话”，规格新增终态恢复约束，不改布局或文案；外部委托原型脏变更未纳入本候选。
 
 - 发布收口（2026-10-21 20:58 +08:00）：首候选Flow280被原bootstrap重复GET回归阻断，未部署；共享原分支修正后Flow281 SUCCESS，3198pass/2pending/0fail。部署71553147 healthy，同Run366文件及公网入口/议事JS/CSS一致，恢复CI-only APPLIED。线上496完成态PC/移动模拟视口历史/重取/返回只读通过，未新增EXECUTE；终态进行中→完成的精确修复回归证据在正式测试，不冒充新一轮付费线上执行。回执：`/var/tmp/cyf-media-delivery-20261021/busy-recovery-release-r2/release-receipt.json`。
+
+<a id="nf-web"></a>
+## NF-WEB 原文件预览代码定义（2026-11-16）
+
+业务以[详设NF-1](detailed-design.md#nf-1)为准；不改变原型议事无下载规则。密议无事项/正式交付/归档：文件作为会话附件，显式保存复用现有archive-operations。本节渲染技术验证仍只限原候选，统一执行6及PRIVATE受理尚未实现。
+
+### 文件与组件
+
+| 路径（Web仓库内） | 目标改动 |
+|---|---|
+| src/components/preview/FilePreview.vue（新增） | 只组合格式渲染器和状态；不直接拼API路径、不做业务ACL |
+| src/composables/useFilePreview.js（新增） | 加载/AbortController/identityEpoch/generation/Blob URL/清理 |
+| src/components/preview/DocxPreview.vue（新增） | 普通组件按需解析；复用既有清洗与静态预览，不自建沙箱运行环境 |
+| src/components/preview/SpreadsheetPreview.vue（新增） | sheet/虚拟视窗/提示；细胞值只作文本 |
+| src/utils/spreadsheetPreview.js（新增） | 解析结果到明确展示模型，样式/格式白名单 |
+| src/workers/spreadsheetPreview.worker.js（新增） | ExcelJS解析/数字格式化，结果按sheet和视窗投影；关闭terminate |
+| src/components/juyiting/HallMessageMedia.vue | 从既有会话资产取原字节接入；无下载按钮 |
+| src/components/workspace/PersonalWorkspace.vue | 删除parts；保持资料管理下载；替换旧私人执行入口 |
+| src/components/outputs/OutputPreview.vue | 删除parts，固定成果版本预览，不改验收选择 |
+| src/composables/usePersonalWorkspace.js、useOutputs.js | 保留原readBlob/鉴权封装，删除派生预览/parts校验与分片读取 |
+| HallMaterialPicker/HallDraftEditor/HallMaterialThumbnail | 接入同一预览入口；图片保留鉴权原图缩略；其它格式显示类型图标，不预加载Office库 |
+| hallReferenceImageSelection.js | 固定图片原文件授权读取，自行持有/释放参考缩略URL，不再读取派生parts |
+| BountyExecutionOutputs.vue、JuyiHall.vue选中成果验收预览 | 复用同一FilePreview/source；保留原成果摘要/长度核对和验收状态，不恢复文本格式转换 |
+| usePersonalWorkspaceExecution/useFormalTaskExecution | 移除旧写/轮询恢复行为；只读历史需要的投影保留或收归历史模块 |
+| TaskMaterialLinks.vue、JuyiHall.vue | open-deliberation交接与草稿冲突；不直接调用新执行HTTP |
+| useHallDrafts.js | 去掉旧capabilities作为资料格式准入；保留真实会话/资料权限 |
+| useHallConversation.js | 移除3处“已回话”Toast；PRIVATE发送冻结materialRefs和原意图key，未知结果查原request；不移除归并/状态/消息去重 |
+
+### 组件内部合同（不在HTTP暴露）
+
+```js
+// source由资源所属模块提供；不得传任意URL替代受控load函数。
+const source = {
+  key: `${identityEpoch}:${resourceKind}:${resourceId}:${version}`,
+  filename: '清单.xlsx', // String，未知时空字符串
+  mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  load: async ({ signal }) => blob // Promise<Blob>；复用现有useHttp鉴权
+}
+// presentation: discussion | picker | workspace | deliverable
+// download只在原界面有权限时由父组件提供，FilePreview不创造下载能力。
+// 状态固定：idle/loading/ready/unsupported/error；取消与迟到结果不弹error。
+```
+
+格式识别优先标准化MIME；仅MIME空、text/plain或application/octet-stream允许按已知后缀展示尝试。具体MIME与后缀冲突不改原文件或上传权限；按MIME选择，解析失败提示不匹配/无法预览，不轮流尝试任意解码器。unsupported不做额外下载请求；选中的预览重试只重新GET固定原文件，不重新运行Agent。
+
+```js
+let generation = 0
+let controller
+async function open(source) {
+  const current = ++generation
+  controller?.abort()
+  disposeRendererAndObjectUrls()
+  controller = new AbortController()
+  setState('loading')
+  try {
+    const blob = await source.load({ signal: controller.signal })
+    if (current !== generation) return
+    await mountRenderer(blob, { isCurrent: () => current === generation })
+    if (current === generation) setState('ready')
+  } catch (error) {
+    if (current !== generation || error.name === 'AbortError') return
+    setPreviewError(error) // 不吞401/403，不把鉴权失败说成格式损坏
+  }
+}
+function dispose() {
+  generation++
+  controller?.abort()
+  disposeRendererAndObjectUrls()
+}
+```
+
+mountRenderer须在异步库加载、解析和DOM提交后均核对代次；cleanup清除静态预览内容/临时引用、terminate已创建的worker，再revoke URL；DOCX没有跨窗口消息需要解绑。隐藏不再用的预览也清理，不只unmount。
+
+### DOCX最小接入（2026-11-16用户要求不增加复杂度）
+
+本节取代前轮自建沙箱运行环境方案：**不增加allow-scripts iframe、UMD/Blob脚本装载、nonce、postMessage握手、消息schema或专用宿主页面。** 不新增服务/预览框架；不是放开不可信文档脚本或取消已有静态隔离。
+
+固定研究样本docx-preview 0.3.7、JSZip 3.10.1；依赖安全/许可证和真实文件测试仍须完成，不声称最新版。普通Vue组件按需导入库，在未挂载到业务页面的临时容器生成结果，再复用现有richDocumentPreview.js的DOMPurify及RichDocumentPreview.vue的sandbox=""静态展示。iframe内不运行库或脚本，不与父页面通信。
+
+```js
+// 目标结构；独立合成DOCX样本已验证，不代表产品接入已验收。
+const body = document.createElement('div')
+const styles = document.createElement('div')
+await renderAsync(bytes, body, styles, {
+  renderAltChunks: false,
+  ignoreFonts: true,
+  useBase64URL: true
+})
+if (!isCurrent()) return
+// 交给现有清洗/静态srcdoc路径；禁止把未清洗结果挂入业务DOM。
+// 先按下文识别库生成的octet-stream内嵌图片MIME，再走原清洗。
+normalizeEmbeddedImageMime(body)
+const html = styles.innerHTML + body.innerHTML
+setDocumentPreview({ kind: 'html', text: html })
+```
+
+- 保留当前script-src/connect-src/font-src等none、sandbox=""及去链接/外部资源规则；不修改部署CSP来让文档脚本运行。
+- 临时DOM不是安全沙箱，静态iframe仅隔离最终展示，不隔离父页面解析库。依赖审查和恶意文件测试仍必要；不得宣称解析崩溃、内存消耗或库漏洞已被隔离。
+- 关闭嵌入HTML和外部字体；测试解析过程和最终展示均不产生文档诱导的外部请求。若所选库行为不满足，不绕过清洗或允许脚本；记录具体缺口再处理，不先造通用隔离框架。
+- 复用原清洗函数时核对生成样式、表格和内嵌图片的保留效果；必要的基础样式差异只在现有组件局部处理，不复制第二套安全策略。不为保真放开任意SVG/外链或导航。
+- 临时容器只在本次调用持有，完成/失败不存全局；仍核对代次并清理预览。失效结果丢弃不等于中止同步解析，不增加复杂取消协议或假报解析已停止。
+- RichDocumentPreview现有“可下载”说明按presentation和已有下载权限修正，议事/资料选择无下载时不显示该文案。此为既有已识别交互修复。
+
+### XLSX解析与样式映射
+
+固定研究样本ExcelJS 4.4.0 + SSF 0.11.2。worker按需加载、每次打开保留一个工作簿，按sheet和可视区域返回投影，不一次postMessage全表；关闭worker释放整个工作簿。Worker隔离不是OOM保证；恶意解压/内存风险须测，不杜撰通用限额。
+
+cell模型：row/col=非负整数；text=String；style仅fontFamily/fontSize/fontWeight/fontStyle/color/backgroundColor/border/alignment/wrap；merge为[startRow,startCol,endRow,endCol]；formulaText nullable String；cachedResultPresent boolean。这些是本地模型，不新增API字段。
+
+- 公式使用公共`cell.formula`与`cell.result`读取；`cell.value`副本会丢失0/false缓存，禁止从其result字段存在性判断。`cell.result !== undefined`区分有值与缺失，不用truthy（0、false、空字符串是有效结果）。错误单元格显示错误文本；richText用文本片段和受限字体样式，不拼HTML。
+- SSF按numFmt及工作簿date1904格式化；1900日期边界/序号60须用fixture锁定表现，不用本地时区Date.toString。格式器失败展示原始值并提示，不悄悄清空或改值。
+- 颜色支持ARGB去alpha/明确alpha映射、主题色+tint、indexed色；未知色退回中性并提示。worker只返回一次主题XML字符串，主页面用浏览器DOMParser解析颜色映射（worker实测没有DOMParser）；仅取主题颜色节点，拒绝DOCTYPE/ENTITY声明及解析错误，不把XML挂入页面，不新加XML库。独立样本已验证主题顺序及HSL亮度tint，不用逐RGB通道线性混合冒充Excel主题色。
+- 合并区域超出视窗时定位其anchor并渲染正确覆盖；隐藏行列不占可视索引。缓存当前sheet投影，滚动不重新解压整个工作簿。row/col像素换算固定同一函数并用fixture断言。
+- 字体族只允许本地安全字体栈，不从文档加载远端字体；边框/对齐枚举映射，禁止style/cssText透传。公式/超链接只展示文本，不执行或自动导航。
+
+### 测试/体积
+
+沿已有web/tests中workspace/output/hall测试补本轮验收矩阵N01—N14中对应的前端断言；增加同类preview测试及固定Office fixture，不把静态原型表格当解析测试。前轮三个发行文件gzip合计304616 bytes≈297KiB，SSF另约10KiB；最终还包含展示适配/样式/worker，不新增DOCX脚本宿主。用真实构建报告核对首次议事不含Office chunk、解析库不重复、首次预览按需加载。安全/真实文件/移动设备/内存验收未完成，不承诺“一小时”或“100%保真”。
+
+### 开发前技术验证状态（2026-11-16）
+
+用户要求选型、接入和展示边界在业务开发前确定，不将可行性验证安排到产品实现早期；开发后仍保留功能回归和发布验收。本轮未继续修改业务源码。
+
+- 独立证据：`/home/isp/state/cyf-preview-sizing-20261116/predevelopment/predevelopment-result.json`。桌面Chromium、合成OOXML文件，不是Office/WPS作者文件或真机证据。
+- DOCX样本的段落、表格、背景和PNG/JPEG/GIF/WebP图片展示通过。必要适配：库生成的`data:application/octet-stream;base64`图片会被现有清洗移除；仅按图片字节签名识别上述四类并纠正data URL媒体类型，随后仍用原清洗。未知格式不放开，不改变文件字节或后端逻辑。此最小适配已在独立样本验证，产品尚未接入。
+- XLSX样本验证了公式缓存0/false与缺失、金额/百分比、日期系统、合并/行列尺寸/隐藏元数据，以及worker解析；不等于完整表格样式渲染器通过。
+- 安全样本未出现脚本执行或外部请求；不是任意恶意文件、解压内存或解析库漏洞的安全保证。
+- 独立DOMPurify 3.4.18补丁候选通过上述样本，项目依赖未升级。独立依赖审计仍有ExcelJS/uuid两条moderate，不能称零告警；已查ExcelJS源码调用为uuid v4无buf，未命中所查公告触发条件。补丁对现有清洗消费者的影响仍须覆盖。
+- **本轮补验已确定：** Word保留页式布局，iframe内部横向滚动；局部覆盖原清洗展示层的`table{display:block}`为DOCX范围内`display:table`，不改HTML/Markdown。1440/390/320页面未撑宽，窄屏内部scrollLeft可变化；原型同步该交互。
+- Excel独立展示模型已验证主题顺序/HSL亮度tint、索引色边框、合并锚点在视窗外仍投影、隐藏行列零尺寸、金额/百分比/日期和公式缓存。稀疏行列必须使用默认尺寸+例外区间计算坐标，不能按最大行号反复getRow实例化空行；百万行跨度只有两条有值行的样本仅投影84格，不为该跨度分配百万行对象。该结论不等于百万条有值数据解析/内存保证。
+- 真正作者文件已补：官方固定提交测试库的4份Microsoft Office Word标识DOCX、3份LibreOffice DOCX，Microsoft Excel与LibreOffice XLSX；损坏XML失败明确。作者来源依据文件元数据，不是人工在这些编辑器上另存测试。公开样本无WPS生产者标识，不能替代WPS样本。
+- 固定直接依赖许可证原文已留证：docx-preview/SSF采用Apache-2.0、ExcelJS采用MIT、JSZip选择MIT、DOMPurify选择Apache-2.0；保留版权/许可告知，不加服务。独立审计剩余moderate事实不重标清零。
+- 异常/大文件处理边界：格式不支持/受保护容器/解析失败明确展示，原字节不变；Excel关闭时terminate，DOCX失效结果丢弃不谎称同步解析可中止。无通用大小、解压比或超时阈值，不承诺任意恶意压缩包/OOM可恢复；不自动重试或转后台解析。
+- **开发前环境阻塞仍未关闭：** WPS作者样本及真实目标移动设备/小程序环境未取得；本机Chromium视口模拟不是这些证据。完整产品接线尚未开发、未验收；不以本轮独立模型通过声称所有条件齐备。
+
+本轮补验路径：`/home/isp/state/cyf-preview-sizing-20261116/predevelopment/predevelopment-closeout.json`、`upstream-fixtures.json`、`authored-fixture-discovery.json`、`licenses.json`。原失败与重试保留：首次隐藏列无数据导致列轴之外的断言NaN，修正样本明确在隐藏列写值后重测；没有重标原失败。
+
+### NF-WEB.5 密议交互代码合同（2026-11-16边界确认）
+
+- `ChatPanel.vue`：PRIVATE无conversationId可选资料，选择只维护暂存引用，不调用会话关联POST；既有有会话的资料管理保持。发送时将本次选中引用交给useHallConversation，pending上传/保存未明确成功则不发送。没有文件仍可正常聊天。
+- `useHallConversation.js`：PRIVATE发送快照包含原conversationId（首次null）、requestId、正文、Agent及materialRefs；新增字段不塞metadata/inputRefs。服务端回会话ID后继续跟随原request，不重新发送。首次丢响应通过已有GET request恢复；同key重试必须复用原body（包括原null会话），不能用已分配ID替换后算成新意图。
+- `HallMessageParts.vue` / `HallMessageMedia.vue`：文件part=ready且assetId/revision就绪时显示预览和“保存到个人资料”；不显示验收/正式交付/返工按钮。文字结果仍用原消息正文，不要求伪造txt文件。
+- `useHallConversationArchive.js`：复用既有单asset保存/查询/unknown恢复和source去重；文案统一为个人资料。没有operationId时保留原key/body重放，有ID先GET。不得浏览器下载再上传冒充服务端保存。
+- `PersonalWorkspace.vue`旧私人执行表单：收口为Agent选择、文字、固定资料及“在密议中处理”，不选输出MIME、不展示任务式执行/验收状态。保留旧记录只读入口。TaskMaterialLinks只带入当前正式议事，不能丢task/承办关联。
+- 正式返工入口必须携带既有delivery/outcome/decision版本进入原改稿API；不能通过通用open-deliberation事件只传文字替代。
+- 草稿交接复用JuyiHall既有面板；已有文本/资料不相同时先确认保留或替换，取消不清来源。page-return不扩成建会话/执行框架；新密议未建立ID不支持借返回机制偷建会话，原微信入口按已支持的home/已有会话边界工作。
+
+```ts
+type MaterialRef =
+  | {kind: 'WORKSPACE_VERSION'; fileId: string; version: string}
+  | {kind: 'CURRENT_CONVERSATION_ASSET'; assetId: string; revision: string}
+type PrivateIntent = {
+  requestId: string; conversationId: string | null;
+  targetAgentId: string; content: string; materialRefs: MaterialRef[]
+}
+// 本地预填不是HTTP请求；接管前核对身份epoch和目标，无自动发送。
+// PRIVATE与TASK共享FilePreview；只有用户显式send调用其对应业务受理入口。
+```
+
+本次受影响防退化：CSV继续以text展示；图片缩略和放大保持；消息/选择器无新增下载；打开预览不改变选中项，不执行任务、不自动保存。API删previewState/capabilities.preview后，shared renderer是浏览器支持性唯一判断来源；file元数据和业务权限各沿原合同。不得把API元数据不认识的格式判成禁止上传/处理。

@@ -388,3 +388,127 @@ API1.16.21/21c32034已由Flow5260799/214部署；Runtime1.2.2/5e8742a已协调�
 ### 2026-10-21 续核结果：修改回放与保留项闭包
 
 上述receipt修复510b2937已随API1.16.23/Flow216发布，新增7项真实reader回归通过（存储替身，不冒充端到端）；生产496原REVISION_REQUEST事件恢复SENT，固定旧正式图片输入→新修订图→SUBMISSION_REQUEST→保留旧文字FORMAL_ARTIFACT→新批→人工验收的实链通过。新批只含新图和原文，原文hash不变，2次EXECUTE总数为初始+修改；结果与B3.1一致，不因Agent多问一次澄清而重生成文字。正式验收证据/版本/剩余忙态恢复问题以production-parity-release-20261021.md的20:25节为准，后端成功不代替前端所有恢复路径验收。
+
+<a id="nf-api"></a>
+## NF-API 统一原生执行与原文件接口（2026-11-16）
+
+[主设计NF-1](detailed-design.md#nf-1)为业务权威，[NF-WIRE](../../../api/docs/interface-catalog/critical-contracts.md#nf-wire)定义唯一目标合同。以下是开发目标，未执行迁移/构建/安装。替代前轮“现行v5保持task必填却可复用密议”“无需DB迁移”的方案。
+
+### NF-API.1 源码落点与接替
+
+| 实际类/模块（组件仓库内） | 同候选修改 |
+|---|---|
+| ChatController / ChatMessageDTO | PRIVATE显式发送携materialRefs；调用事务受理后才返回SSE，不能提前getOrCreate+普通CHAT派发 |
+| ChatDeliberationService / ChatConversationServiceImpl / ChatDeliberationDao | 复用SQL会话/请求唯一键；私人首次会话、request、turn、step及execution及既有派发事实同事务；纯文字与带文件走同一PRIVATE受理路径 |
+| ChatTypedDiscussionAdmissionService / ChatActionExecutionService / ChatDeliveryRevisionService | 保留正式任务/改稿语义；生成同一种scope=TASK原生合同；不能删除资金/交付因果检查 |
+| SkillExecutionService / PersonalWorkspaceExecutionServiceImpl | Create/Command增加明确ExecutionScope；内部执行身份改executionId/runId；准入与结果授权集中，任务层之外不散布taskId==null猜测 |
+| PersonalWorkspaceExecutionEntity/Dao/Mapper/SchemaInitializer、SkillExecutionSchemaInitializer | 按下节更新字段、唯一性、精确schema验证及当前队列查询；历史查询不得反向触发写入 |
+| PersonalWorkspaceConversationRuntimeController / AgentRuntimeAuthenticationFilter | 运行路径统一到executionId；身份仍由Runtime认证，不能从请求scope取得Owner。删除旧运行路由白名单 |
+| ChatBountyAssetProjector / ChatBountyAssetRelay | 当前类原地抽取共享投影正文，按scope取得业务根；PRIVATE不取task锁或创建正式交付。共享附件投影完成事实，绝不复制一个私人投影器 |
+| ChatConversationAssetController / ChatBountyMediaController | 会话asset原路由不变；将共同文件读取职责落到按executionId的原文件读取方法。正式请求目录接口保留其业务用途，不作为PRIVATE读取的前置条件 |
+| JdbcChatConversationArchiveStore / ChatConversationAssetSourceResolver / ChatConversationArchiveService | 去掉公共读取/保存中的bounty唯一准入；保留TASK专属条件分支及共同request/step/execution/output/owner/hash关系；复用现有保存操作表与文件写入事务 |
+| Runtime skill-executor / skill-conversation / skill-usage-delivery / native-execution-runtime / store / managed配置与技能绑定消费者 | 唯一活动6合同、统一地址、同一个runNative；消除task必填作为隔离身份前提；输入/输出/恢复不按PRIVATE/TASK分叉执行 |
+| PersonalWorkspacePreviewRenderer / OutputFormatValidator / DeliverablePreviewAdapter及对应路由DTO | 删除，仅原文件读取与完整性校验保留；其它用途POI保留 |
+| 旧execution/collaboration/rework/draft写服务及Web调用方 | 删除旧文件执行依赖；正式改稿走现行因果合同，密议没有交付流程 |
+
+### NF-API.2 唯一执行上下文（Java目标结构）
+
+```java
+sealed interface ExecutionScope permits PrivateScope, TaskScope {
+    String conversationId();
+    long conversationGeneration();
+}
+record PrivateScope(String conversationId, long conversationGeneration)
+        implements ExecutionScope {}
+record TaskScope(String conversationId, long conversationGeneration,
+        String taskId, String taskGrantId, long taskGrantVersion,
+        long assignmentRevision) implements ExecutionScope {}
+// scope由API可信会话/任务授权生成，不接受浏览器传grant/owner/tenant。
+record Create(String actionEventId, ExecutionScope scope, String targetAgentId,
+              Map<String,Object> snapshot) {}
+```
+
+PRIVATE授权以既有会话Owner/client/环境tenant、代次和目标Agent使用权为依据，execution.grantRevision作为本次执行授权修订，不新增私人事项/私人授权服务。TASK仍由现有task root/assignee/grant服务产生权威事实。安装技能统一为`executionBinding`，绑定executionId、Agent安装身份、技能安装版本、会话代次和执行scope摘要；任务授权只在TASK准入检查，不让Runtime把私人绑定伪装成taskSkillBinding。技能安装管理协议和密钥配置本次不重做。
+
+同一内核不等于通用业务层开放网络/付费权限：继续使用已有toolPolicy及服务端实际授权的工具/技能集合，私人会话不因无task而获取更多权限；空技能集合可使用已授权的基础文件工具。未授予的工具不能自动补授权。
+
+### NF-API.3 首次发送及事务/锁边界
+
+```java
+// 现有Chat服务中增加受理方法；不是新增远程服务或controller侧手工事务。
+Accepted admitPrivate(TrustedSender sender, PrivateSend input) {
+    var bodySha = canonicalClientIntentSha(input); // 包含原始conversationId:null
+    var known = requests.findByOwnerRequest(sender, input.requestId(), 1);
+    if (known != null) return replayAfterAclAndDigestCheck(known, bodySha);
+    // 必要安装包准备在事务外；不调用模型、不写会话、不取数据库锁。
+    return admissionTransaction.execute(() -> {
+        var conversation = resolveOrCreateOwnedPrivateConversation(sender, input);
+        // 在此事务中再查原key，之后由数据库request唯一键裁决竞争。
+        var sources = authorizeExactSelections(sender, conversation, input.materialRefs());
+        var accepted = persistRequestTurnStepAndNativeExecution(conversation, sources, bodySha);
+        registerExistingWorkDiscoveryAfterCommit(accepted); // 执行行是持久队列事实，提交后才通知
+        return accepted;
+    });
+}
+// 唯一键竞争失败：整个事务回滚后读取原回执；不同body -> 409。
+// 禁止在rollback-only事务内吞异常继续写、另建会话或改requestId。
+```
+
+`client_intent_sha256`与现有request_hash分开：前者用于原始客户端意图重放，后者仍含服务端已解析会话/来源快照。正文/目标/materialRefs/首次null会话任何变化均冲突；不要用后续分配conversationId重新计算首次意图。已受理重放不重新选择latest或重新发现来源；仍必须核对当前登录及原会话可访问性。
+
+事务统一使用现有关系型Chat/Agent数据源和事务管理器；相关写入不得另开REQUIRES_NEW。原生执行行作为持久队列事实，复用workDiscovery.afterCommit唤醒；通知丢失由既有队列发现恢复。正式动作已有outbox保持，不为PRIVATE另造派发表。首次失败会话一起回滚，ID间隙不是错误，不补发假消息。
+
+当前修改链统一锁序：TASK业务根（仅TASK）→会话生命周期行→本次执行行→授权/来源行（稳定ID顺序）→输出/投影行。PRIVATE从会话根开始。准入新建execution尚无可锁旧行时通过唯一键串行，不能先持文件锁反向进入会话/任务。需要调整既有withConversationRoot及投影/取消/输入/结果方法按同一顺序进入；禁止只改主路径留下相反锁序。现有资料保存的“锁内取得授权元数据→锁外复制字节→短事务确认”保持，不把I/O搬进长事务。
+
+来源解除关联只改变后续默认选择，已经受理的不可变快照不被无声替换；源文件删除/身份撤销/会话删除或明确请求取消仍按既有权限语义阻止后续读取/提交。取消必须让该请求关联的执行fence失效；已发送到外部的未知操作不宣称已撤回、不自动重跑。TASK取消沿原任务事务。
+
+### NF-API.4 数据库调整（不可再称无迁移）
+
+复用原执行表、输出表、skill快照表、chat_request/turn/step/link/asset/archive-operation，不另建私人执行表。
+
+| 表/字段 | 目标变更与理由 |
+|---|---|
+| agent_personal_workspace_execution.task_id | 改为NULL允许；仅新PRIVATE无任务，TASK必须非空；不使用空串/虚构task |
+| 同表.business_scope VARCHAR(16) NULL | 新6必填PRIVATE/TASK；历史记录保持NULL，不重写旧快照；execution_mode新记录统一CONVERSATION |
+| 同表task_grant_id/version/assignment_revision | PRIVATE全NULL，TASK按既有必填及版本约束；permitted_operation保持当前原生操作语义 |
+| 同表run唯一性 | 复用已有`uk_pwex_execution_scope`唯一执行身份，按executionId取行后严格匹配runId及scope；旧task/run索引保留历史用途，不新增被唯一executionId覆盖的冗余索引 |
+| chat_request.client_intent_sha256 CHAR(64) NULL | 新PRIVATE受理必填，历史NULL；使用既有uk_chat_request_scope_revision，不新增受理台账 |
+| chat_interaction_step.task_id/assignment_revision/grant_id/grant_version | 当前四列均NOT NULL，改为允许NULL；PRIVATE四项全NULL，TASK保持原必填约束；Step record的两个long改Long并保持TASK验证，request/step/link不能缺失 |
+| agent_skill_execution.snapshot_json | 新6明确scope/authority/固定技能选择与来源；安装executionBinding复用既有独立绑定列，详见NF-WIRE，不与snapshot摘要循环引用；旧快照原字节保留 |
+| chat_conversation_asset / archive_operation | 复用已有结构、来源唯一键和幂等记录，不新增私人asset/保存表 |
+
+目标DDL骨架（开发时放现有migration资源，由既有受控迁移入口显式执行；schema initializer只核验目标结构，不在启动时执行DDL，不直接在生产手工执行）：
+
+```sql
+ALTER TABLE agent_personal_workspace_execution
+  MODIFY task_id VARCHAR(100) NULL,
+  ADD COLUMN business_scope VARCHAR(16) NULL;
+ALTER TABLE chat_request ADD COLUMN client_intent_sha256 CHAR(64) NULL;
+ALTER TABLE chat_interaction_step
+  MODIFY task_id VARCHAR(100) NULL,
+  MODIFY assignment_revision BIGINT NULL,
+  MODIFY grant_id VARCHAR(100) NULL,
+  MODIFY grant_version BIGINT NULL;
+```
+
+还需同步Chat步骤schema验证器、JDBC row mapper、ChatInteractionStepStore.Step及所有TASK消费者，不能把SQL NULL通过getLong变成0冒充授权。PRIVATE步骤来源权限来自其真实execution scope，TASK校验不放宽。
+
+必须同步PersonalWorkspaceExecutionSchemaInitializer中CONVERSATION强制taskGrant的两个验证查询及字段/索引校验，不仅改entity；6按scope精确校验，历史结构验证只为读取，不授执行权限。队列在ORDER/LIMIT前筛协议6、CONVERSATION、有效scope和未开始，TASK grant条件不得内连接过滤所有PRIVATE；使用互斥scope授权条件。工作发现、通知、恢复扫描和投影扫描统一只处理当前6，不能继续`version<>4`放行未知版本。
+
+迁移资源须幂等识别完整/部分结构，不在不认识的生产schema上兜底继续；保留原历史数据/摘要。不承诺跨任意DDL的自动回退；上线前只读检查实际列/约束/索引与候选一致，再按现有备份恢复事务安装。无生产迁移已执行。
+
+### NF-API.5 输入、输出和保存
+
+新PRIVATE来源两类：`WORKSPACE_VERSION`（用户明确选定本人fileId/version）、`CURRENT_CONVERSATION_ASSET`（同会话assetId/revision）。TASK保留现有task-linked/file/result/formal来源及权限，不自动放宽为任意本人文件。均转换为同一inputRef/sourceKind/sourceIdentity/MIME/length/hash快照，通过同一下载和隔离载体物化；私人来源不是客户端任意URL或路径。
+
+原`stageConversationOutput`/commitResult复用，接受通用元数据和原字节，不用POI判质量。执行结果原子提交后，统一projector写message/part/asset/link及事件，唯一键防重复。PRIVATE仅产生会话文件；TASK额外的正式交付必须仍经明确的现行业务动作。原`markProjected`在附件/文字权威消息事务提交后调用。
+
+密议无归档业务；以下仅保存选定文件。保存复用历史命名的POST/GET archive-operations、现有source唯一键及PersonalWorkspaceWriteService：解析固定asset→授权关系→锁外校验读取原字节并持久化→确认fileId/version及操作回执；每次重试同body/key。独立key重复保存同asset/revision沿现有source唯一规则返回已保存映射，不做不必要副本。保存后的资料版本不依赖会话继续存在；保存中会话撤销在最终确认前重验，失败不暴露半成品文件，原操作可核对，不重跑模型。
+
+目前JdbcChatConversationArchiveStore.authorizedSource限制bounty，ChatConversationAssetController委托BountyMedia校验，projector先锁task：三处必须同候选改为共享scope授权；不能仅在Web打开按钮、不能删全部JOIN当作支持PRIVATE。历史已提交记录继续按其原绑定只读，读取不触发补写或执行。
+
+### NF-API.6 测试和交付
+
+原定向测试中保留身份/跨Owner、同键竞争、未知响应、租约失效、源读取中撤销、历史只读、结果完整性、正式验收/资金断言；迁移旧fixture到真实6，不删安全测试或仅测类不存在。追加MySQL真实事务测试覆盖首次并发仅一个会话/执行、失败无孤儿会话、TASK与PRIVATE并发锁序、schema升级重启、私人输出与个人保存归属分离。
+
+Runtime仅6活动命令/恢复；普通运行与任务运行调用同一个runNative，参数不同不得代码复制。变更清单必须覆盖usage、effects、结果读回、技能工具执行binding、依赖闭包、管理测量及已有恢复定位；遗漏一条task路径不得称迁移完毕。正式验证使用现有SSH worker/编排/600秒单次预算，安装和业务验收另计。设计阶段不运行应用构建。

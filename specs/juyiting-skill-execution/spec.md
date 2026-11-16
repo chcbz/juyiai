@@ -12,6 +12,10 @@ API权限/完成事实；bridge目录进程会话隔离；模型编排；工具�
 
 原生执行Owner独立于资料读取Owner：无资料载体/资料失败不阻止原生探测，反向亦然；二者复用隔离实现而不共用能力结果。探测、注册、执行与清理由同一原生Owner负责；关闭时撤回声明、不晚发就绪。缺少可信Provider仍不可用，禁止自动复制凭据或强报READY。原生仅配置方式及2026-11-08实现见[详设§4.3](native-execution-technical-design-20261027.md)与[当前handoff](../../docs/implementation/handoffs/NATIVE-READINESS-DECOUPLE-20261108.md)。
 
+### 执行单轨收口（2026-11-16定义；2026-11-17实施发布）
+
+旧执行写/恢复删除、历史只读、Web旧消费者接替见[代码详设NF-API](../juyiting-ui-baseline-20261006/optimization/code-backend-design.md#nf-api)和[接口NF-WIRE](../../api/docs/interface-catalog/critical-contracts.md#nf-wire)。当前新执行合同6：PRIVATE/TASK复用单一内核，旧1—5仅历史只读；原5合同保留为历史基线，不再描述当前写/恢复入口。密议无事项/成果交付/归档，仅处理、预览及显式保存文件到个人资料。RB-1保持。固定三端候选与实际验证范围见[验收结果](../juyiting-ui-baseline-20261006/optimization/acceptance.md#nf-acceptance)，不宣称全局回归或实体小程序通过。
+
 ### 明确边界
 RB-1和原生详设优先于旧runner协议；旧执行/恢复单轨退役，历史只读；不按技能名/Provider硬编码通用层，不缓存全部技能包。
 
