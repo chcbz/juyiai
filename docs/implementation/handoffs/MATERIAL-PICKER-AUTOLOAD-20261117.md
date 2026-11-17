@@ -48,3 +48,19 @@
 - 真实生产Chromium：办事桌面1440×1000、移动390×844每行一个预览/一个移除，固定V2文本原件预览正确；桌面资料列表真实滚动由50到80项、80唯一ID，无手点加载更多。花荣已有两个XLSX文件卡片三按钮同排，移动/桌面均核对；下载 `NATIVE6_MATERIAL_V2.xlsx` 为5139字节有效XLSX、原V2标记正确；原件表格预览显示V2、¥1,234.50和25%。未点击生产保存，不将可见性验证冒充新增个人资料写入成功。
 - API PID1549576前后相同、HEALTH=UP、ARTIFACT_ATTESTATION=MATCH；未改API/Runtime、未发起新Agent执行/正式事项，个人资料保存POST为0，pageerror为空。未验证微信真机，不宣称119项全局回归或全部历史事项通过。
 - 证据 `/home/isp/state/cyf-preview-actions-release-20261117/release.json`、`live-acceptance.json`、`download-verification.json`、`install.log`及after-*.png；正式包和构建证据 `/home/isp/state/cyf-local-build/tasks/cyf-preview-actions-web-20261117-02/`。包SHA-256 `0803e2bb3bf9a545affdf100b1bf570d4dd461623c33e582b520e8369ddedd96`；原备份 `/var/lib/cyf-web-flow/backups/61f80dd05fd0fa3939fc8e4251df57522cc42638b76d353a6708693852627fe2`。控制机包已按原入口登记完成保留；worker缓存和历史包不额外清理。
+
+## 列表底部状态视觉收口（2026-11-17，尚未发布）
+
+- Owner：本线程；基线Web `62fffa7443b3d33b2729e9dd7a1631bed8546de9`。用户截图要求底部提示居中并保持项目统一样式，未授权本次新候选部署。
+- 先更新唯一原型 `web/prototypes/juyiting/prototype.js` / `interaction-completion.css` 及原型规格，再更新 `HallMaterialPicker.vue`。
+- 复用PersonalWorkspace已有列表尾提示的居中、16px留白及辅助色节奏；12px字号、1.5行高，移除段落默认margin，错误重试按钮保留8px间距。加载中、继续滚动、末页及错误共用状态容器，手机/桌面一致；不改分页观察器、接口、文件权限或底部导航。
+- 已执行原型JS语法检查及 `git diff --check`，均通过。尚未执行SSH正式测试/构建、真实界面回归或部署，不继承此前62候选的通过证据。
+
+## GitHub develop合入并发布（2026-11-17）
+
+- 用户明确授权“拉取develop最新代码并部署”。GitHub抓取到 `ff663c8`（包含908111f与ff663c8小程序应用视口修复），本线程将底部状态样式提交为194385d后合入；原型规格仅解决追加段落冲突，两项内容均保留。固定发布候选 `cb3be686e2e75539a6f815110451c985d4afff38` / tree `035c1ba4a95711232b18a0a948d7b5dc5f9d6555` 已push GitHub develop。后续ls-remote只读查询挂起后精确停止本线程git进程，不将未返回查询当作另一次最新确认。
+- 原SSH worker与原LOCAL builder执行32 selector：674项中672 PASS / 0 FAIL / 2既有pending；构建95.216秒。没有API/Runtime构建、安装或重启，API PID仍1549576。
+- 首次完整传输tar因worker空间不足失败，原成功包与失败日志保留；仅删除本次失败的重复transport tar，保留大小/SHA记录，不清缓存、原源码或生产/回退包。复用原SSH固定主机rsync原语，将同一成功包直接传回、证据单独传回，双端SHA/大小重新核对，不重复构建。接收校验最初读取result不存在的artifact.size字段报KeyError，包SHA已一致；改为双端独立读取真实size复验，原异常日志保留。
+- 正式包107,948,860字节，SHA256 `1c6748085c0bf8d3761e4f1df96dcbf024c132f8f33bbc78c82cba90184601da`；原LOCAL安装事务16.781秒，265项线上资源摘要验证，online_verified。证据 `/home/isp/state/cyf-develop-web-release-20261117-03/`，构建目录 `/home/isp/state/cyf-local-build/tasks/cyf-develop-web-20261117-03/`。原保留入口完成登记。
+- 真实线上Chromium桌面1440×1000、移动390×844与模拟小程序环境均滚动至“已加载全部资料”；居中、16px内距、12px字号、18px行高、项目辅助色、段落零margin，无横向溢出、pageerror=[]。截图mobile.png已人工查看。初两次对话框采样退出后footer等待超时，失败日志保留；增加首次加载后的稳定等待后三视口通过，不据此宣称修复了另一产品缺陷。
+- 普通浏览器viewport仍允许原网页缩放；模拟小程序viewport具备minimum-scale=1 / maximum-scale=1 / user-scalable=no。**未执行微信真机验收**，原生浮层是否消失仍须问题真机确认。未新增执行、保存资料、生产数据写入；不宣称全局119项通过。

@@ -147,7 +147,7 @@ UI记录1440/390/320及真实目标设备，桌面模拟不代替小程序真机
 
 ### NF-1 固定候选执行结果（2026-11-17）
 
-API `f4e94e607ef8f6bcdd75c39cb8b1b5bab7b41b94`、Web `b47358e631e54c4e830483538d68e9401c90ef16`、Runtime `c184e26bc88aab6e21bb62322117a1a9152c6a41` 已安装。完整tree/制品、迁移、失败尝试及证据见[原handoff](../../../../docs/implementation/handoffs/NATIVE-PROTOCOL-SINGLE-TRACK-20261116.md)；不得将下列子场景PASS扩成N01—N14每个组合或全局119项均通过。
+API `f4e94e607ef8f6bcdd75c39cb8b1b5bab7b41b94`、Web `b47358e631e54c4e830483538d68e9401c90ef16`、Runtime `c184e26bc88aab6e21bb62322117a1a9152c6a41` 已安装。完整tree/制品、迁移、失败尝试及证据见[原handoff](../../../docs/implementation/handoffs/NATIVE-PROTOCOL-SINGLE-TRACK-20261116.md)；不得将下列子场景PASS扩成N01—N14每个组合或全局119项均通过。
 
 | 层次 | 本轮实际结果 |
 |---|---|

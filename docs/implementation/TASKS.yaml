@@ -3,7 +3,7 @@ schema_version: 4
 runtime_ledger_json: |
   {
     "schema_version": 2,
-    "updated_at": "2026-11-17T11:04:06+08:00",
+    "updated_at": "2026-11-17T19:10:34+08:00",
     "critical_path": [
       "JUYIAI-OPEN-SOURCE-MIGRATION"
     ],
@@ -25,12 +25,12 @@ runtime_ledger_json: |
           "mode": "writer"
         },
         "exact_sha_tree": {
-          "commit_sha": "377132f786c6a38b1cb9d2cb90bda7dc3a96ff0b",
-          "tree_sha": "2f8ef34554e28be8c83c3d874d6b6a525927d39c"
+          "commit_sha": "4fd0951fec5d5a89c05985b96465169ff7e39e39",
+          "tree_sha": "c6e7f6e0b5713e738fa5153115d13ec1a4a84566"
         },
         "current_gate": "targeted_verification",
         "blocker": null,
-        "next_action": "API55 build03 after verified fixture constructor fix; original678 revision and billing acceptance"
+        "next_action": "User instructed proceed deployment verification; announced prior one-attempt15min exception. Build05 serial all selectors, fixed source, then stage/carrier/new-managed probes/migrate/install/HR+ZQ UI."
       },
       "HERO-MODEL-HOSTING-20261112": {
         "owner": null,
@@ -72,6 +72,46 @@ runtime_ledger_json: |
         "blocker": null,
         "next_action": "Completed: API1.1.53 installed;318tests+2browser+33Web pass;75production readonly quotes+healthUP;141obsolete keys removed;hot-price/immutable quotes isolated PASS. Evidence /home/isp/state/cyf-quote-db/completion-audit.json; root docs0525d29a local-only (unrelated unpublished ancestors); no Runtime/Web release or production test debit."
       },
+      "REMOTE-BUILD-MIGRATION-20261116": {
+        "owner": null,
+        "exact_sha_tree": {
+          "commit_sha": "4d7637771bf5a78c39eff9dbc115d83ef58b796b",
+          "tree_sha": "f51cce515c650468047394af733398987cbec6de"
+        },
+        "current_gate": "done",
+        "blocker": null,
+        "next_action": "Completed Runtime worker migration: remote05 exact115/bridge77,807tests797PASS10SKIP0FAIL,build+transfer143.939s; existing Owner installation reused under original lock/CAS no-op verification,PΙD1116103 five ready and152portable entries exact. Original installation provenance/auth/state unchanged; prior3FAIL+114lock conflict retained; packages registered,caches retained,owned temp cleaned;54tool testsPASS. Evidence /home/isp/state/cyf-remote-build-migration-20261116/runtime-completion-audit.json. Root62fc024f local-only; no FULL119/paid business claim."
+      },
+      "MATERIAL-RESPONSIBILITY-20261116": {
+        "owner": null,
+        "exact_sha_tree": {
+          "commit_sha": "bb4f89b7956abf0271376f957f448298101388ef",
+          "tree_sha": "c8728cdd0da52b88c4b68673804960853f33b356"
+        },
+        "current_gate": "done",
+        "blocker": null,
+        "next_action": "Authorized API1.1.57/Runtime1.3.115 deployed; API UP/attestation MATCH and current Runtime PID1116103 five agents connected/registered/ready. Evidence deploy/verification-summary.json. No meeting-minutes business completion claimed."
+      },
+      "AUDIO-TRANSCRIPTION-SKILL-20261116": {
+        "owner": null,
+        "exact_sha_tree": {
+          "commit_sha": "6519b79070c3efb3dc47e470554392dfc95e72eb",
+          "tree_sha": "53246296d5349fb3258327da07cecd57a9015587"
+        },
+        "current_gate": "done",
+        "blocker": null,
+        "next_action": "Fixed Runtime1.3.116/bridge1.1.78 deployed; worker build141.463s,808PASS/10SKIP/0FAIL; 5agents healthy. Original 花荣 task689 execution RESULT_COMMITTED/COMPLETE generated3verified DOCX/Markdown/transcript downloads. Engineering preview complete; user quality acceptance remains pending, no archive/settlement. Evidence integration/business-verification.json and handoff."
+      },
+      "WEB-DEVELOP-DEPLOY-20261116": {
+        "owner": null,
+        "exact_sha_tree": {
+          "commit_sha": "723f0ac1b13cbfd5416ba73f40c82c3a785339be",
+          "tree_sha": "d8db986c5ec23b2cb0f9c70fd68e3d1468addded"
+        },
+        "current_gate": "accepted",
+        "blocker": null,
+        "next_action": "Web723f0ac deployed/GitHub synced; SSH710PASS/0FAIL/2pending,236.457s; LOCAL install18.708s/265online hashes. Live HR/ZQ/task600/home cancel+keepCurrent/edit/clear5PASS with controlled native boundary. API PID1549576 UP; no Runtime change. Evidence cyf-wechat-return-release-20261117-02/final-verification.json; no physical WeChat claim."
+      },
       "NATIVE-PROTOCOL-SINGLE-TRACK-20261116": {
         "owner": null,
         "exact_sha_tree": {
@@ -111,6 +151,16 @@ runtime_ledger_json: |
         "current_gate": "accepted",
         "blocker": null,
         "next_action": "Web62fffa7 released: SSH656PASS/2pending/0FAIL; build+transfer267.913s; original LOCAL install17.190s,621package/264online hashes. Live home single preview desktop/mobile,50→80 auto-page; HR private action row+actual XLSX download/original preview PASS. API PID unchanged/UP. No execution or personal-file save POST; no physical Mini claim. /home/isp/state/cyf-preview-actions-release-20261117/release.json."
+      },
+      "JYT-FLOW-FIX-20261117": {
+        "owner": null,
+        "exact_sha_tree": {
+          "commit_sha": "50218c4e1ed7ef92a128c0b4fe84926c73d94510",
+          "tree_sha": "c71819ef1f640ee02ff9107d6c8d00d8ed729e7e"
+        },
+        "current_gate": "deferred",
+        "blocker": null,
+        "next_action": "已修复部署并完成定向UI回归11PASS/1内容FAIL/1前台NOT_RUN；GitHub网络恢复后只读确认远端再同步本地develop（API50218c4/Webd2aa361），不需重建重部署。内容缺口未定位另处理；报告见handoff。"
       }
     }
   }

@@ -10,7 +10,11 @@ API权限/完成事实；bridge目录进程会话隔离；模型编排；工具�
 
 普通技能安装/配置→任务授权→原生执行→工具产物适配→API提交成果→Web显示权威结果。
 
-原生执行Owner独立于资料读取Owner：无资料载体/资料失败不阻止原生探测，反向亦然；二者复用隔离实现而不共用能力结果。探测、注册、执行与清理由同一原生Owner负责；关闭时撤回声明、不晚发就绪。缺少可信Provider仍不可用，禁止自动复制凭据或强报READY。原生仅配置方式及2026-11-08实现见[详设§4.3](native-execution-technical-design-20261027.md)与[当前handoff](../../docs/implementation/handoffs/NATIVE-READINESS-DECOUPLE-20261108.md)。
+原生执行Owner独立于资料读取Owner：无资料载体/资料失败不阻止原生探测，反向亦然；二者复用隔离实现而不共用能力结果。探测、注册、执行与清理由同一原生Owner负责；关闭时撤回声明、不晚发就绪。缺少可信Provider仍不可用，禁止从其他主体或未授权来源自动补取凭据或强报READY；受信模板为本主体生成文件及本主体隔离副本按下述统一认证详设执行。原生仅配置方式及2026-11-08实现见[详设§4.3](native-execution-technical-design-20261027.md)与[当前handoff](../../docs/implementation/handoffs/NATIVE-READINESS-DECOUPLE-20261108.md)。
+
+### 模型认证统一（2026-11-15，实施设计）
+
+所有CYF Agent执行期统一使用本主体HOME/auth.json，不做环境回退或按Agent类型分支。托管模板生成、普通/隔离执行、清理后重新接入及一次性存量迁移见[完整详设](model-auth-unification-design-20261115.md)。[取代：本任务此前独立credentials目录/引用及文件优先环境回退建议] 不新增后端下发或密钥服务；不删除技能及Runtime身份凭据。2026-11-15固定候选Runtime1.3.114（`4fd0951`）的实施及定向发布验收见详设与[原handoff](../../docs/implementation/handoffs/RUNTIME-LEASE-SEPARATION-20261112.md)；不据此宣称新主体enrollment全流程或当前线上版本已复验。
 
 ### 执行单轨收口（2026-11-16定义；2026-11-17实施发布）
 

@@ -681,3 +681,68 @@ ENTRY01独立同账号browser context实测FAIL：退出当前设备后自动OAu
 - 原red/bridge01/runtime01日志保留：bridge01暴露旧FEATURE_DISABLED断言及无真实delta却在final补发伪delta；修正旧断言及实际流式处理，保留原materials final持久化顺序断言。runtime01两项UDS listen EINVAL来自过长TMPDIR；最终改用短普通磁盘`/home/isp/state/cup-flags-tmp`（ext4），没有放宽socket/权限检查，并增加上述磁盘兼容修复及回归后重跑。证据生成首次误用系统Python3.6的text参数失败，改用已安装Python3.11，仅影响证据生成，不改变测试结果。
 - 本轮仅源码、测试与文档；没有生产打包、安装、共享Runtime重启、存量配置写入、684重放或资金变更。原684尚未恢复，活动状态仍37PASS/2FAIL/80NOT_RUN。未push，不声称远端最新。其他开关仅定向核查本链路：有独立生命周期/授权语义和未证明冗余者不机械删除，不把此轮称为全项目开关清理完成。下一步仍须实际发布授权、模板native配置与原意图恢复及真实新Agent接入验收。
 - 本轮组件/根`git diff --check`通过；`./sddw check-docs juyiting-unified-experience`仍因导出缺`docs/sdd-document-map.json`退出2，见cup-switch-removal/docs-check.log，不宣称全库文档检查通过。
+
+### 2026-11-15 16:16 用户授权部署及花荣/张清真实回归（执行中）
+- 用户明确授权“部署，并用花荣和张清都回归测试一遍”；沿同一Owner/任务、API d6f03755及Runtime af9f10ab固定候选，Web150不改。证据B/cup-deploy-20261115/authorization.json。自有活动原累计22/100文，原684仍只自然接续、不重新交办、不替用户验收或取消；新自有两事项覆盖花荣取消/张清验收及资金幂等。
+- 复用原LOCAL Runtime构建/安装适配器（仅固定输入/批次及作用域参数更新），独立systemd构建600秒上限，普通磁盘cup-rt113：235.724秒完成，fresh593PASS/0FAIL/2原有skip，Runtime113/bridge75代码包SHA fb4f54578e091e5d91a01385dd1bf983deae9038ea712e29643338155632a38b。目标主机依赖单独验证；bridge锁文件仅包自身version变化，去掉且仅去掉顶层和根节点version后完整依赖图/完整性相等，否则拒绝复用，保留dependency-version-only.json。
+- API复用cup-api-readiness-03原183项有效证据及精确包，mark-active后核对包/测试XML/前代JAR，原helper CAS/锁/备份/身份/attestation安装56成功，PID750563、HEALTH UP；实际启动慢于上轮，原日志保留，不重建或改生产JVM/启动deadline。API前代55不回写为新候选，见api-installed-record.json及api-install.log。
+- Runtime在原发布锁下验证候选闭包、前代清单及精确writer后停止，正在既有scope归档状态/配置，再固定app切换。缺native Provider元数据也需明确补齐：只花荣agt_44f93f9a92c5483582a20c7c88f67f5c和张清agt_0130b9efcc3a42eba3394851e7fa2d2d的配置/冻结template及future模板，使用原managed/https://codex.chcbz.net/v1/responses及既有10000ms传输连接超时，不改Provider密钥/目的地、身份、关联、enrollment或operation事实。原冻结配置不因删开关自动重写；本次是单独获部署授权的离线修复，须完整备份、只允许四项native元数据变化及future模板删除旧开关，逐文件readback，重启仍须实际测量READY。
+- 配置修复preview前两次仅诊断失败：第一误用normalized config已不含的hostingControlPath，第二最小host替身缺agents Map；各自根因修正、原日志/脚本保留，第三通过现有config/journal/template/profile验证，无锁/注册/执行副作用。未盲重试同根因。首只读SQL误用不存在的agent表安全失败，按既有agent_runtime修正，原错误保留。
+- 已真实UI创建自有685（HR）仅保存需求及推荐，尚未确认/预占；Runtime停机期间候选unavailable保持，不为赶验证强行交办。浏览器仅本任务profile/端口，后续保留实际UI、wire及资金证据；未把部署过程或离线通过提前记业务PASS。
+
+#### 2026-11-15 用户要求凭据单轨统一：撤回未部署的兼容补丁
+- Runtime113安装已完成，API56健康；花荣/张清真实native测量报TYPED_INSPECTION_AUTH_SOURCE_REQUIRED，通道ready不等于议事READY，业务回归仍未通过。原684不手动重放，自有685尚未确认。
+- 进一步只读核对：吴用/林冲/卢俊义各自auth.json含API key且无tokens对象；花荣/张清无auth.json，以模板env_key指定主体providerEnvironment。普通app-server注入该环境，隔离启动主动清环境并仅从HOME复制auth；这不是已证实的外部引擎升级，而是两条配置/启动路径未收口。密钥不仅存在future模板与journal，也在两主体target快照中；不输出实际值。
+- 用户明确“完全统一，不做版本兼容”。此前本轮临时编写的auth.json优先、缺失回退env的补丁只做过定向13项测试，没有提交/构建/部署；已将差异及两新增文件保存在B/cup-auth-adaptation-20261115/superseded-*，仅撤回本轮这5个文件，恢复Runtime af9f10ab干净源码，不覆盖其他改动。新增托管接线测试还未经运行且调用了不存在的host.profiles，随原型归档，不计通过证据。
+- 单轨目标：所有存量及新建Agent使用同一模型Provider绑定/凭据解析，普通连接、隔离议事和重启恢复统一消费；不按托管/静态/版本分支、不从旧HOME或环境猜测回退。凭据实体与模板/journal分离，主体只保留明确引用，现有独立凭据工具优先复用；模型凭据、技能服务密钥、Runtime注册授权是不同用途，不因统一合并权限。引擎所需短期凭据载体不等于另一套权威来源，保留初始化后不可见及主体隔离。
+- 本节是经源码核验的原因及用户决策，不宣称长期方案已落地或已证明最优。仍须核对所有实际消费者和固定引擎凭据生命周期，完成一次性离线配置迁移及恢复验证、单轨实现/测试/安装，再用花荣和张清真实回归；不以本节替代实现或验收。旧快照只受控留作历史/恢复证据，不作为运行时兼容入口。无需新增功能开关、Reviewer、外部密钥平台或付费流水线。
+
+#### 2026-11-15 用户要求全部凭据归属盘点（本机直接依赖已核，非全平台完成）
+- 只读证据B/credential-inventory-20261115/{inventory.py,inventory.json,REPORT.md}，仅字段、路径、用途、内存比较组号，不写原值/可复用密钥摘要；不迁移、不轮换、不调用Provider。远端、全库、历史备份及供应商账号未全量核验，不能声明所有秘密已盘完。
+- 关键纠正：吴用/林冲/卢俊义HOME、花荣/张清托管模型key的实际值相同，并与本机图片配置、知识整理credential、API运行中语音识别/合成key相同（报告K01）。共发现37处字段/环境引用，含快照及历史/待确认记录，不是37把密钥或37项活动授权；供应商账号归属未核。图片scope显式tenant0/client jiafewnnv58ec2379c授权，不等于全局公开。
+- 六份安装授权值互不相同，其中五名Agent确认，另一managed subject对应Agent在当前scope数据库无行，状态待确认；三份enrollmentSecret独立且有效/消费状态未核。host token、API Jasypt口令、语音HMAC及缓存key也是独立组，不得混用。API外置生产配置另13项ENC服务/应用凭据未解密比对；mTLS私钥只查文件存在0640，未读取私钥/验证有效期。
+- 统一方案必须按凭据引用和明确消费者收口，不能机械按Agent复制共享模型key；也不能直接把API基础设施/语音身份秘密移入Runtime目录。Runtime credentials拟定目录目前不存在，代码仍af9f10ab，回归未通过状态不变。
+
+#### 2026-11-15 最小文件认证统一详设（仅设计交付）
+- 用户最终选择最小方案：全部Agent执行期以自身HOME/auth.json为唯一模型认证来源；托管自动生成，普通直接读取，隔离仅复制本主体后seal临时副本。取代本handoff此前“credentials目录/引用分离”建议；不新增服务、后端下发或环境回退，接受现阶段私有模板/快照副本。
+- 详设：`specs/juyiting-skill-execution/model-auth-unification-design-20261115.md`，已从技能主spec接入。补齐modelAuth精确schema、file-auth TOML、受信publicFiles/cleanup、target-only/冻结journal/静态adoption、普通与隔离全部spawn消费者、离线CAS迁移/失败恢复以及14项验证矩阵。核对operation摘要不绑定template，不允许借迁移重写身份/费用/代际。
+- 当前Runtime仍af9f10ab，未修改产品源码/生产配置、未构建部署新方案；37/2/80与业务未通过结论不变。源码与真实binary/多轮/恢复测试须实际执行，不保证一次开发绝无返工或一小时必完。根目录其他脏修改保留，未捎带提交。
+
+#### 2026-11-15 详设二次复核：仍有未关闭项
+- 找到初版遗漏：preferred_auth_method与组件审计示例冲突；skill-inventory独立catalogOnly spawn未被普通host wrapper覆盖；文件模型key未必进入现有logger knownSecrets；typed inspection measurement含authSourceDigest。已修订同一详设§3/§5/§10，新增A15–A18，不宣称问题已修复。
+- 只读当前/usr/local/bin/codex --version为0.167.0，旧契约fixture为0.153.4，实际在线app-server snapshot未重新绑定核验。不能据此说引擎升级就是根因；最早验证必须核对实际受测/运行binary与file-store有效配置。
+- 仍只改设计，未改产品源码/生产、未执行模型回合或收费。明确同UID持久HOME风险及初始化seal后的真实多轮/恢复尚待验证；不作“全部核实/无遗漏”保证。
+
+#### 2026-11-15 19:21 详设前置离线探针
+- 以独立HOME、unshare --net、假key核验本机0.167.0真实binary（SHA cdcb45aaa01d0f14e298985e09465aebccd47f64ecd298aea44814af7b62bbda）：file-store严格配置成功；preferred_auth_method严格配置明确未知字段。实际config/read file、env_key为空；account/read在删除临时auth前后均为apiKey。无真实模型/业务调用、无生产修改；不是多轮通过。
+- 证据B/model-auth-design-verification/，更新详设§11。安装record forward-only限制已补入，不把设计中的恢复算法冒充既有工具授权/能力。仍须新实现全链测试、实际运行snapshot绑定及真实业务验收。
+
+#### 2026-11-15 19:54 文件认证统一实施进度（未部署）
+- 唯一Owner main_orchestrator，用户“好，开始实施”授权。Runtime a11f7e75实现单轨，4fd0951fec5d5a89c05985b96465169ff7e39e39补齐旧回归夹具；tree c6e7f6e0b5713e738fa5153115d13ec1a4a84566，Runtime1.3.114/bridge1.1.76。API/Web无修改。源码尚未push，生产仍113；不继承旧业务PASS。
+- 统一helper校验自身HOME/auth、文件安全读取与内存脱敏；普通/隔离/CLI/tool/catalog消费者去模型env回退；托管template、物化与cleanup重建config+auth；有效Provider/file-store在account/model读取前校验；移除preferred_auth_method及authSourceDigest。技能环境与Runtime身份不动。
+- 一次性迁移工具覆盖future/journal/全部target（含target-only）、已有HOME、静态operator baselines；真实只读plan19文件、6subjects且operations不变。历史inactive template若完全没有native字段允许只读恢复，任何显式native配置必须一致；新CHAT接入仍要求完整native配置，不新增旧凭据回退。
+- B/model-auth-implementation保存实现证据。首正式批auth-rt114固定a11f7e75，516.471秒FAIL：769PASS/4FAIL/10SKIP；4失败均旧fixture auth缺失/非法，修正后定向4PASS，不放宽产品认证。build02在测试前因systemd解析python3为3.6.8失败（71ms），保留日志；build03使用原/root/.local/bin/python3.11、全新普通磁盘输出auth-rt114-03，固定4fd0951重跑完整必要测试，独立600秒。未复用旧测试结果或失败包。
+- 已准备受控安装适配：原发布锁、精确writer/无在途检查、停机状态备份、19文件离线迁移、fixed app切换；当前forward-only不自动恢复旧业务state。吴用/林冲隔离配置digest改变须各自真实9图+文件认证后更新证据，未运行/未计PASS。新浏览器私有profile已通过UI登录，花荣/张清真实业务回归仍待部署。
+- 20:03 build03在729个顶层用例已完成且未观察not-ok时触及600秒，systemd受控TERM，原build-result停在RUNNING，外部权威终态另存B/model-auth-implementation/build03-termination.json（TIMEOUT、600.536秒），不是通过。未生成包、未执行stage/安装。已通知一小时目标不可靠；观察可用内存3625MiB后在同一构建内采用Node文件级并发2、所有selectors不减，独立build04新输出/600秒；不并发其他构建、不修改生产JVM、不延长原批次。
+- 20:14 build04（同源、文件级并发2）也触及600秒，被原systemd受控停止；已观察758顶层用例完成、无not-ok，但runtime-host/unified-acceptance仍被打断，因此无完整PASS、无包。B/model-auth-implementation/build04-termination.json为权威终态补充，原RUNNING回执原样保留。连续两次同耗时原因停止盲重试；向用户申请“仅下一次完整测试/构建/打包900秒”例外，尚未获批，不更改正在/已结束批次的上限。
+- 生产Runtime113未停止，密钥配置/状态未迁移、候选未安装，carrier及新托管真实探针均未执行。Runtime final4fd0951干净，20:07 fetch证实origin/develop无领先变更（本地ahead4）；未push。新增new-managed-probe与载体activation仅准备、未计PASS。HR685通过真实UI打开详情，未确认，GET证实open/unassigned/funding null；wallet2522可用/1预占，原684仅reserve1不动，活动22/100文不变。恢复入口与下一步精确路径见B/model-auth-implementation/RESUME.md。
+- 20:37用户“先不管了，赶紧完成部署验证”，按上下文继续交付并在回复明确本次采用前述单次15分钟例外（不改变后续默认600秒），build05新普通磁盘输出auth-rt114-05、同固定4fd0951、所有selectors不减、恢复串行1；Python及systemd均900秒，原失败/超时回执不变。暂停性能扩展排查，复用原依赖与安装工具。生产在通过正式测试和前置真实载体认证前保持不动。
+
+#### 2026-11-15 20:49 文件认证候选构建通过、受控安装启动
+- build05固定4fd0951/c6e7f6e0，完整783项：773PASS/0FAIL/10SKIP，298.124秒（本批900秒例外，实际仍低于600秒）；制品a198e143fc88745247b1991ded75881e6d15648dcbd3b927a29bca311b0fadf5。stage校验84.629秒通过，未复用旧测试或失败包。
+- 吴用/林冲各自真实9图+文件语义认证通过，各10cases/1turn，隔离initialize后seal并真实请求。新托管合成subject通过生产materialize自动生成auth、无模型env、2轮/重启续聊/清理重建4轮；不等于生产新Agent enrollment已验收。初探针第三轮后断言错误漏计按合同保留的skills目录，保留attempt01失败，修测试断言后重跑4轮通过，产品源码未变。
+- B/model-auth-implementation/stage与各carrier/new-managed-probe保存证据；已启动原锁/前代CAS/停机完整状态备份/离线19文件迁移/固定app安装。此时尚未记录安装成功，花荣685和张清业务仍待运行；原684不重放、不代验收。
+
+- 21:00安装完成（728.751秒，独立安装阶段）：Runtime1.3.114/bridge1.1.76，PID856667；完整state备份SHA 8fc99530a5126a7e6ba812a072355f2cc7f3e75fa8b73c9f387a53d0902029a4，19文件迁移，after-plan=0/6subjects/operations不变。fixed app及双载体新证据生效，forward-only；记录仍installed-channel-verification-pending，正在核验新PID健康和业务。Runtime develop已推送origin4fd0951，未带根无关修改。
+
+- 21:19花荣685真实UI确认→自动首轮HR/A→原议事HR/B→整页刷新恢复→取消通过；RESERVE/REFUND各1文。张清686确认→自动ZQ/A→原议事修订子请求交付修订稿.txt（预览恰为ZQ/B）→刷新恢复→明确只选B验收通过；RESERVE/CAPTURE各1文、无重复结算。普通吴用密议AUTH_WUYONG_OK通过。
+- 补查吴用正式687失败RECOVERY_REQUIRED/TYPED_INSPECTION_CARRIER_EVIDENCE_INVALID；保留失败并UI取消释放2文（以最终账目为准），不重放。原因是暂存认证 toolchainDigest 含sourcePath/imageRoot，搬迁后binding变化；吴用/林冲启动同错误，原5通道ready不足以证明载体ready。已在正式路径各自再次真实9图+文件认证通过，measurement对比仅nativeAttestation.toolchainDigest变化（连带engine/toolPolicy）；不改摘要冒充证据。B/model-auth-implementation/carrier-final-*与carrier-path-attribution.json为证据，正在持锁配置更新/受控重启，尚待最终静态正式业务复测。
+- 只读查询原684返回当前测试身份404，未绕权限、未重放/代取消/代验收；不声称已验证原用户事项。旧point-and-start-capability属于另一lane，UNDECLARED不能当作当前point-and-deliberate的native状态；最终按实际业务及profile-capabilities/当前PID通道证据分别记录。
+
+#### 2026-11-15 21:39 本次文件认证部署与定向验收完成
+- 最终Runtime1.3.114/bridge1.1.76、4fd0951/c6e7f6e0不变，已push origin/develop。正式目录重新认证后，仅更新吴用/林冲各自证据引用，既有锁下18.118秒受控重启，PID873209；5主体connected/registered/ready，重启日志无载体证据错误。当前release-record标verified-active，明确仅定向范围，不宣称FULL119完成。
+- 吴用正式688再次真实确认后整页刷新，仅读取原操作，不重发；同一初始请求交付AUTH_WUYONG_FORMAL_OK，截图/权威请求及grant/bootstrap/费用证据完整，随后UI取消。687原失败保留，不自动重放；两次分别预占/退款2文、3文，不使用页面旧报价猜测账目。
+- 花荣685取消退款1文；张清686只验收B版并唯一结算1文；本轮新事项held0，账号此前独立held1保持，wallet2521可用/1held。既有活动累计实结23/100文。每项只有1次承办POST、revision1、1个bootstrap；原684当前测试身份不可见，不越权验证。
+- B/model-auth-implementation/verification-summary.json、final-uniqueness.tsv、final-task-wallet-readbacks.jsonl、final-runtime-health.json、release-record-verified.json为最终回执；所有早期超时/失败/暂存证明保留，不重标历史。活动FULL119仅将本次修复的2项由FAIL转PASS并保留原失败历史，汇总39PASS/0FAIL/80NOT_RUN，仍不是全局全部通过。
+- 新托管技术验证为synthetic materialization+真实Provider四轮/重启续聊/cleanup重建；生产新主体enrollment/移除计费全流程未运行。静态吴用普通密议与正式议事通过，吴用/林冲各10载体真实认证通过；非本次范围未补跑。纯文档不重建。
+- 发布metadata准确标verified-active并明确前代record真实位于backup/release-records/current.json（前代状态仍pending、forward-only，不伪改历史）。现有保留脚本对verified-active前代仅认识backup/current.json且要求前代verified-active，可能因此保守拒绝回收Runtime旧包；本轮未改维护工具/未执行清理，不宣称该独立保留路径已兼容。

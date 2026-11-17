@@ -439,6 +439,7 @@
       "specs/architecture-convergence/development-principles.md",
       "specs/agent-economy-marketplace/beta-wen-billing.md",
       "specs/juyiting-skill-execution/responsibility-boundaries.md",
+      "specs/juyiting-skill-execution/model-auth-unification-design-20261115.md",
       "specs/juyiting-skill-execution/native-execution-technical-design-20261027.md",
       "specs/juyiting-skill-execution/native-execution-extensions-20261028.md",
       "specs/juyiting-skill-execution/native-execution-4plus1-20261028.md",

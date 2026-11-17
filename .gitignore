@@ -1,4 +1,5 @@
 # Local workspace and operational artifacts
+.cache/
 .git.empty.*
 .worktrees/
 .safeguards/
