@@ -38,3 +38,7 @@
 - Final target `/home/chc/state/cyf-local-build/eva-upgrade-20261117/completion-summary.json`; controller copy `/home/isp/state/cyf-eva-upgrade-20261117/completion-summary.json`. Installation record updated under original release lock to verified-active with separate two-round business acceptance reference. Original build/source evidence stays native6-runtime-20261117-05, not relabeled as a new build.
 - No Runtime/API/Web source changes, no cleanup of other tasks/cache, no global119/file/image/billing acceptance claim. Runtime self-host reboot-lock automation is not changed; this was explicit stopped-writer repair, not automatic stale-lock takeover.
 - Final documentation/navigation check `./sddw check-docs --all-docs` **FAIL on one preexisting unrelated link**: `specs/juyiting-ui-baseline-20261006/optimization/acceptance.md` points to `../../../../docs/implementation/handoffs/NATIVE-PROTOCOL-SINGLE-TRACK-20261116.md`. Not changed in this scope. Scanned39features/186Markdown/1201local targets; no unreachable default documents. Export omissions and2unverified references remain explicitly reported, not upgraded to source/online validation. `git diff --check` PASS. Installed nginx snippet and committed-source candidate SHA256 both `e507afca78fa35e5e4d5608edd5f4103a2792648802cde4dfd3ea17167f0ba0c`.
+
+## 同日追加：chcbz.net
+
+用户随后授权升级 `isp@chcbz.net`；该主机是 `li159-118`，不是控制机或 Eva。其 Runtime1.3.102 已升级到同一固定1.3.118候选，李逵实时通道及真实私聊验收通过；独立安装失败与恢复、状态备份、证据及磁盘余量见[目标升级记录](CHCBZ-RUNTIME-UPGRADE-20261117.md)。本条不改变上文 Eva 的来源、备份和验收事实。
