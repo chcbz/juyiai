@@ -91,6 +91,16 @@ runtime_ledger_json: |
         "current_gate": "accepted",
         "blocker": null,
         "next_action": "Web-only release complete: SSH357PASS/2pending/0FAIL,247.361s incl transfer; original LOCAL install35.704s,621files/264online hashes PASS. Mobile-size HR/ZQ detail→private and return, private Save label, task693 no Save and original preview, desktop checks PASS; API PID unchanged; no physical Mini claim. Evidence /home/isp/state/cyf-ui-fixes-release-20261117/release.json."
+      },
+      "WEB-MATERIAL-PICKER-AUTOLOAD-20261117": {
+        "owner": null,
+        "exact_sha_tree": {
+          "commit_sha": "ef5903f0a19bc727569d9dcaab9910dc632003a6",
+          "tree_sha": "8346d120a67d057ca128c3ad5cce8840f7e66d25"
+        },
+        "current_gate": "ready_for_release",
+        "blocker": null,
+        "next_action": "Development integrated/pushed ef5903f; SSH selected195PASS, real browser mobile/desktop21items auto-page PASS. No build/package/deploy authorization or evidence; production remains d3fbbaa. Worker low disk requires preparation before any separately authorized package. See MATERIAL-PICKER-AUTOLOAD-20261117 handoff."
       }
     }
   }
