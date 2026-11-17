@@ -12,6 +12,7 @@
 | 资料上传/固定版本、预览和验收选版 | [个人资料](../specs/juyiting-creative-delivery-mvp/spec.md)、[UI细则](../specs/juyiting-ui-baseline-20261006/optimization/spec.md) |
 | 微信聊天资料选取（2026-11-16源码，未发布） | [小程序配套、配置和平台验收](../web/miniprogram/README.md#微信聊天资料导入2026-11-16待平台验收)、[交互规格](../web/prototypes/juyiting/specs/prototype-spec.md#微信资料选择2026-11-16) |
 | 跨页面返回与原现场恢复（2026-11-17局部核对 Web `723f0ac`） | [详设A–Q](../specs/juyiting-ui-baseline-20261006/optimization/detailed-design.md#cross-page-return-design-20261116)、[实现/验证交接](implementation/handoffs/PAGE-RETURN-20261116.md)；[初始化误冲突修复/发布](implementation/handoffs/WEB-DEVELOP-DEPLOY-20261116.md)。显式交接、按需挂载、草稿/暂选及原幂等写入恢复；不含分享直达，未宣称微信真机验收 |
+| 小程序整页缩放/原生浮层遮挡（2026-11-17，源码 Web `ff663c8b`，未部署） | [统一应用视口与真机验收](../web/miniprogram/README.md#微信小程序应用视口与缩放浮层2026-11-17待真机验收)；Android/iOS/桌面小程序统一固定整页比例，预览组件内部缩放不改 |
 | WEN钱包/预占/结算/人民币成本 | [文钱包合同](../specs/agent-economy-marketplace/beta-wen-billing.md) |
 | 岗位/技能管理/托管 | [技能管理合同](../specs/juyiting-skill-execution/management-contract.md)、[托管责任](../specs/agent-economy-marketplace/spec.md) |
 | 典籍维护/阅读器/手札 | [维护](../specs/archive-agent-maintenance/spec.md)、[阅读器](../specs/archive-pavilion-reader-mvp/spec.md) |
