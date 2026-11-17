@@ -101,6 +101,16 @@ runtime_ledger_json: |
         "current_gate": "ready_for_release",
         "blocker": null,
         "next_action": "Development integrated/pushed ef5903f; SSH selected195PASS, real browser mobile/desktop21items auto-page PASS. No build/package/deploy authorization or evidence; production remains d3fbbaa. Worker low disk requires preparation before any separately authorized package. See MATERIAL-PICKER-AUTOLOAD-20261117 handoff."
+      },
+      "WEB-PRIVATE-FILE-ACTIONS-20261117": {
+        "owner": null,
+        "exact_sha_tree": {
+          "commit_sha": "62fffa7443b3d33b2729e9dd7a1631bed8546de9",
+          "tree_sha": "4c131eeab34f2dcb7f70a62472371cd3c0b65bc7"
+        },
+        "current_gate": "ready_for_release",
+        "blocker": null,
+        "next_action": "Web62fffa7 pushed; SSH186PASS and real browser1440/390/320 action row+original download PASS. First185PASS/1FAIL omitted fixture preserved then exact fixture restored/new run PASS. No build/package/deploy; includes previous unshipped ef5903f. Handoff PRIVATE-FILE-ACTIONS-ROW-20261117."
       }
     }
   }
