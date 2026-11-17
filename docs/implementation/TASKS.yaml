@@ -3,7 +3,7 @@ schema_version: 4
 runtime_ledger_json: |
   {
     "schema_version": 2,
-    "updated_at": "2026-11-17T09:46:27+08:00",
+    "updated_at": "2026-11-17T11:04:06+08:00",
     "critical_path": [
       "JUYIAI-OPEN-SOURCE-MIGRATION"
     ],
@@ -95,12 +95,12 @@ runtime_ledger_json: |
       "WEB-MATERIAL-PICKER-AUTOLOAD-20261117": {
         "owner": null,
         "exact_sha_tree": {
-          "commit_sha": "ef5903f0a19bc727569d9dcaab9910dc632003a6",
-          "tree_sha": "8346d120a67d057ca128c3ad5cce8840f7e66d25"
+          "commit_sha": "62fffa7443b3d33b2729e9dd7a1631bed8546de9",
+          "tree_sha": "4c131eeab34f2dcb7f70a62472371cd3c0b65bc7"
         },
-        "current_gate": "ready_for_release",
+        "current_gate": "accepted",
         "blocker": null,
-        "next_action": "Development integrated/pushed ef5903f; SSH selected195PASS, real browser mobile/desktop21items auto-page PASS. No build/package/deploy authorization or evidence; production remains d3fbbaa. Worker low disk requires preparation before any separately authorized package. See MATERIAL-PICKER-AUTOLOAD-20261117 handoff."
+        "next_action": "ef5903f integrated and shipped in authorized Web62fffa7; shared single preview, real live desktop50→80 auto-pagination and desktop/mobile one-preview PASS; SSH combined656PASS/2pending/0FAIL; original LOCAL install/online verified. /home/isp/state/cyf-preview-actions-release-20261117/release.json; no API/Runtime change."
       },
       "WEB-PRIVATE-FILE-ACTIONS-20261117": {
         "owner": null,
@@ -108,9 +108,9 @@ runtime_ledger_json: |
           "commit_sha": "62fffa7443b3d33b2729e9dd7a1631bed8546de9",
           "tree_sha": "4c131eeab34f2dcb7f70a62472371cd3c0b65bc7"
         },
-        "current_gate": "ready_for_release",
+        "current_gate": "accepted",
         "blocker": null,
-        "next_action": "Web62fffa7 pushed; SSH186PASS and real browser1440/390/320 action row+original download PASS. First185PASS/1FAIL omitted fixture preserved then exact fixture restored/new run PASS. No build/package/deploy; includes previous unshipped ef5903f. Handoff PRIVATE-FILE-ACTIONS-ROW-20261117."
+        "next_action": "Web62fffa7 released: SSH656PASS/2pending/0FAIL; build+transfer267.913s; original LOCAL install17.190s,621package/264online hashes. Live home single preview desktop/mobile,50→80 auto-page; HR private action row+actual XLSX download/original preview PASS. API PID unchanged/UP. No execution or personal-file save POST; no physical Mini claim. /home/isp/state/cyf-preview-actions-release-20261117/release.json."
       }
     }
   }

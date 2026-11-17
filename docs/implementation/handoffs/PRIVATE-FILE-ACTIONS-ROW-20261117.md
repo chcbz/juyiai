@@ -18,3 +18,14 @@
 - 控制机最小诊断135 PASS。真实Chromium 1440×1000、390×844、320×740：长/短文件名两张原组件卡片均预览/保存/下载同排、无横向溢出；保存状态变化、原文件名和字节下载通过，一次GET，pageerror为空。仅API/保存I/O使用fixture，不冒充微信真机或线上验收。浏览器及本任务Vite服务已关闭。
 - 未生产构建/打包/部署，未重启任何生产服务。生产安装记录仍d3fbbaa9e5174b694a37a3ad8778b1d4e0495296；上一项自动分页及本项均待另行授权发布。worker仍低磁盘，不清缓存/他人目录/生产/备份来强行打包。
 - 汇总 `/home/isp/state/cyf-private-file-actions-20261117/verification.json`；`remote-test02/{source,inputs,result,tests,attempt}.json`、`run.log`，首次失败在remote-test/；browser/browser.json及三尺寸截图。worker测试输出 `/home/isp/state/cyf-local-build/tasks/cyf-private-file-actions-tests-20261117-02`，源码身份与Node/锁/依赖回执/实际输入摘要已留存。
+
+
+## 本轮Web统一发布及线上验收（2026-11-17）
+
+- 用户明确授权“现在部署”；仅Web，固定候选 `62fffa7443b3d33b2729e9dd7a1631bed8546de9` / tree `4c131eeab34f2dcb7f70a62472371cd3c0b65bc7`，包括此前ef5903f单预览/自动分页及密议操作行。不自动跟随其他HEAD。GitHub develop只读核对同候选。
+- 指定SSH worker执行原 `local_web_build.py`：**656 PASS / 0 FAIL / 2既有pending**，31个selector；fresh生产包、完整性检查和回传合计 **267.913秒**，未超过600秒。构建本体113.433秒；不以原195/186测试替代本批成功。原LOCAL安装事务 **17.190秒**，621项包内文件、264项线上文件核验，当前记录online_verified。
+- 初次655PASS/1FAIL/2pending：稀疏快照遗漏 `tests/fixtures/interface-standard/http-envelope-fixtures.json`，补齐同commit真实fixture后在全新输出02重新执行；原失败/26.072秒记录保留。另一次02准备脚本转义错误未进入应用构建，脚本及日志保留。未修改产品、断言或安装保护。
+- 构建准备仅删除本线程d3批次已核验对象字节一致且有独立完整Git副本的web-snapshot重复传输仓库；保留原源码、构建证据、缓存、生产/回退包及其他Owner内容。沿用62固定快照，收窄无关地图截图fixture物化；生产src/public/static及根配置709文件逐一核对Git blob，实际输入890文件SHA记录。没有切换tmpfs或控制机源码构建。
+- 真实生产Chromium：办事桌面1440×1000、移动390×844每行一个预览/一个移除，固定V2文本原件预览正确；桌面资料列表真实滚动由50到80项、80唯一ID，无手点加载更多。花荣已有两个XLSX文件卡片三按钮同排，移动/桌面均核对；下载 `NATIVE6_MATERIAL_V2.xlsx` 为5139字节有效XLSX、原V2标记正确；原件表格预览显示V2、¥1,234.50和25%。未点击生产保存，不将可见性验证冒充新增个人资料写入成功。
+- API PID1549576前后相同、HEALTH=UP、ARTIFACT_ATTESTATION=MATCH；未改API/Runtime、未发起新Agent执行/正式事项，个人资料保存POST为0，pageerror为空。未验证微信真机，不宣称119项全局回归或全部历史事项通过。
+- 证据 `/home/isp/state/cyf-preview-actions-release-20261117/release.json`、`live-acceptance.json`、`download-verification.json`、`install.log`及after-*.png；正式包和构建证据 `/home/isp/state/cyf-local-build/tasks/cyf-preview-actions-web-20261117-02/`。包SHA-256 `0803e2bb3bf9a545affdf100b1bf570d4dd461623c33e582b520e8369ddedd96`；原备份 `/var/lib/cyf-web-flow/backups/61f80dd05fd0fa3939fc8e4251df57522cc42638b76d353a6708693852627fe2`。控制机包已按原入口登记完成保留；worker缓存和历史包不额外清理。

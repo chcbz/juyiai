@@ -27,3 +27,24 @@
 - 本轮不构建生产包、不部署。最初尝试原完整打包入口的源码准备，worker只剩213MB，已停止本任务传输，未进入测试/构建/安装。仅清除本任务中断的92MB传输临时文件，保留其SHA/大小回执及控制机原始包；不清他人目录/缓存/生产/备份。浅克隆完整对象也因空间失败，后采用只读复用原基线Git对象、固定候选增量bundle及一次稀疏源码快照完成定向测试；所有准备失败日志保留，不重标成功。
 - 生产仍为先前 `d3fbbaa`；未改API/Runtime、未重启服务、无生产数据写入。正式包需在用户授权发布且worker空间可用后按现有构建/LOCAL安装链执行。
 - 汇总证据 `/home/isp/state/cyf-material-picker-autoload-20261117/verification.json`；SSH `remote-test/{source,inputs,result,tests,attempt}.json`、`run.log`；浏览器 `browser/browser.json` 及picker-1440.png/picker-390.png；准备失败build.log/test-worker*.log、interrupted-transfer-cleanup.json。worker新测试输出 `/home/isp/state/cyf-local-build/tasks/cyf-material-picker-autoload-tests-20261117-01`。
+
+## 办事页重复预览的统一源码复核（2026-11-17）
+
+用户补充办事页同症状后，核对Web当前HEAD `62fffa7443b3d33b2729e9dd7a1631bed8546de9` / tree `4c131eeab34f2dcb7f70a62472371cd3c0b65bc7`，组件工作区干净；安装记录 `/home/isp/state/cyf-web-flow/record.json` 仍为 `d3fbbaa9e5174b694a37a3ad8778b1d4e0495296`。这是源码检查及安装记录核对，不新增线上界面验收或部署声明。
+
+- 办事HallOverview、草稿HallDraftEditor、事项详情HallTaskResources均直接使用HallMaterialPicker的已选资料行。生产候选d3该行确有两个相同`previewSelectedMaterial(material)`按钮；ef5903已在共用组件删除重复，62fffa包含此修复，不需逐页补丁。
+- ChatPanel的议事/密议输入附件由独立composer-attachment-card渲染，每行只有一个预览和一个移除；其HallMaterialPicker及HallRequirementEditor均为dialog-only，不会再渲染共用已选行。BountyPanel通过HallTaskResources展示资料，编辑按钮为选择资料而非第二个预览。
+- 独立文件/成果入口同时核对PersonalWorkspace、HallDraftEditor成果、BountyExecutionOutputs、HallCompletedRecords、HallDeliveryReviewDialog及HallMessageParts→HallMessageMedia。未发现同一文件操作区重复的两个预览按钮；下载、验收、关闭、失败重试及图片自身放大入口不作重复预览误删。HallMaterialThumbnail只显示缩略图/文件图标，无额外预览按钮。
+- 已有定向组件用例 `web/tests/juyiting-unified-discussion-materials.test.js` 明确覆盖readOnly=false/true各一枚可用预览及0/1枚移除；其正式通过证据仍仅引用上文原候选195 PASS，本轮未新增测试运行，不宣称全部页面真实界面回归通过。
+- 结论：此次办事截图与此前事项详情属于同一个共享组件缺陷；当前修复尚未生产发布，不能归因为浏览器缓存。本轮未再改产品代码、未改API/Runtime、未部署。
+
+
+## 本轮Web统一发布及线上验收（2026-11-17）
+
+- 用户明确授权“现在部署”；仅Web，固定候选 `62fffa7443b3d33b2729e9dd7a1631bed8546de9` / tree `4c131eeab34f2dcb7f70a62472371cd3c0b65bc7`，包括此前ef5903f单预览/自动分页及密议操作行。不自动跟随其他HEAD。GitHub develop只读核对同候选。
+- 指定SSH worker执行原 `local_web_build.py`：**656 PASS / 0 FAIL / 2既有pending**，31个selector；fresh生产包、完整性检查和回传合计 **267.913秒**，未超过600秒。构建本体113.433秒；不以原195/186测试替代本批成功。原LOCAL安装事务 **17.190秒**，621项包内文件、264项线上文件核验，当前记录online_verified。
+- 初次655PASS/1FAIL/2pending：稀疏快照遗漏 `tests/fixtures/interface-standard/http-envelope-fixtures.json`，补齐同commit真实fixture后在全新输出02重新执行；原失败/26.072秒记录保留。另一次02准备脚本转义错误未进入应用构建，脚本及日志保留。未修改产品、断言或安装保护。
+- 构建准备仅删除本线程d3批次已核验对象字节一致且有独立完整Git副本的web-snapshot重复传输仓库；保留原源码、构建证据、缓存、生产/回退包及其他Owner内容。沿用62固定快照，收窄无关地图截图fixture物化；生产src/public/static及根配置709文件逐一核对Git blob，实际输入890文件SHA记录。没有切换tmpfs或控制机源码构建。
+- 真实生产Chromium：办事桌面1440×1000、移动390×844每行一个预览/一个移除，固定V2文本原件预览正确；桌面资料列表真实滚动由50到80项、80唯一ID，无手点加载更多。花荣已有两个XLSX文件卡片三按钮同排，移动/桌面均核对；下载 `NATIVE6_MATERIAL_V2.xlsx` 为5139字节有效XLSX、原V2标记正确；原件表格预览显示V2、¥1,234.50和25%。未点击生产保存，不将可见性验证冒充新增个人资料写入成功。
+- API PID1549576前后相同、HEALTH=UP、ARTIFACT_ATTESTATION=MATCH；未改API/Runtime、未发起新Agent执行/正式事项，个人资料保存POST为0，pageerror为空。未验证微信真机，不宣称119项全局回归或全部历史事项通过。
+- 证据 `/home/isp/state/cyf-preview-actions-release-20261117/release.json`、`live-acceptance.json`、`download-verification.json`、`install.log`及after-*.png；正式包和构建证据 `/home/isp/state/cyf-local-build/tasks/cyf-preview-actions-web-20261117-02/`。包SHA-256 `0803e2bb3bf9a545affdf100b1bf570d4dd461623c33e582b520e8369ddedd96`；原备份 `/var/lib/cyf-web-flow/backups/61f80dd05fd0fa3939fc8e4251df57522cc42638b76d353a6708693852627fe2`。控制机包已按原入口登记完成保留；worker缓存和历史包不额外清理。
