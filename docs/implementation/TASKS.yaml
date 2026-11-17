@@ -3,7 +3,7 @@ schema_version: 4
 runtime_ledger_json: |
   {
     "schema_version": 2,
-    "updated_at": "2026-11-17T07:18:29+08:00",
+    "updated_at": "2026-11-17T09:46:27+08:00",
     "critical_path": [
       "JUYIAI-OPEN-SOURCE-MIGRATION"
     ],
@@ -81,6 +81,16 @@ runtime_ledger_json: |
         "current_gate": "accepted",
         "blocker": null,
         "next_action": "Delivered exact API20/Web06/Runtime118, GitHub develop synced, original installers healthy, both agents real PRIVATE/TASK and file-byte/save checks passed within documented scope. No global119/physical Mini/WPS/full production fault-injection claim. Evidence: NATIVE-PROTOCOL-SINGLE-TRACK-20261116 handoff and final-release-verification-20261117.json."
+      },
+      "WEB-PRIVATE-ENTRY-SAVE-20261117": {
+        "owner": null,
+        "exact_sha_tree": {
+          "commit_sha": "d3fbbaa9e5174b694a37a3ad8778b1d4e0495296",
+          "tree_sha": "e76cc709e671d407dc03dde4e5bbe52bb6679f5a"
+        },
+        "current_gate": "accepted",
+        "blocker": null,
+        "next_action": "Web-only release complete: SSH357PASS/2pending/0FAIL,247.361s incl transfer; original LOCAL install35.704s,621files/264online hashes PASS. Mobile-size HR/ZQ detail→private and return, private Save label, task693 no Save and original preview, desktop checks PASS; API PID unchanged; no physical Mini claim. Evidence /home/isp/state/cyf-ui-fixes-release-20261117/release.json."
       }
     }
   }
