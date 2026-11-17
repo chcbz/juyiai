@@ -270,3 +270,5 @@ Web/API复用 `local_release.py`，每次在原固定源码参数上显式追加
 6. 构建不是安装授权。按既有 Runtime 发布锁、前代 CAS、固定目录/备份/forward-only 边界发布；若另一 Owner 正发布，告警并等待，不抢锁/降级。已验证上线的**同一源码及全部 portable 字节/模式、原安装清单/依赖和实时通道**均一致时可锁内幂等确认，不重复搬文件、重启、认证迁移或收费回归；保留原安装来源，只新增精确远程验证回执，不把包 SHA 不同但代码相等伪称为同一原包。
 
 实测及失败原始回执见[迁移handoff](../../docs/implementation/handoffs/REMOTE-BUILD-MIGRATION-20261116.md)。本入口不编译 Runtime 专用 Codex 源码补丁，不修改全机 Codex，也不自动部署其他任务最新候选。
+
+生产 Runtime 走公网 API 时，还须核对既有 `ops/ci/aliyun-flow/host/nginx/cyf-runtime-native-locations.conf` 的精确协议路由。2026-11-17已补齐 protocol6 `/internal/agent/executions/commands`（GET）及执行 run 的指定 POST 操作，复用原代理鉴权，不能以 blanket `/internal` 放行代替；WebSocket在线/READY不等于原生HTTP执行可达。定向入口 `python3 -B -m unittest discover -s ops/ci/aliyun-flow/tests -p test_runtime_native_nginx.py -v`；实际公网401/405负例及 Eva两轮私聊见[升级handoff](../../docs/implementation/handoffs/EVA-RUNTIME-UPGRADE-20261117.md)。

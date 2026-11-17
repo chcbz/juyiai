@@ -17,7 +17,7 @@ class RuntimeNativeNginxTest(unittest.TestCase):
         return any(p.fullmatch(path) and m.fullmatch(method) for p, m in self.routes)
 
     def test_complete_native_contract(self):
-        self.assertEqual(len(self.routes), 17)
+        self.assertEqual(len(self.routes), 19)
         reads = [
             '/tasks/workspace-executions/commands', '/tasks/conversation-executions/commands',
             '/skill-installations/a/package', '/tasks/a/runs/b/inputs',
@@ -46,6 +46,25 @@ class RuntimeNativeNginxTest(unittest.TestCase):
                     other = 'POST' if method == 'GET' else 'GET'
                     if not path.endswith('/result-commit'):
                         self.assertFalse(self.accepts(other, '/internal/agent' + path))
+
+    def test_protocol6_native_operations_and_denied_aliases(self):
+        self.assertTrue(self.accepts('GET', '/internal/agent/executions/commands'))
+        self.assertFalse(self.accepts('POST', '/internal/agent/executions/commands'))
+        for suffix in ('lease', 'lease/renew', 'inputs', 'inputs/ref/content',
+                       'outputs/out/content', 'effects/e/start', 'effects/e/result',
+                       'resume', 'result-commits/manifest', 'failure', 'usage', 'provider-usage'):
+            path = '/internal/agent/executions/pwe_a/runs/run_b/' + suffix
+            self.assertTrue(self.accepts('POST', path), path)
+            for wrong in ('GET', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'):
+                self.assertFalse(self.accepts(wrong, path), (wrong, path))
+        for path in ('/internal/agent/executions', '/internal/agent/executions/commands/extra',
+                     '/internal/agent/executions/pwe_a/runs/run_b/admin',
+                     '/internal/agent/executions/pwe_a/runs/run_b/inputs/../content',
+                     '/internal/agent/executions/pwe_a/runs/run_b/start',
+                     '/internal/agent/executions/' + 'a' * 101 + '/runs/b/lease',
+                     '/internal/agent/executions/a%2fb/runs/c/lease'):
+            for method in ('GET', 'POST'):
+                self.assertFalse(self.accepts(method, path), (method, path))
 
     def test_archive_maintenance_methods(self):
         for suffix in ('', '/a/source', '/a/result'):
