@@ -236,7 +236,7 @@ class Tests(unittest.TestCase):
 
     def test_scan_limit_no_partial_batch(self):
         with mock.patch.object(m, 'MAX_FILES', 1):
-            self.assertFalse(self.collect()[0])
+            self.assertRaises(m.Unsafe, self.collect)
 
     def test_plan_no_mutation(self):
         with mock.patch.object(m.time, 'time', return_value=self.now):
@@ -319,6 +319,183 @@ class Tests(unittest.TestCase):
                                       'policy': 'newest-two-plus-current-pin'}))
         (self.bs[0] / 'PAYLOAD_RETIRED.json').symlink_to(target)
         self.assertNotIn(str(self.bs[0]), [b['batch'] for b in self.collect()[0]])
+
+
+
+class ScopedTests(unittest.TestCase):
+    setUpBase = Tests.setUp
+    tearDown = Tests.tearDown
+    batch = Tests.batch
+    pin = Tests.pin
+    collect = Tests.collect
+    clean = Tests.clean
+
+    def setUp(self):
+        import hashlib
+        self.setUpBase()
+        for p in self.bs:
+            (p/'RECOVERY.md').unlink(); (p/'current.json').unlink()
+            (p/'release-records').mkdir()
+            (p/'release-records/current.json').write_text(json.dumps({
+                'unit': 'cyf-agent-runtime-v1@unified.service',
+                'status': 'verified-active', 'runtimeVersion': '1.3.1', 'sourceCommit': 'a'*40}))
+            (p/'state-scope.json').write_text(json.dumps({
+                'policy': 'runtime-essential-state-v2', 'roots': ['/scope/never-traverse'],
+                'excluded': [], 'includedRegularBytes': 5, 'includedCount': 1,
+                'releaseBinding': {'commit': 'b'*40},
+                'archiveBytes': 5, 'archiveSha256': hashlib.sha256(b'state').hexdigest(),
+                'selectionSha256': 'c'*64}))
+            time.sleep(.005)
+
+    def mutate(self, field, value):
+        p = self.bs[0]/'state-scope.json'
+        scope = json.loads(p.read_text()); scope[field] = value
+        p.write_text(json.dumps(scope))
+
+    def rejected(self):
+        self.assertRaises(m.Unsafe, m.collect_batch, self.p, self.bs[0])
+
+    def test_valid_scope_and_different_incoming_commit(self):
+        batches, protected, _, _ = self.collect()
+        self.assertEqual({b['batch'] for b in batches}, {str(p) for p in self.bs[:2]})
+        self.assertEqual(set(protected), {str(p) for p in self.bs[2:]})
+
+    def test_missing_receipt(self):
+        (self.bs[0]/'state-scope.json').unlink(); self.assertRaises(OSError, m.collect_batch, self.p, self.bs[0])
+
+    def test_unknown_policy(self):
+        self.mutate('policy', 'unknown'); self.rejected()
+
+    def test_unknown_schema_field(self):
+        self.mutate('unrecognized', True); self.rejected()
+
+    def test_archive_digest_mismatch(self):
+        self.mutate('archiveSha256', '0'*64); self.rejected()
+
+    def test_archive_byte_mismatch(self):
+        self.mutate('archiveBytes', 6); self.rejected()
+
+    def test_bool_not_integer(self):
+        self.mutate('includedCount', True); self.rejected()
+
+    def test_unsafe_roots(self):
+        self.mutate('roots', ['/ok/../unknown']); self.rejected()
+
+    def test_invalid_release_binding(self):
+        self.mutate('releaseBinding', {}); self.rejected()
+
+    def test_record_hash_binding(self):
+        import hashlib
+        p = self.bs[0]/'release-records/current.json'
+        self.mutate('releaseBinding', {'currentRecordSha256': hashlib.sha256(p.read_bytes()).hexdigest()})
+        m.collect_batch(self.p, self.bs[0])
+        self.mutate('releaseBinding', {'currentRecordSha256': '0'*64}); self.rejected()
+
+    def test_pending_previous_is_not_current_status_override(self):
+        p = self.bs[0]/'release-records/current.json'
+        d = json.loads(p.read_text()); d['status'] = 'installed-channel-verification-pending'
+        p.write_text(json.dumps(d)); m.collect_batch(self.p, self.bs[0])
+        self.pin(self.bs[2], 'installed-channel-verification-pending')
+        self.assertRaises(m.Unsafe, self.collect)
+
+    def test_unknown_previous_status(self):
+        p = self.bs[0]/'release-records/current.json'
+        d=json.loads(p.read_text()); d['status']='unknown'; p.write_text(json.dumps(d)); self.rejected()
+
+    def test_receipt_symlink(self):
+        p=self.bs[0]/'state-scope.json'; q=self.root/'receipt'; p.rename(q); p.symlink_to(q); self.rejected()
+
+    def test_record_directory_symlink(self):
+        p=self.bs[0]/'release-records'; q=self.root/'other-records'; p.rename(q); p.symlink_to(q); self.rejected()
+
+    def test_state_symlink(self):
+        p=self.bs[0]/'state.tar'; q=self.root/'state'; p.rename(q); p.symlink_to(q); self.rejected()
+
+    def test_dual_archive_rejected(self):
+        (self.bs[0]/'state.tar.gz').write_bytes(b'state'); self.rejected()
+
+    def test_metadata_change_rejected(self):
+        layout=m.recovery_layout(self.p,self.bs[0])
+        self.mutate('includedCount',2)
+        self.assertRaises(m.Unsafe,m.validate_layout,self.p,layout)
+
+    def test_missing_archive_without_intent_rejected(self):
+        (self.bs[0]/'state.tar').unlink(); self.rejected()
+
+    def test_unsafe_current_backup_stops_all(self):
+        p=self.bs[2]/'state-scope.json'; p.write_text('{}')
+        self.assertRaises(m.Unsafe,self.collect)
+
+    def test_new_format_plan_no_mutations(self):
+        with mock.patch.object(m.time,'time',return_value=self.now): result=m.run(self.p,'plan')
+        self.assertEqual(result['removed_files'],0)
+        self.assertFalse(self.p.audit.exists())
+        for p in self.bs: self.assertFalse((p/'RECOVERY.md').exists())
+
+    def test_payload_only_clean_and_records_retained(self):
+        result=self.clean(); self.assertEqual(result['removed_files'],4)
+        for p in self.bs[:2]:
+            self.assertFalse((p/'state.tar').exists())
+            self.assertTrue((p/'state-scope.json').exists())
+            self.assertTrue((p/'release-records/current.json').exists())
+            self.assertFalse((p/'RECOVERY.md').exists())
+        self.assertTrue((self.bs[2]/'state.tar').exists())
+        self.assertEqual(self.clean()['removed_files'],0)
+
+    def test_external_old_program_hardlink_rejected(self):
+        os.link(self.bs[0]/'old-program/lib/code.py',self.root/'live-alias'); self.rejected()
+
+    def test_internal_shared_links_supported(self):
+        p=self.bs[0]/'old-program/lib/code.py'; os.link(p,p.with_name('code2.py'))
+        rows=m.collect_batch(self.p,self.bs[0]); aliases=[r for r in rows if r.get('shared')]
+        self.assertEqual(len(aliases),2)
+        self.assertEqual(sum(r['allocated'] for r in aliases),p.stat().st_blocks*512)
+        remaining={tuple(aliases[0]['signature'][:2]):aliases[:]}
+        for row in aliases: m.unlink(self.p,row,remaining)
+        self.assertFalse(p.exists())
+
+    def test_resume_after_archive_unlink(self):
+        original=m.unlink
+        def interrupt(paths,row,remaining=None):
+            if '/old-program/' in row['path']: raise m.Unsafe('injected interruption')
+            return original(paths,row,remaining)
+        with mock.patch.object(m,'unlink',side_effect=interrupt):
+            self.assertRaises(m.Unsafe,self.clean)
+        self.assertFalse((self.bs[1]/'state.tar').exists())
+        self.assertTrue((self.bs[1]/'PAYLOAD_RETIRED.json').exists())
+        result=self.clean()
+        self.assertEqual(len(result['retired_batches']),2)
+        self.assertFalse((self.bs[1]/'old-program/lib/code.py').exists())
+
+    def test_resume_fails_if_receipt_changes(self):
+        p=self.bs[0]; layout=m.recovery_layout(self.p,p)
+        m.safe.atomic_json(p/'PAYLOAD_RETIRED.json',{
+            'status':'retiring-not-a-complete-recovery','policy':'newest-two-plus-current-pin',
+            'batchIdentity':list(m.safe.signature(p.lstat())[:2]),'layoutProof':layout,'payloadStamp':time.time()-7200})
+        (p/'state.tar').unlink(); self.mutate('includedCount',2); self.rejected()
+
+    def test_chunk_metadata_race_stops_before_unlink(self):
+        original=m.validate_layout
+        def changed(paths,layout):
+            if (self.bs[1]/'PAYLOAD_RETIRED.json').exists():
+                p=self.bs[1]/'release-records/current.json'; p.write_text('{}')
+            return original(paths,layout)
+        with mock.patch.object(m,'validate_layout',side_effect=changed):
+            self.assertRaises(m.Unsafe,self.clean)
+        self.assertTrue((self.bs[1]/'state.tar').exists())
+
+    def test_archive_changed_during_hash(self):
+        original=m.safe.digest
+        def changed(path,expected,*args,**kwargs):
+            value=original(path,expected,*args,**kwargs)
+            if path.name=='state.tar': path.write_bytes(b'other')
+            return value
+        with mock.patch.object(m.safe,'digest',side_effect=changed): self.rejected()
+
+    def test_legacy_metadata_does_not_silently_fallback(self):
+        (self.bs[0]/'RECOVERY.md').write_text('partial legacy')
+        self.assertRaises(OSError,m.collect_batch,self.p,self.bs[0])
+
 
 
 if __name__ == '__main__':

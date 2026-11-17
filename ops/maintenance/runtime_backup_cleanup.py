@@ -89,17 +89,136 @@ def leaf(paths, p, shared=False):
     if not (stat.S_ISREG(st.st_mode) or stat.S_ISLNK(st.st_mode)):
         raise Unsafe('non-payload file type')
     if st.st_uid != 0 or (st.st_nlink != 1 and not (shared and stat.S_ISREG(st.st_mode))) or (not stat.S_ISLNK(st.st_mode) and st.st_mode & 0o022):
-        raise Unsafe('unsafe payload ownership/links/mode')
+        raise Unsafe('unsafe payload ownership/links/mode: ' + str(p))
     if st.st_dev != paths.root_device or safe.mounted(paths, p):
         raise Unsafe('mounted payload')
     return st
 
 
-def collect_batch(paths, batch):
+def recovery_json(paths, path):
+    """Bounded, no-follow metadata read with stable physical ancestors."""
+    directory(paths, path.parent)
+    ancestors = [(p, p.lstat().st_dev, p.lstat().st_ino) for p in path.parents]
+    st = safe.regular(path)
+    if st.st_size > 1024 * 1024:
+        raise Unsafe('oversized recovery metadata')
+    fd = os.open(str(path), os.O_RDONLY | os.O_NOFOLLOW)
+    with os.fdopen(fd) as stream:
+        if safe.signature(os.fstat(stream.fileno())) != safe.signature(st):
+            raise Unsafe('recovery metadata replaced')
+        try:
+            value = json.load(stream)
+        except (ValueError, UnicodeError):
+            raise Unsafe('invalid recovery metadata JSON')
+        if safe.signature(os.fstat(stream.fileno())) != safe.signature(st):
+            raise Unsafe('recovery metadata changed')
+    for parent, dev, ino in ancestors:
+        actual = parent.lstat()
+        if not stat.S_ISDIR(actual.st_mode) or (actual.st_dev, actual.st_ino) != (dev, ino):
+            raise Unsafe('recovery metadata ancestor replaced')
+    if safe.signature(safe.regular(path)) != safe.signature(st):
+        raise Unsafe('recovery metadata replaced')
+    if not isinstance(value, dict):
+        raise Unsafe('recovery metadata must be an object')
+    return value, {'path': str(path), 'signature': list(safe.signature(st))}
+
+
+def validate_layout(paths, layout):
+    # Metadata must stay unchanged through every delete chunk; hashes of payload
+    # bytes are additionally bound to the original unlink signatures.
+    for row in layout['metadata']:
+        path = Path(row['path'])
+        directory(paths, path.parent)
+        if safe.signature(safe.regular(path)) != tuple(row['signature']):
+            raise Unsafe('recovery metadata changed after validation')
+
+
+def recovery_layout(paths, batch):
     directory(paths, batch)
-    # Known recovery layout only. Preserve RECOVERY, manifests, records, evidence.
-    for n in ('RECOVERY.md', 'current.json'):
-        safe.regular(batch / n)
+    # Do not silently fall back from partially present/unsafe legacy metadata.
+    if any(os.path.lexists(batch / n) for n in ('RECOVERY.md', 'current.json')):
+        metadata = []
+        for name in ('RECOVERY.md', 'current.json'):
+            path = batch / name
+            metadata.append({'path': str(path), 'signature': list(safe.signature(safe.regular(path)))})
+        return {'format': 'legacy', 'metadata': metadata}
+    scope, scope_row = recovery_json(paths, batch / 'state-scope.json')
+    record, record_row = recovery_json(paths, batch / 'release-records/current.json')
+    fields = {'policy', 'roots', 'excluded', 'includedRegularBytes', 'releaseBinding',
+              'archiveSha256', 'archiveBytes', 'includedCount', 'selectionSha256'}
+    if set(scope) != fields or scope.get('policy') != 'runtime-essential-state-v2':
+        raise Unsafe('unknown state scope schema/policy')
+    for name in ('archiveBytes', 'includedCount', 'includedRegularBytes'):
+        if type(scope[name]) is not int or scope[name] <= 0:
+            raise Unsafe('invalid state scope size/count')
+    for name in ('archiveSha256', 'selectionSha256'):
+        if not isinstance(scope[name], str) or not re.fullmatch('[0-9a-f]{64}', scope[name]):
+            raise Unsafe('invalid state scope digest')
+    roots = scope['roots']
+    if (not isinstance(roots, list) or not roots or len(roots) > 64
+            or any(not isinstance(p, str) or not p.startswith('/') or str(Path(p)) != p
+                   or '..' in Path(p).parts for p in roots)
+            or len(set(roots)) != len(roots) or not isinstance(scope['excluded'], list)):
+        raise Unsafe('invalid state scope roots/exclusions')
+    # These are declarations only: never traverse roots or archived absolute paths.
+    for row in scope['excluded']:
+        if not isinstance(row, dict) or not isinstance(row.get('path'), str) or not isinstance(row.get('reason'), str):
+            raise Unsafe('invalid state scope exclusion')
+    binding = scope['releaseBinding']
+    if not isinstance(binding, dict) or not binding:
+        raise Unsafe('missing state scope release binding')
+    if set(binding) == {'commit'}:
+        if not isinstance(binding['commit'], str) or not re.fullmatch('[0-9a-f]{40}|[0-9a-f]{64}', binding['commit']):
+            raise Unsafe('invalid state scope commit binding')
+        # Installer binds the INCOMING commit, whereas the copied current record
+        # describes the PREVIOUS release. They must not be equated.
+    elif set(binding) == {'currentRecordSha256'}:
+        if binding['currentRecordSha256'] != safe.digest(batch / 'release-records/current.json', record_row['signature']):
+            raise Unsafe('state scope current record binding mismatch')
+    else:
+        raise Unsafe('unknown state scope release binding')
+    if (record.get('unit') != 'cyf-agent-runtime-v1@unified.service'
+            or record.get('status') not in ('verified-active', 'installed-channel-verification-pending')
+            or not re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+', str(record.get('runtimeVersion', '')))
+            or not re.fullmatch('[0-9a-f]{40}|[0-9a-f]{64}', str(record.get('sourceCommit', '')))):
+        raise Unsafe('unrecognized previous Runtime release record')
+    layout = {'format': 'runtime-essential-state-v2', 'metadata': [scope_row, record_row]}
+    archives = [batch / n for n in ('state.tar', 'state.tar.gz') if os.path.lexists(batch / n)]
+    if len(archives) == 1:
+        archive = archives[0]
+        st = safe.regular(archive)
+        if st.st_size != scope['archiveBytes'] or st.st_dev != paths.root_device or safe.mounted(paths, archive):
+            raise Unsafe('state archive size/device mismatch')
+        digest = safe.digest(archive, safe.signature(st))
+        if digest != scope['archiveSha256'] or safe.signature(archive.lstat()) != safe.signature(st):
+            raise Unsafe('state archive digest/identity mismatch')
+        layout['archive'] = {'path': str(archive), 'signature': list(safe.signature(st)), 'sha256': digest}
+    elif not archives:
+        # Resume only our own durable, metadata-bound intent after the already
+        # validated state archive was unlinked. Never infer success from absence.
+        intent = retirement_record(batch)
+        proof = intent.get('layoutProof', {})
+        archive = proof.get('archive', {}) if isinstance(proof, dict) else {}
+        sig = archive.get('signature', [])
+        if (intent.get('status') != 'retiring-not-a-complete-recovery'
+                or intent.get('policy') != 'newest-two-plus-current-pin'
+                or intent.get('batchIdentity') != list(safe.signature(batch.lstat())[:2])
+                or proof.get('format') != layout['format'] or proof.get('metadata') != layout['metadata']
+                or archive.get('path') not in [str(batch / n) for n in ('state.tar', 'state.tar.gz')]
+                or not isinstance(sig, list) or len(sig) != 9 or sig[6] != scope['archiveBytes']
+                or archive.get('sha256') != scope['archiveSha256']):
+            raise Unsafe('missing state archive without validated retirement intent')
+        layout['archive'] = archive
+    else:
+        raise Unsafe('ambiguous state archives')
+    validate_layout(paths, layout)
+    return layout
+
+
+def collect_batch(paths, batch, layout=None):
+    directory(paths, batch)
+    layout = recovery_layout(paths, batch) if layout is None else layout
+    validate_layout(paths, layout)
     selected = [batch / n for n in PAYLOADS if os.path.lexists(batch / n)]
     old = batch / 'old-program'
     if os.path.lexists(old):
@@ -189,7 +308,8 @@ def collect(paths, usage, now=None):
             unretired += 1
             if unretired > 512:
                 raise Unsafe('unretired batch limit exceeded')
-            rows = collect_batch(paths, batch)
+            layout = recovery_layout(paths, batch)
+            rows = collect_batch(paths, batch, layout)
             if rows:
                 # File times, never directory mtime (deletion changes directory mtime).
                 stamp = max(r['signature'][8] / 1e9 for r in rows)
@@ -204,7 +324,7 @@ def collect(paths, usage, now=None):
                         and all(r['signature'][7] / 1e9 <= retirement['payloadStamp'] for r in rows)):
                     stamp = retirement['payloadStamp']
                 batches.append({'batch': str(batch), 'stamp': stamp, 'rows': rows,
-                                'identity': safe.signature(batch.lstat())[:2]})
+                                'identity': safe.signature(batch.lstat())[:2], 'layout': layout})
         except (OSError, Unsafe) as e:
             if unretired > 512:
                 raise Unsafe('unretired batch limit exceeded')
@@ -217,8 +337,9 @@ def collect(paths, usage, now=None):
     protected = {b['batch'] for b in batches[:2]} | {str(pin)}
     # Never prune newer-than-current backup attempts, even beyond newest two.
     pin_stamp = next((b['stamp'] for b in batches if b['batch'] == str(pin)), None)
-    if pin_stamp is None:
-        raise Unsafe('pinned recovery payload is missing')
+    if pin_stamp is None or not any(b['batch'] == str(pin) and b['rows'] and not b.get('unsafe') for b in batches):
+        reason = next((s['reason'] for s in skips if s['batch'] == str(pin)), 'no payload')
+        raise Unsafe('pinned recovery payload is missing or unsafe: ' + reason)
     eligible = []
     for b in batches:
         if b.get('unsafe') or b['batch'] in protected:
@@ -327,12 +448,14 @@ def run(paths, mode, inherited=None):
             directory(paths, batch)
             if safe.signature(batch.lstat())[:2] != tuple(b['identity']):
                 raise Unsafe('backup batch replaced')
+            validate_layout(paths, b['layout'])
             # Durable marker BEFORE first deletion: interrupted runs must not
             # advertise a partially retired archive as a usable recovery point.
             audit({'retirement_intent': str(batch), 'time': time.time()})
             safe.atomic_json(batch / 'PAYLOAD_RETIRED.json', {
                 'status': 'retiring-not-a-complete-recovery', 'time': time.time(),
                 'payloadStamp': b['stamp'], 'batchIdentity': list(b['identity']),
+                'layoutProof': b['layout'],
                 'policy': 'newest-two-plus-current-pin', 'audit': str(paths.audit)})
             remaining = {}
             for row in b['rows']:
@@ -344,6 +467,7 @@ def run(paths, mode, inherited=None):
                     raise Unsafe('backup became active')
                 if read_current(paths)[1] != current_sig:
                     raise Unsafe('current release changed')
+                validate_layout(paths, b['layout'])
                 chunk = b['rows'][i:i + 100]
                 if any(tuple(r['signature'][:2]) in fresh.inodes for r in chunk):
                     raise Unsafe('payload inode became active')
@@ -357,6 +481,7 @@ def run(paths, mode, inherited=None):
                         done.append(row['path'])
                 finally:
                     audit({'removed': done})
+            validate_layout(paths, b['layout'])
             safe.atomic_json(batch / 'PAYLOAD_RETIRED.json', {
                 'status': 'retired-not-a-complete-recovery', 'time': time.time(),
                 'policy': 'newest-two-plus-current-pin', 'audit': str(paths.audit)})

@@ -69,6 +69,14 @@
 不要混淆三类：①上述确实范围外或明确保留；②已纳管但因当前/回退绑定、最近两批、24小时、占用/锁、身份/证据不全而保护跳过（例如`state/cyf-build/lease-int5`）；③通用临时及轮转日志已有规则，但仅空闲低于5GiB才触发、清到8GiB，当前不触发。MySQL错误日志、3天binlog与每天两次历史构建输出均已有各自自动策略，不列为无规则盲区。生产身份、授权、会话及运行状态不能因为位于state而视作非业务垃圾。
 
 
+
+### 同日一次性在线整理（17:26—17:28，北京时间）
+
+- 经用户明确授权，对本机 `jia.core_log` 执行 `ALTER TABLE jia.core_log FORCE, ALGORITHM=INPLACE, LOCK=NONE`；显式限定在线算法，避免静默退回阻塞写入的COPY方式。取得本表维护锁，元数据锁等待限定5秒（不限制整个维护耗时），不重启服务、不关闭binlog、不清空表、不删除数据库文件。重建83.102秒，含备份及验证全程156.954秒；执行源码基线 `2b2abf4ec02ae050ad9f1fdc8dc9f05ab049a87f`。
+- 执行前为当前保留的整张表建立single-transaction备份 `retained-core-log.sql.gz`（55,607,945字节），gzip完整性及SHA-256验证通过；未宣称已做隔离恢复演练。备份及恢复说明、SQL、前后数据指纹和实际空间回执保存在 `/home/isp/state/cyf-git-cleanup-20261115/core-log-rebuild-172532/`，私有权限保存，暂不自动删除。恢复必须先隔离核验，禁止直接覆盖生产。
+- 固定 `id <= 7834232` 的952,915条原有记录，重建前后有序逐行SHA-256聚合完全一致；NULL时间记录仍68,465条，期间及完成后新记录继续增长。维护连接退出后两把命名锁均已释放，七天保留事件仍ENABLED、首次运行仍未到期。未执行业务全链回归。
+- 表文件从4,777,312,256字节降到767,557,632字节（约732MiB），按实际分配块释放4,009,951,232字节（约3.73GiB）。扣除备份及同期磁盘活动，根盘净增可用约3.68GiB，已用约47.15GiB，尚未达到45GiB。此次仅一次性整理，不新增定期缩表；七天自动删行策略不变。上节“未重建/未回收”为首次删行时的历史状态，不代表此次整理后的状态。
+
 ## 2026-11-15后续：按用户授权删除教学录屏
 
 用户明确“录屏可以不要了”后，只清理本次教学任务的原始WebM、剪辑/成品MP4、下载补录及失败尝试视频，不删除整批目录。范围为 `/home/isp/state/` 下三个 `cyf-tutorial-recording-20261112{,-batch02,-batch03}`、`cyf-tutorial-download-completion-20261112` 和 `cyf-tutorial-review-20261113`。补录与交付目录的全部关联硬链接已在范围内核齐，无外部硬链接、`.keep`、挂载或视频FD占用；未触碰 `cyf-tutorial-unblock-20261112` 的Runtime包、源码及安装状态。
@@ -76,3 +84,56 @@
 - 删除122个视频路径（88个唯一inode），按唯一inode回收1,372,782,592字节，约1.278GiB；删除后五个限定目录内无上述视频。没有另存视频备份，否则无法兑现丢弃录屏及回收空间的要求。
 - 其余1,241个普通文件逐项SHA-256及身份核验不变：脚本、说明、验收/日志、输入图片、PDF/PPTX/Excel等交付资料和依赖缓存保留。没有删除其他业务数据或改变后续录屏的自动保留策略。
 - 私有删除清单、删除前摘要和验收在 `/home/isp/state/cyf-git-cleanup-20261115/tutorial-video-removal/{plan.json,deleted.jsonl,FINAL.json}`。根盘可用实测增加约1.277GiB（差额含同期系统写入）；当次已用约48.92GiB、可用9.95GiB，仍未达到45GiB目标。
+
+## 2026-11-15后续：优先清理项（用户授权）
+
+- 限定删除197份API历史压缩日志、2份MySQL历史压缩日志、2份2026-10-27堆转储、废弃录屏专用FFmpeg二进制，以及已停用JUnit/4套测试fixture的数据库载荷。只删除已核验的819个普通文件及空数据目录；保留未压缩/活动日志、测试mysql.log、脚本及其他证据，不清空整个state/tmp/log目录。复用现有完整FD/cwd/exe/mmap快照，逐文件核验身份、摘要及占用，并检查.keep、挂载、链接与进程引用。
+- 系统包缓存经 `dnf --cacheonly clean all` 成功清理（63项），不连接仓库、不卸载软件；不包含Gradle/NPM/node_modules/Node编译缓存。以上合计按分配块回收981,770,240字节，根盘净增可用976,707,584字节（约0.91GiB），当次已用约46.24GiB；未达到45GiB。
+- 删除清单与摘要、系统缓存回执及空间/保护验证在 `/home/isp/state/cyf-git-cleanup-20261115/priority-cleanup-173534/`。819个删除路径复核均已不存在；两个审计回滚/整理备份SHA-256与原回执一致，clear_disk清理审计压缩日志全部保留，数据库新日志继续产生且七天事件仍ENABLED。
+- 历史构建中间输出另外调用已安装 `rebuildable_cache_cleanup.py clean --artifacts-only`，沿原host/build/release锁、当前/回退及24h/最近两批保护执行；本节上述回收量**未计入该后台阶段**。最终输出见同证据目录 `build-output-clean.json`，空文件表示仍未收尾，应查询进程/退出日志而非宣称已完成。其他备份、诊断证据、其他项目和可复用构建缓存未扩清；未新增自动保留规则。
+
+## 剩余清理候选（2026-11-15 17:47北京时间盘点）
+
+本轮仅记录，不新增删除授权。根盘当次已用约46.24GiB，距45GiB尚约1.24GiB；活动任务会继续写入。下表是目录占用/候选上限，**不是全部可以回收，不能把父子目录重复相加**。原始盘点在 `state/cyf-git-cleanup-20261115/priority-cleanup-173534/remaining-inventory.json`（该相对路径基于 `/home/isp/`）。
+
+### 可优先继续筛选（保留必要证据）
+
+| 项目与完整路径 | 当前占用 | 可处理范围/条件 |
+| --- | ---: | --- |
+| `/home/isp/state/cyf-diagnostics` | 647MiB | 筛旧日志、trace、重复诊断输出；含依赖和唯一证据，不能整删 |
+| `/home/isp/state/cyf-host-cleanup` | 240MiB | 压缩大JSON计划、去重复/失败预案；保留必要删除审计，不承诺释放240MiB |
+| `/var/log/journal` | 192MiB | 可另行授权缩短保留/限容量，仅回收可退役的历史journal，活动部分保留 |
+| `/var/tmp` | 135MiB | 逐任务核对旧fixture/临时文件；不整删源码或证据 |
+| `/home/isp/state/cyf-native-skills-20261028` | 506MiB | 筛下载镜像和旧临时工具（此前发现Python源码压缩包约44MiB）；可复用依赖、源码/证据不动 |
+| `/home/isp/state/juyiting-root-cause-20261109` | 149MiB | 筛临时Arthas等诊断工具，保留必要根因证据 |
+| `/home/isp/state/cyf-git-cleanup-20261115` | 351MiB | 含下列两份备份共约248MiB，非备份材料约103MiB亦含清理追溯；只压缩/去重，不整删 |
+
+### 需要先确认绑定、用途或Owner
+
+| 项目 | 当前占用 | 处理前提 |
+| --- | ---: | --- |
+| `/home/isp/state/cyf-tutorial-unblock-20261112/attempt04/package/runtime-1.3.103.tgz` | 280MiB | 核对当前/回退绑定、占用和发布锁，必要证据先保存；所在批次目录共383MiB，不整删 |
+| `/root/.codex` | 约1.01GiB | 历史库约715MiB、日志库约79MiB；含当前/其他会话，须专门核对归属、保留追溯及数据库安全整理，禁止直接rm SQLite/整个目录 |
+| `/home/isp/apps/jdk8` | 357MiB | 排查全部服务与构建引用后再判断，当前不是已确认无用软件 |
+| `/home/isp/pkgs/xray` | 16MiB | 确认旧安装包不再作为恢复输入；不是卸载在用代理 |
+| `/tmp/banyishu-*` | 三个主要目录合计约440MiB，另有小文件 | 属其他项目，由对应Owner确认；CYF清理规则不授权删除 |
+| 两份审计维护备份 | 约195MiB+53MiB | 分别在 `audit-retention-7d/expired-before-20261108T141444975.sql.gz`、`core-log-rebuild-172532/retained-core-log.sql.gz`（均位于上列cyf-git-cleanup目录）；删除会失去恢复副本，目前继续保护，已包含于351MiB不另加 |
+
+### 已纳管待执行 / 明确保留
+
+- 历史API中间输出：上轮计划约79.3MiB，既有后台 `rebuildable_cache_cleanup.py clean --artifacts-only` 仍在执行，未拿到最终结果；最终删除量只认 `priority-cleanup-173534/build-output-clean.json`，不把计划量当回收量。不再启动重复清理、不绕锁。`lease-int5`源码身份缺失等保护仍保留。
+- MySQL binlog：当次约5.89GiB，现有259200秒（3天）自动保留；等待自动到期。提前清理需核对恢复/复制依赖并另授权，不直接rm。
+- `/home/isp/state/cyf-runtime-lease-separation-20261112`约527MiB：活动任务，暂不清。Runtime历史备份、API回退JAR、当前/回退包及生产状态受保护，不能为凑45GiB直接删。
+- Gradle/NPM/Web共享依赖/node_modules/Node编译缓存继续保留；运行中的云效Runner、生产应用、数据库和Git可达历史不当垃圾。
+- 原优先项的旧压缩日志、历史堆转储、废弃录屏FFmpeg和停用测试数据库载荷已清，不重复列为收益。`cyf-test-tmp`余约2.5MiB主要是日志/证据，`clear_disk.log.*.gz`为清理审计，继续保留。
+
+
+## 2026-11-15后续：旧证据压缩与journal回收
+
+- 本次授权继续处理可筛选目录，未扩到Codex活动会话、其他项目、JDK/Xray、Runtime包及维护备份。上一轮构建中间产物已完成：8,410文件、83,189,760字节（79.3MiB），最终回执为 `priority-cleanup-173534/build-output-clean.json`；此前“仍在执行”为当时盘点状态。
+- 对至少48小时未变化、至少512KiB、无占用的旧JSON/JSONL/log/txt文本证据执行相邻gzip归档，共140份，按实际分配块节省474411008字节（452.4MiB）。逐文件验证解压SHA-256与原内容一致后才移除原路径；全部压缩文件再次核验通过。保留源代码、测试输入、可复用构建缓存、权威manifest/receipt/state等控制记录，未知用途工具/包未删。
+- 一次性执行 `journalctl --vacuum-size=100M`，只回收可退役的历史journal，不直接删除活动文件、不改永久保留配置。执行返回码0；前后占用及回收详情见证据目录的journal日志，不承诺含活动文件的总量低于100MiB。
+- 本批净增可用141099008字节（0.131GiB）；完成核验时根盘已用46.528GiB、可用12.338GiB，尚未达到45GiB。实际净值含同期系统写入，不与上一轮回收重复累计。
+- 私有证据路径 `/home/isp/state/cyf-git-cleanup-20261115/evidence-compression-204918/`：`compressed.jsonl`映射旧路径→gzip及原内容SHA-256，`plan.json`保留原身份/权限/时间，`verification.json`是逐文件复核结果，恢复说明为`RECOVERY.md`。历史证据原路径若已压缩，按映射用 `gzip -dc -- 原路径.gz`读取；不把原路径缺失误当成证据字节已丢失。
+
+本次journal回执实际释放128MiB（216MiB→88MiB），与文本压缩合计约580MiB。清理结束的净增可用回执与随后复核不是同一时点：期间其他写入使根盘回升；20:55后的二秒只读观测发现其他gzip进程及MySQL/Codex仍写盘，观测时已用约46.79GiB。该gzip不属于本次Python压缩进程，未对其控制或清理。详见同证据目录`concurrent-write-observation.json`；不把本次文件回收量冒充整盘净下降。
