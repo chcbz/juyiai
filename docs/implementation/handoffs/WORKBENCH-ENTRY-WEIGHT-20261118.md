@@ -57,3 +57,9 @@ Owner 沿用 workbench_entry_weight，Web develop 基线 `075ba6e21adf9848a169a6
 指定 SSH worker 对固定候选运行 9 组文件（页面挂载、名册/本领、导航、返回、技能生命周期与契约）：207 通过，0 失败/跳过；含 Vite 构建诊断与报告回传 22.57 秒，基线同配置构建 16.44 秒。两个版本均用固定切片源码、相同依赖缓存和 Vite 配置输出 manifest，不复制 public、不产发布包。以实际 JuyiHallEntry JS 的静态 imports 闭包、逐文件去重的 JS/CSS gzip level 6 对比：890214 → 865027 B，减少 25187 B。名册、技能管理均不在新入口静态闭包；按顺序首次打开的额外资源分别为 8650 和 18449 B。因此若两个面板都用，总计反而多 1912 B，并非所有访问路径都少流量。未计 HTTP 缓存/请求头，未测真实设备耗时，不与旧版首屏请求口径拼接。
 
 证据 `/home/isp/state/cyf-workbench-roster-20261118/`：`candidate-report.json`、`comparison.json`、两版 `*-manifest.json`、worker 日志和传输回执。存储探针旧目录不存在；首次对照脚本按源文件名找路由不匹配，改按实际 manifest JS 文件定位后成功，未重跑构建。未推送、部署或做线上账号验收。发布前仍须验证旧标签页资源可达或安全恢复；建议先对冷首页、首次进入名册和首次打开管理器做同设备浏览器耗时对照，再决定是否拆地图舞台。
+
+### Web develop 已授权发布（2026-11-18）
+
+GitHub develop 快进 `67bb9367` → `16dea5ebf2e68b1a12533880b3ad50c7a7b7c235`，推后和安装前均回读一致。只发布 Web；版本号沿用 1.16.151，区分本次线上版本请用 commit/tree 和 `workbench-web-20261118-01-web`。指定 SSH worker 用原 LOCAL Web builder 完成必要测试、构建、打包及回传 269.48 秒；435 项中 433 通过、0 失败、2 pending。包 SHA-256 `2e9c9a3738497e36ce930d0628e80120e7016f9f3e7154593334908bbfa2b300`。原安装事务 15.81 秒；624 个安装文件完整性核对，267 个线上入口/JS/CSS HTTP 摘要一致，前代备份保留，API/Runtime 未发布。API 健康 UP、JWKS 200、未认证用户接口 401。
+
+复核旧入口和旧技能管理 JS/CSS 四个 URL，均与前代摘要一致。桌面 Chromium 新会话用测试账号验证登录后冷开概览不请求名册/管理器/原始大 PNG，首开名册不加载管理器，点击有权管理的好汉后能打开技能管理；不提交业务写入、不据此宣称真机性能。首次浏览器脚本等待单一入口超时，按实际可见入口并收起新手引导复验通过。旧资源探针最初使用的 Python 缺系统 CA，改用有系统 CA 的 Python 校验成功，未跳过证书验证。证据 `/home/isp/state/workbench-web-release-20261118/`（`release-01/attempt.json`、`release-01/install.json`、`old-assets-system-ca.log`、`browser-ui-02.json`、`retention-registered.log`）。
