@@ -136,3 +136,7 @@
 本地基线：API `516267bf7b19bfc03581ae580704af9246ffb622`，Web `ca22ac29de657971b12a71f3a99d2d9ecfc67c1c`，Runtime `15483d554a0fd6b01c3413d68c80e5367654a942`；根仓 `ee8ba6ccaf16afe5f3a72ef2a07a594b9a4534ab`。实际读取工作区字节及原文备份见 `evidence/responsibility-boundary-20261028/`；不是远端最新或当前线上核验。
 
 已核对范围：原生执行设计、API resume/commit/成果查询、Web成果发现、Runtime native-model/image runner及新快照函数。不是全仓越界扫描。源码实现尚未按本规格迁移/删除；历史71项复核及局部1项快照测试不能冒充RB-1验收。
+
+## 岗位技能发布附件（2026-11-20）
+
+小型业务调用沿用 JSON。技能发布 ZIP 时，脚本经本轮 Unix socket 分开发送元数据与附件（上限 16 MiB）；Runtime 在受控目录有界接收，以可信执行上下文构造 multipart，不向脚本发放 Runtime 凭证或原始租约。领域 API 校验完整包、摘要、授权及提交前状态。提交状态不明时只查回执，不再次上传。此能力不要求密议或事项议事注册技能专用工具。
