@@ -31,10 +31,10 @@ def need(ok, message):
 def resume(root, peer, tmp):
     app=root/'instance/app'; stage=root/'candidate'; records=app.parent/'release-records'; backup=root/'backup'; task=root/'tx'
     need(root.resolve()==root and root.parent==Path('/home/isp/state/cyf-local-build') and root.name.startswith('rb-joint-'), 'expected isolated worker batch')
-    need(sha(peer)=='6f332d640569cd3aa7872c54c91d18425046eca2e6843e733375a941927a5ce6','fixture source changed')
+    need(sha(peer)=='2b9b0ae0d94457e67d7fe2923046fcb063505b005015375c1304d33f9babb6cf','fixture source changed')
     ctl=root/'control'; ctl.mkdir(mode=0o700); app.mkdir(parents=True); records.mkdir(); backup.mkdir(); task.mkdir()
     (app/'donor-fixture').write_text('not admitted'); (records/'current.json').write_text('{}'); lock=ctl/'release.lock'
-    manifest=root/'candidate.manifest.json'; pins=dict(commit='6d152d8697c82b93f542e9e5cdbc30b5198db034',tree='568e897569b482e782fba2bb953c160904241d67',archive_sha='e58c644e175086671a81884fed9020ec360d7ca9f6fc0711a3292cfebb4ab911',manifest_sha='8b014ec9b90850da016b239084b38cf3ad6e81a50725487708ea5fc4c2b02560')
+    manifest=root/'candidate.manifest.json'; pins=dict(commit='0712448010f774f9cdd0413b67bfda8dd3a7e2a3',tree='5742b47afbcda04a8cd45005b793727a4b2da72c',archive_sha='f43638b07dff3695c44b7a1ac2849db9059265b227b356e2378f9af0982a1974',manifest_sha='05877e1f8a64962b7ab13e784a93a4bedc6237ce722dd6c051087c95d076fa11')
     need(sha(manifest)==pins['manifest_sha'], 'candidate manifest changed')
     inbox=tmp/'cutover-inbox'
     def retained(): return {str(p.relative_to(inbox)):sha(p) for p in inbox.rglob('*') if p.is_file()}
