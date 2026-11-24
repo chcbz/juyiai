@@ -52,6 +52,17 @@ class BudgetCoverageTest(unittest.TestCase):
                 if pins:obj['rosterSha256' if name=='observations' else 'observationsSha256']=pins[-1]
                 p=Path(tmp)/name;p.write_text(json.dumps(obj));pins.append(hashlib.sha256(p.read_bytes()).hexdigest());cmd += [str(p),'--'+name+'-sha256',pins[-1]]
             output=subprocess.check_output(cmd);self.assertNotIn(b'sensitive-case',output);self.assertEqual(pins[-1],json.loads(output)['truthSha256']);(Path(tmp)/'truth').write_text('{}');r=subprocess.run(cmd,capture_output=True);self.assertEqual(2,r.returncode);self.assertFalse(r.stdout)
+    def test_bind_published_offer_not_another_scope_price_or_missing_response(self):
+        self.case('observed',['65',None],['NOT_ACCEPTED','NOT_EXECUTED']);self.case('absent',[None],['EVIDENCE_UNAVAILABLE'],None)
+        scope=dict(tenantId='t',clientId='c',ownerJiacn='o'); manifest=dict(format='budget-offer-manifest-v1',observationsSha256=self.h,scope=scope,offers=[dict(quoteId='q0',offerSha256=self.h)])
+        offer=dict(original=dict(taskId='observed',ownerJiacn='o',scope=dict(tenantId='t',clientId='c')),agentId='0',quoteId='q0',wen=65,referenceSha=self.h,featureSha=self.h,groupSha=self.h)
+        join=lambda x:tool.reconcile_offers(self.roster,self.run,manifest,self.h,self.h,lambda pin:x)
+        rows=join(offer)['requests'];self.assertEqual([[self.h,None],[None]],[[c['offerSha256'] for c in r['candidates']] for r in rows]);
+        for patch in (dict(wen=66),dict(referenceSha='b'*64),dict(agentId='1'),dict(original={**offer['original'],'ownerJiacn':'other'})):
+            with self.assertRaises(tool.Invalid):join(dict(offer,**patch))
+        manifest['offers'].append(dict(quoteId='extra',offerSha256='b'*64))
+        with self.assertRaises(tool.Invalid):join(offer)
+
     def wire(self):
         self.case('k',['0'],['MEASURED']);req=self.roster['requests'][0];req.update(requestId='request',idempotencyKeySha256=self.h);self.roster['cutoffAtMs']=30
         data=self.run['results'][0]['data'];data['observedAt']=15

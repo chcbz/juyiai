@@ -150,6 +150,48 @@ def freeze_observations(roster, capture, roster_sha, capture_sha):
     return dict(format='budget-forecast-observations-v1',rosterSha256=roster_sha,results=output)
 
 
+def reconcile_offers(roster, observations, manifest, roster_sha, observations_sha, get_object):
+    """Match Economy's private frozen offers to every priced item; no inferred replies or outcomes."""
+    require(roster['format']=='budget-roster-v1' and observations['format']=='budget-forecast-observations-v1'
+            and manifest['format']=='budget-offer-manifest-v1' and sha(roster_sha) and sha(observations_sha)
+            and observations['rosterSha256']==roster_sha and manifest['observationsSha256']==observations_sha, 'unbound offer inputs')
+    scope=manifest['scope']; require(all(text(scope[k]) for k in ('tenantId','clientId','ownerJiacn')), 'missing private scope')
+    candidates=rows_by(manifest['offers'],'quoteId'); reqs=rows_by(roster['requests'],'intentRef'); seen=rows_by(observations['results'],'intentRef')
+    require(reqs and reqs.keys()==seen.keys() and sha(roster['referenceSha256']), 'incomplete observation population')
+    output=[]; used={}
+    for key,req in reqs.items():
+        ids=req['agentIds'];require(isinstance(ids,list) and ids and all(map(text,ids)) and len(set(ids))==len(ids), 'invalid roster candidates')
+        reply=seen[key]; status=reply['httpStatus']; data=reply['data']; bound={}
+        if type(status) is int and status==200:
+            require(data['taskId']==req['taskId'] and data['taskVersion']==req['taskVersion'],'wrong observed task')
+            quotes=rows_by(data['quotes'],'agentId');require(quotes.keys()==set(ids),'incomplete observed candidates')
+            for agent,q in quotes.items():
+                if not available(q):continue
+                qid=q['quoteId']; require(qid in candidates, 'missing published offer'); pin=candidates[qid]['offerSha256'];require(sha(pin),'invalid offer pin')
+                if pin not in used:used[pin]=get_object(pin)
+                o=used[pin]; original=o['original'];require(original==dict(taskId=req['taskId'],ownerJiacn=scope['ownerJiacn'],scope={k:scope[k] for k in ('tenantId','clientId')})
+                        and o['agentId']==agent and o['quoteId']==qid and type(o['wen']) is int and str(o['wen'])==q['amount']['amountMinor']
+                        and o['referenceSha']==roster['referenceSha256'] and sha(o['groupSha']) and sha(o['featureSha']), 'offer does not match forecast')
+                bound[agent]=pin
+        else:require(data is None and (status is None or type(status) is int and 400<=status<=599),'invalid absent forecast')
+        output.append(dict(intentRef=key,candidates=[dict(agentId=i,offerSha256=bound.get(i)) for i in ids]))
+    require(len(used)==len(candidates),'unobserved offer in manifest')
+    return dict(format='budget-bound-forecasts-v1',observationsSha256=observations_sha,requests=output)
+
+
+def offers_main(argv):
+    parser=argparse.ArgumentParser(description='Offline private offer join; input hashes must be independently retained.')
+    for name in ('roster','observations','manifest'):
+        parser.add_argument(name,type=Path);parser.add_argument('--'+name+'-sha256',required=True)
+    parser.add_argument('--objects',type=Path,required=True);args=parser.parse_args(argv)
+    try:
+        r,o,m=[load(getattr(args,k),getattr(args,k+'_sha256')) for k in ('roster','observations','manifest')]
+        result=reconcile_offers(r,o,m,args.roster_sha256,args.observations_sha256,lambda pin:load(args.objects/pin,pin));result['manifestSha256']=args.manifest_sha256
+    except (KeyError,ValueError,TypeError,OSError) as e:
+        parser.exit(2,'invalid offer inputs: '+(str(e) if isinstance(e,Invalid) else type(e).__name__)+'\n')
+    print(json.dumps(result,sort_keys=True,allow_nan=False))
+
+
 def freeze_main(argv):
     parser=argparse.ArgumentParser(description='Freeze private forecast observations before opening truth. No network access.')
     for name in ('roster','capture'):
@@ -164,6 +206,8 @@ def freeze_main(argv):
 
 
 def main():
+    if sys.argv[1:2]==['offers']:
+        return offers_main(sys.argv[2:])
     if sys.argv[1:2]==['freeze']:
         return freeze_main(sys.argv[2:])
     parser=argparse.ArgumentParser(description=__doc__)
