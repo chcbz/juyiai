@@ -269,6 +269,8 @@ Web/API复用 `local_release.py`，每次在原固定源码参数上显式追加
 
 4. 本 worker 是 Ubuntu26/uutils，原测试会把 cat/sleep 复制成不同名称后验证原生 inode；用 `build_command(..., runtime_source=..., native_fixtures=[('/usr/bin/gnucat','/usr/lib/cargo/bin/coreutils/cat'),('/usr/bin/gnusleep','/usr/lib/cargo/bin/coreutils/sleep')])`，只在该 systemd mount namespace 绑定 GNU 工具，不改系统命令。原生沙箱需要的 AppArmor profile 仅匹配隔离视图 `/runtime/codex-resources/bwrap` 并授予 userns；配置 `/home/isp/conf/cyf-build/runtime-bwrap.apparmor`，系统链接 `/etc/apparmor.d/cyf-runtime-build-bwrap`。**不关闭全局 AppArmor/userns 限制，不以跳过真实隔离用例替代依赖准备。** 其它主机按实际工具/内核决定，不机械安装该兼容绑定。
 5. `build_command` 的远端期限与 `collect('runtime', ..., timeout=remaining)` 共用600秒。源码/依赖准备另计，不能拆测试与打包续时；`build-result.json`、原 TAP、package manifest、原 tgz、工具/binary/resources SHA均回传，重复源码/payload及 scratch 不回传。包仍是 LOCAL 来源，不伪造 Flow Run。
+针对 11 月 21 日安装事务的故障修订：`runtime-forward-only.patch` 仅适配原件 SHA-256 `384d0ab31a1b311057d9a47794e540e92d0fedfc37cb350ac2a9a38816859fde`，不修改现用安装器，不是独立发布命令。该历史脚本固定了旧候选，不能原样用于新版本。在**隔离副本**核对来源并用 `git apply --check` 后应用；测试 `tests/test_runtime_forward_only_recovery.py` 读取环境变量 `CYF_TEST_RUNTIME_INSTALL_SOURCE` 指定的精确原件，在私有目录测试实际替换/异常分支，不能用另一来源或测试通过代替正式版本绑定、发布锁、排空及接管。停止之后失败只保留原件、失败回执与候选形态，须显式前修，不自行启动旧 reader。该约束不阻止事务外的重启；实际切换仍须保证其他入口不能激活旧版。
+
 6. 构建不是安装授权。按既有 Runtime 发布锁、前代 CAS、固定目录/备份/forward-only 边界发布；若另一 Owner 正发布，告警并等待，不抢锁/降级。已验证上线的**同一源码及全部 portable 字节/模式、原安装清单/依赖和实时通道**均一致时可锁内幂等确认，不重复搬文件、重启、认证迁移或收费回归；保留原安装来源，只新增精确远程验证回执，不把包 SHA 不同但代码相等伪称为同一原包。
 
 实测及失败原始回执见[迁移handoff](../../docs/implementation/handoffs/REMOTE-BUILD-MIGRATION-20261116.md)。本入口不编译 Runtime 专用 Codex 源码补丁，不修改全机 Codex，也不自动部署其他任务最新候选。
