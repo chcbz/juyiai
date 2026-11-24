@@ -459,13 +459,17 @@ B86 优先处理真实目录与认证的重复观察：区分会话、所有者�
 
 - `cyf-rb-1123-d157`，API `bdfa2608fd96ac87c55e1d5be5209f57bc7adab9`，指定 worker 50.535 秒失败。`validateLayering` 的 G1 拦截 Chat 引用另一个域 Agent 的 HTTP 实现类。原结果保留；不豁免 G1、不用全限定名绕开。修订为 Agent API 暴露内部 intake 契约；两个 Controller 各自渲染 HTTP，应答绑定、关联、持久化及提交后结算继续复用原 journal。未形成可发布制品。
 
+- `cyf-rb-1123-d158`，Runtime `f8eaf23760f70ee74c2a75bda0e8549c26e93a00`，指定 worker 111.757 秒，808 通过、10 跳过、0 失败，产物 SHA `0d390919aa28081182f4c8e16acce4a12161d7d37bfe46e1d88012819d78b40a`。后台 usage lane 冷启动从私有源目录发现，运行中登记仅唤醒；沿原 V2 逐条投递，核对租户、客户端、agent、原绑定、封口、证据摘要和 ACK，不构造工作区命令。模拟服务端保留7份回执、首 POST 丢响应、同 receipt GET 后完成，重启移交无重复 POST，错客户端不确认。测试对端为内存夹具，不是实际 MySQL 提交后断网。
+- `cyf-rb-1123-d159`，Runtime `78103d8791afc71b6ab37736ec753c5b6565e1f7`，指定 worker 112.719 秒，808 通过、10 跳过、0 失败，产物 SHA `97c01d691d76b2bf04f3c6df5278d3ebb7077e4a49c8d87c41957e9c2864c6db`。回读发现真实议事此前只写 producer-stopped 水位，不能凭此投递。改为在原 child/egress 停止及排空围栏内落最终清单；固定 CLI 隔离环回实际用例在业务返回后、任何恢复前直接读到原 turn/dispatch 封口。独立投递/移交只读验封；已有 ACK 但封口缺失时不能补造或放行。按来源分别报告本地封口、服务端回执、覆盖率，ACKNOWLEDGED 与 INCOMPLETE 可同时成立。
+- 后续联验：同一条真实议事源的后台 Runtime POST 接到真实认证 API/MySQL，提交完成后丢弃第一次响应；独立事务 GET 同回执，核实一次响应只产生一个账本修订。补重连恢复和容量验证：当前每批复核整个已封来源；若本地复核耗尽投递批时间，大来源可能连续无法发出，不能把8次/3秒网络限额当作已证吞吐。维持默认关闭，不发布或删源。
+
 **D156 起：接收端分批实施；不以设备落盘代替服务端持久回执**
 
 | 批次与责任层 | 交付及验收 | 当前状态 |
 | --- | --- | --- |
 | D156a · Agent 成员归属 | 复用成员唯一键，以任务所有者、原 turn/dispatch、原准入摘要（不是 contextHash）和 captureId 做一次存在性查询；无新表、无回填。原准入写接口不变。 | API 候选 `286f4660870b8124769827b103e8610d0307861d`；指定 worker MySQL 正例及错所有者、错摘要、尾空格别名和空 capture 反例已通过。 |
 | D156b · Chat 接收授权 | 在设备认证事务内组合原发送围栏、单承办、冻结快照和 Agent 成员查询；发送前、换代、替换派发不能收件。`contextSnapshot.facts` 是 hostedWire 从冻结 `factsManifest` 构造的，不能要求数据库 outbox 另存一份 wire。 | 内部授权入口已实现并经 D156b 定向验证；D157r 在开发候选中接入 POST/GET，未部署。 |
-| D157 · API 与 Runtime 交付 | 复用 journal 幂等写及提交后关联；设备后台按议事来源投递。提交成功后模拟断连，GET 须返回原 receipt；不得让回复等待外部回传。 | API 收件入口与 PLAN 重放已验证；设备后台回传及提交后断连联验未完成。核对 Economy 的 `NATIVE_RESPONSE_USAGE`：Runtime 与服务端以同一渠道及 provider response 定义逐响应身份；旧 CHAT STARTED/TERMINAL 另有观测键。两类不能直接相加；需用同一响应回放验证不会重复计价，不能为接入而伪造 workspace execution。 |
+| D157 · API 与 Runtime 交付 | 复用 journal 幂等写及提交后关联；设备后台按议事来源投递。提交成功后模拟断连，GET 须返回原 receipt；不得让回复等待外部回传。 | API 收件入口与 PLAN 重放、设备后台及移交投递分别已验证；实际跨端提交后断连联验未完成。核对 Economy 的 `NATIVE_RESPONSE_USAGE`：Runtime 与服务端以同一渠道及 provider response 定义逐响应身份；旧 CHAT STARTED/TERMINAL 另有观测键。两类不能直接相加；需用同一响应回放验证不会重复计价，不能为接入而伪造 workspace execution。 |
 | 效果验收 · 推荐 / 预算分别判定 | 推荐独立盲标及有负载 P95；预算按整事项留出验证 WAPE、P90 和覆盖率，未核实覆盖、无真值或未获付费授权则报告缺口。 | 不随上述任一批构建通过而通过。 |
 
 **D151 起：议事出口与效果验收的开发计划**
