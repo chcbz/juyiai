@@ -73,8 +73,11 @@ class Group:
         insufficient = 'INSUFFICIENT' in labels.values()
         self.insufficient += insufficient
         high = [person for person, level in rows if level == 'HIGH']
-        recommended = any(level in ('HIGH','MEDIUM') for _, level in rows)
         acceptable = {person for person, label in labels.items() if label == 'ACCEPTABLE'}
+        medium = [person for person, level in rows if level == 'MEDIUM']
+        positive = high + medium
+        correct = sum(p in acceptable for p in positive)
+        recommended = bool(positive)
         def add(key, num, den):
             self.rates[key].add(family, num, den)
         add('highPrecision', sum(p in acceptable for p in high), len(high))
