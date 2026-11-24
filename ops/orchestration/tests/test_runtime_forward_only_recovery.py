@@ -52,7 +52,7 @@ class ForwardOnlyTransactionTest(unittest.TestCase):
             self.assertEqual(args, ('systemctl','start','fixture')); starts.append((app/'reader').read_bytes())
         def validate(args, **kwargs):
             self.assertEqual(fault,'after'); self.assertEqual(args[:2], ['bash',str(app/'runtime/validate.sh')]); raise OSError('validation fault')
-        ns=dict(os=os,hashlib=hashlib,stat=stat,json=json,time=time,shutil=shutil,subprocess=types.SimpleNamespace(run=validate),
+        ns=dict(os=os,hashlib=hashlib,stat=stat,json=json,time=time,shutil=shutil,subprocess=types.SimpleNamespace(run=validate,STDOUT=subprocess.STDOUT),
                 APP=app,STAGE=stage,BACK=backup,RECORDS=records,TASK=task,CONFIG=root/'config',UNIT='fixture',env={},
                 started=time.monotonic(),stopped=True,start_attempted=False,old_saved=False,report={'rollbackPolicy':'forward-only'},
                 admin=admin,prop=lambda k: '0' if not starts else '1')
