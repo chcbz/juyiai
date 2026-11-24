@@ -46,3 +46,24 @@ def protect_instance(instance, skeleton, *, device, inode, parent_ns):
             raise ValueError('instance view mismatch')
     finally:
         os.close(fd)
+
+
+def activate_unified(instance, skeleton, *, authority, config, parent_ns):
+    """Run from a dedicated worker/manager child; success replaces this PID.
+
+    The release protocol must stop/drain the prior process before another swap.
+    No lock reacquisition: the installer may already hold it across service start.
+    """
+    from runtime_start_admission import verify
+    instance, config = Path(instance), Path(config)
+    permit = authority.read_allowed()
+    protect_instance(instance, skeleton, device=permit['device'], inode=permit['inode'], parent_ns=parent_ns)
+    app = instance / 'app'
+    verify(app, instance / 'release-records', **permit['pins'])
+    os.chdir(app)
+    env = dict(os.environ, PYTHONDONTWRITEBYTECODE='1')
+    subprocess.run(['/bin/bash', app / 'runtime/validate.sh', '--root', app, '--config', config], env=env, check=True)
+    if authority.read_allowed() != permit:
+        raise ValueError('activation generation changed during validation')
+    node = app / 'node/bin/node'
+    os.execve(node, [node, app / 'runtime/agent-runtime.mjs', 'run', '--config', config], env)
