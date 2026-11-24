@@ -278,9 +278,12 @@ class NativeLocalApiTest(unittest.TestCase):
     @unittest.skipUnless(os.environ.get('CYF_CUTOVER_API_RESULT_SHA'), 'requires fixed LOCAL package and isolated worker')
     def test_fixed_api_bootjar_config_failure_retains_exact_candidate(self):
         # Real JAR/installer/JVM; one deliberate Spring config failure, NOT evidence of healthy boot.
-        import shutil, sys
         self.assertNotEqual(os.stat('/proc/self/ns/net').st_ino,os.stat('/proc/1/ns/net').st_ino)
         self.assertNotEqual(os.stat('/proc/self/ns/mnt').st_ino,os.stat('/proc/1/ns/mnt').st_ino)
+        self._fixed_api_bootjar_failure()
+
+    def _fixed_api_bootjar_failure(self):
+        import shutil, sys
         self.assertNotIn(subprocess.check_output(['stat','-f','-c','%T',self.root],text=True).strip(),('tmpfs','ramfs'))
         result_path=Path(os.environ['CYF_CUTOVER_API_RESULT']); raw=result_path.read_bytes()
         self.assertEqual(sha(raw),os.environ['CYF_CUTOVER_API_RESULT_SHA']); result=json.loads(raw)
@@ -303,6 +306,59 @@ class NativeLocalApiTest(unittest.TestCase):
         self.assertEqual(record['receipt_sha256'],pkg['receiptSha256']); self.assertEqual(record['source'],pkg['identity'])
         boot=(self.root/'boot.log').read_text();self.assertIn('APPLICATION FAILED TO START',boot);self.assertIn('missing-cutover-required.properties',boot)
         self.assertEqual((self.root/'calls').read_text().splitlines().count('start'),1); self.assertTrue((self.root/'stopped').exists())
+
+        return env,pkg
+
+    @unittest.skipUnless(os.environ.get('CYF_CUTOVER_RECOVERY')=='isolated', 'requires offline full-service namespace and fixed LOCAL package')
+    def test_fixed_api_repair_reaches_real_health_after_failure(self):
+        # Parent binds only test inputs and private service dependencies, never a live install tree.
+        import signal, socket, sys, urllib.request
+        for ns in ('pid','mnt','net'):
+            self.assertNotEqual(os.stat('/proc/self/ns/'+ns).st_ino, int(os.environ['CYF_FIXTURE_PARENT_'+ns.upper()]))
+        self.assertFalse(Path('/home/isp/conf').exists()); self.assertFalse(Path('/home/isp/hosts').exists())
+        self.assertEqual(subprocess.check_output(['ip','route','show','default']),b'')
+        env,pkg=self._fixed_api_bootjar_failure()
+        before=self.record(); approval=self.approval_path.read_bytes()
+        with self.assertRaises(ConnectionRefusedError):socket.create_connection(('127.0.0.1',18442),1)
+        # Changing the isolated service configuration is the repair. The package, descriptor,
+        # target, durable failed record, database and test namespace are NOT replaced.
+        kit=self.root/'bin/cyf-api-kit';src=kit.read_text();start=src.index('start)');end=src.index(';;',start)+2
+        src=src[:start]+'''start) python3 "$root/fixture-jvm.py" start "$root" || exit 1; rm -f "$root/stopped" ;;
+'''+src[end:];src=src.replace('echo HEALTH=UP','exec python3 "$root/fixture-jvm.py" health "$root"');kit.write_text(src)
+        (self.root/'fixture-jvm.py').write_text('''import json, os, pathlib, subprocess, sys, time, urllib.request
+root=pathlib.Path(sys.argv[2]); endpoint='http://127.0.0.1:18442/actuator/health'
+def healthy():
+    try:
+        with urllib.request.urlopen(endpoint,timeout=2) as r:
+            status=json.load(r)['status'];return r.status==200 and (status.get('code') if isinstance(status,dict) else status)=='UP'
+    except (ValueError,KeyError,OSError):return False
+if sys.argv[1]=='health':sys.exit(0 if healthy() else 1)
+with (root/'repair-boot.log').open('wb') as log:
+    p=subprocess.Popen([os.environ['JAVA_HOME']+'/bin/java','-Xmx512m','-Djava.io.tmpdir=/tmp','-jar','cyf-api-kit.jar','--spring.config.additional-location=file:/work/fixture.properties','--spring.profiles.active=rb-isolated'],cwd=root/'service',stdin=subprocess.DEVNULL,stdout=log,stderr=log,close_fds=True)
+(root/'repair.pid').write_text(str(p.pid));deadline=time.monotonic()+75
+while p.poll() is None and time.monotonic()<deadline:
+    if healthy():sys.exit(0)
+    time.sleep(.25)
+if p.poll() is None:p.terminate();p.wait(timeout=10)
+sys.exit(1)
+''')
+        try:
+            again=subprocess.run([str(self.installer)],env=env,capture_output=True,text=True,timeout=110)
+            self.assertEqual(again.returncode,0,again.stderr[-900:]); after=self.record()
+            self.assertEqual(after['status'],'installed'); self.assertEqual(after['rollback_policy'],'forward-only')
+            for key in ('source','binding_sha256','receipt_sha256','candidate_sha256','previous_sha256'):
+                self.assertEqual(before[key],after[key],key)
+            self.assertEqual(json.loads(approval)['expected_previous_sha256'],sha(self.f.old))
+            with self.f.target.open('rb') as f:self.assertEqual(hashlib.file_digest(f,'sha256').hexdigest(),pkg['applicationJarSha256'])
+            with urllib.request.urlopen('http://127.0.0.1:18442/actuator/health',timeout=3) as r:
+                status=json.load(r)['status']; self.assertEqual(r.status,200);self.assertEqual(status.get('code') if isinstance(status,dict) else status,'UP')
+            self.assertEqual((self.root/'calls').read_text().splitlines().count('start'),2)
+        finally:
+            pid=self.root/'repair.pid'
+            if pid.exists():
+                n=int(pid.read_text());proc=Path('/proc')/str(n)
+                if (proc/'cwd').exists() and (proc/'cwd').samefile(self.root/'service') and (proc/'exe').samefile(Path(env['JAVA_HOME'])/'bin/java'):
+                    os.kill(n,signal.SIGTERM)
 
     def test_forward_only_policy_is_part_of_immutable_binding(self):
         original=self.m.native_binding(self.approval)
