@@ -151,6 +151,9 @@ D155 开发回读：在首次独占该采集目录后、写 PLAN 前，Runtime �
 
 **下一批的接口约束**：Chat 专属逐次 POST、按 receipt 读回及按 record 查当前修订均走 Runtime 独占认证路径；授权规则相同，不允许浏览器或旧聚合接口代行。复用 V2 证据合同和 Economy journal，不以 `executionId`/`runId` 字段名伪造 workspace 行。首版议事 PLAN 仅接受原冻结快照的 SHA、`CHAT_SOURCE_UNVERIFIED_V1`、无原生 dispatchGroup；不得允许来源自己报告一个完整覆盖策略即被纳入报价。旧 `CHAT_EXECUTION_EVIDENCE` 保留聚合观测，逐响应另按渠道与 provider response 关联。会话归属、幂等、事务提交后结算、完整性和线上效果分别验收。
 
+D157r 开发接口：`POST /internal/agent/chat/dispatches/{dispatch}/turns/{turn}/contexts/{context}/captures/{capture}/usage`，其中 context 为冻结 `sha256:` 后的 64 位小写摘要；同路径附加 `/receipts/{id}` 或 `/records/{id}` 分别 GET。按既有 V2 请求信封、Idempotency-Key 及 ACK 格式，不添加授权主体字段；Chat 将原 turn/dispatch 映射至 V2 采集的 executionId/runId，不创建工作区执行表行。Runtime 认证拦截器只放行准确方法和路径，查询串不作为范围输入。合法 PLAN 的持久回执不代表该事项已完整采集，更不代表扣费；旧聚合端点不代收上述请求。详情及验证边界见实施记录 D157/D157r。
+
+
 
 **待评审变更：多阶段事项怎样分组（不是现行报价策略）**
 
