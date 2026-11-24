@@ -462,7 +462,8 @@ B86 优先处理真实目录与认证的重复观察：区分会话、所有者�
 - `cyf-rb-1123-d158`，Runtime `f8eaf23760f70ee74c2a75bda0e8549c26e93a00`，指定 worker 111.757 秒，808 通过、10 跳过、0 失败，产物 SHA `0d390919aa28081182f4c8e16acce4a12161d7d37bfe46e1d88012819d78b40a`。后台 usage lane 冷启动从私有源目录发现，运行中登记仅唤醒；沿原 V2 逐条投递，核对租户、客户端、agent、原绑定、封口、证据摘要和 ACK，不构造工作区命令。模拟服务端保留7份回执、首 POST 丢响应、同 receipt GET 后完成，重启移交无重复 POST，错客户端不确认。测试对端为内存夹具，不是实际 MySQL 提交后断网。
 - `cyf-rb-1123-d159`，Runtime `78103d8791afc71b6ab37736ec753c5b6565e1f7`，指定 worker 112.719 秒，808 通过、10 跳过、0 失败，产物 SHA `97c01d691d76b2bf04f3c6df5278d3ebb7077e4a49c8d87c41957e9c2864c6db`。回读发现真实议事此前只写 producer-stopped 水位，不能凭此投递。改为在原 child/egress 停止及排空围栏内落最终清单；固定 CLI 隔离环回实际用例在业务返回后、任何恢复前直接读到原 turn/dispatch 封口。独立投递/移交只读验封；已有 ACK 但封口缺失时不能补造或放行。按来源分别报告本地封口、服务端回执、覆盖率，ACKNOWLEDGED 与 INCOMPLETE 可同时成立。
 - `cyf-rb-1123-d160`，Runtime `2c601dffddfd120cc60b8a91c42b28c5712c316d`，指定 worker 111.416 秒，809 通过、10 跳过、0 失败；包 SHA `4140bd478b55f8b21eea6779fab3d50bf8b84757f121a1b872cbd61b879c77e6`，未安装。议事本地验封不消耗网络尝试的 3 秒；POST 与不确定后同 receipt GET 共用 8 次和网络时间预算。单调时钟夹具分别推进本地时间、失败传输、成功传输，验证扣减；不是大目录实测。本地全量复核成本仍存在，不能据此承诺吞吐或 P95。
-- 下一批复用已有 `MeteredPeerMySqlTest` 的 HTTP 丢回执台，不将现有工作区样本或模拟议事成员当作议事鉴权。用已提交的原议事派发、设备会话及成员驱动 Runtime 后台 POST；RESPONSE 提交后丢答，独立 GET 读同 receipt，核一下游账本仅一修订。换代不越权。随后分别验证多来源公平性和大目录的磁盘/时间开销；默认关闭，不发布或删源。
+- `cyf-rb-1123-d161`，API `71eb8b48224ce25eca95d8e40540378bba56b707`，指定worker 251.938秒，469项JUnit通过，0失败/错误/跳过，分层与fresh bootJar通过。仅开发验证，未打交付包或安装；worker JAR SHA `c8c34f8f3b268b3cc78f0a57f61c4b4007c56d4ecac1e8a522ed7a11d30607da`。议事使用真实临时设备会话、已提交的原派发/SENT/归属和成员、无工作区执行。Runtime 通过正式议事收件与投递路径 POST 七份证据；RESPONSE 已提交后关闭环回 HTTP，不返回字节，独立 GET 原 receipt；重启投递对象后复核无需再 POST。MySQL 最终七份回执、一个 attempt、一个 revision，缺用量为 PENDING_USAGE、成本 NULL，覆盖 INCOMPLETE。替换执行者拒绝404，撤销安装拒绝401。派发为隔离库固定输入，模型响应为夹具；不是生产端到端或真实报价样本。
+- D161 Runtime 测试对端 `0cd4c6b0a045c8470d147773916df3c91ef03edc`，与本批 API 同次运行。下一批复核**换代后的可恢复性**：签发同安装的新 generation，旧凭证失效、新会话不能代读旧来源；须区分安全拒绝与可恢复投递，先验证再决定是否需要新的受控恢复协议。保留原件，默认不开放能力。多来源公平性和大目录磁盘/耗时另测。
 
 **D156 起：接收端分批实施；不以设备落盘代替服务端持久回执**
 
@@ -470,7 +471,7 @@ B86 优先处理真实目录与认证的重复观察：区分会话、所有者�
 | --- | --- | --- |
 | D156a · Agent 成员归属 | 复用成员唯一键，以任务所有者、原 turn/dispatch、原准入摘要（不是 contextHash）和 captureId 做一次存在性查询；无新表、无回填。原准入写接口不变。 | API 候选 `286f4660870b8124769827b103e8610d0307861d`；指定 worker MySQL 正例及错所有者、错摘要、尾空格别名和空 capture 反例已通过。 |
 | D156b · Chat 接收授权 | 在设备认证事务内组合原发送围栏、单承办、冻结快照和 Agent 成员查询；发送前、换代、替换派发不能收件。`contextSnapshot.facts` 是 hostedWire 从冻结 `factsManifest` 构造的，不能要求数据库 outbox 另存一份 wire。 | 内部授权入口已实现并经 D156b 定向验证；D157r 在开发候选中接入 POST/GET，未部署。 |
-| D157 · API 与 Runtime 交付 | 复用 journal 幂等写及提交后关联；设备后台按议事来源投递。提交成功后模拟断连，GET 须返回原 receipt；不得让回复等待外部回传。 | API 收件入口与 PLAN 重放、设备后台及移交投递分别已验证；实际跨端提交后断连联验未完成。核对 Economy 的 `NATIVE_RESPONSE_USAGE`：Runtime 与服务端以同一渠道及 provider response 定义逐响应身份；旧 CHAT STARTED/TERMINAL 另有观测键。两类不能直接相加；需用同一响应回放验证不会重复计价，不能为接入而伪造 workspace execution。 |
+| D157 · API 与 Runtime 交付 | 复用 journal 幂等写及提交后关联；设备后台按议事来源投递。提交成功后模拟断连，GET 须返回原 receipt；不得让回复等待外部回传。 | API 收件入口与 PLAN 重放、设备后台及移交投递分别已验证；D161 已验证原会话下实际跨端提交后断连及回读，非换代恢复。核对 Economy 的 `NATIVE_RESPONSE_USAGE`：Runtime 与服务端以同一渠道及 provider response 定义逐响应身份；旧 CHAT STARTED/TERMINAL 另有观测键。两类不能直接相加；需用同一响应回放验证不会重复计价，不能为接入而伪造 workspace execution。 |
 | 效果验收 · 推荐 / 预算分别判定 | 推荐独立盲标及有负载 P95；预算按整事项留出验证 WAPE、P90 和覆盖率，未核实覆盖、无真值或未获付费授权则报告缺口。 | 不随上述任一批构建通过而通过。 |
 
 **D151 起：议事出口与效果验收的开发计划**
