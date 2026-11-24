@@ -451,6 +451,9 @@ B86 优先处理真实目录与认证的重复观察：区分会话、所有者�
 
 - `cyf-rb-1123-d154r`，Runtime `b753631aba8442955de3a3a089a7bd9c2454e0f0`，指定 worker 112.421 秒，818 项中 808 通过、10 跳过、0 失败；制品 SHA `e9462d971e6b3a323825b423e55ee6d1fc57ee6ff97a0a199cea4dd4b429ce57`。用既有托管授权解析器配置 DIRECT_TEXT，固定 CLI、bwrap 网络隔离、原 inbox、逐调用出口和 HTTPS 对端均实际运行。正式 JSON 收件后可执行首轮；本地 TLS 对端观察到一次 `/custom/responses`、原请求 PENDING 已落盘、临时密钥和采集控制字段未发给对端。回复与输入12/输出3的夹具报告分别写入各自记录；重启关闭为 SEALED_INCOMPLETE，不重跑。业务输入、工具目录、认证会话围栏、密钥、响应和发送确认均为测试条件，不是生产注册、真实计费用量或独立误差样本；未发布。未要求 LOCAL_FILE 设备改变权限。
 
+- `cyf-rb-1123-d155`，Runtime `f1d9f8a8a8082979fcaa266f5c74b00b6ac4322d`，指定 worker 112.409 秒，808 通过、10 跳过、0 失败；SHA `6c159d91a97f97d0cee825de3bbc8864747376050f3ce9db67b05ea5ae278c9e`。初次独占采集时在原私有来源目录写一次最小归属绑定，落盘在 PLAN 之前，不复制提示词、回复或完整业务归档。通过原 inbox 的归档和去重清理实际退役测试数据；验证仅余去重标记时能重核、两者均过期后首次关闭及重复关闭均可、绑定篡改拒绝、无业务记录不能重开引擎。D154r 的实际 CLI 用例在本候选再次通过。没有实现 API 持久 ACK 或批准清理，未启用/部署。
+- 后续接收端核对：已有 `ChatUsageCostRecorder` 是 STARTED/TERMINAL 观测，不是逐调用 ACK；原生提交端的 `NativeCaptureAuthority` 依赖真实 workspace execution，不能借用其入口伪造议事执行。应沿 `withAuthenticatedDevice` 在事务内复验原派发、成员 captureId 及快照，再复用 Economy journal 与既有提交后结算边界；收件与样本资格分开。专项验证重复 POST、提交后断连 GET 同回执、换设备和缺 final 均不得重复计价或抬升完整性。
+
 **D151 起：议事出口与效果验收的开发计划**
 
 | 责任方 | 交付顺序与可验证的完成条件 |
