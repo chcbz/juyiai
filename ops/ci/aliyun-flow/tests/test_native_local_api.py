@@ -275,6 +275,35 @@ class NativeLocalApiTest(unittest.TestCase):
         self.assertEqual(self.f.target.read_bytes(),self.jar)
         self.assertEqual(self.record()['status'],'installed')
 
+    @unittest.skipUnless(os.environ.get('CYF_CUTOVER_API_RESULT_SHA'), 'requires fixed LOCAL package and isolated worker')
+    def test_fixed_api_bootjar_config_failure_retains_exact_candidate(self):
+        # Real JAR/installer/JVM; one deliberate Spring config failure, NOT evidence of healthy boot.
+        import shutil, sys
+        self.assertNotEqual(os.stat('/proc/self/ns/net').st_ino,os.stat('/proc/1/ns/net').st_ino)
+        self.assertNotEqual(os.stat('/proc/self/ns/mnt').st_ino,os.stat('/proc/1/ns/mnt').st_ino)
+        self.assertNotIn(subprocess.check_output(['stat','-f','-c','%T',self.root],text=True).strip(),('tmpfs','ramfs'))
+        result_path=Path(os.environ['CYF_CUTOVER_API_RESULT']); raw=result_path.read_bytes()
+        self.assertEqual(sha(raw),os.environ['CYF_CUTOVER_API_RESULT_SHA']); result=json.loads(raw)
+        self.assertEqual(result['status'],'BUILT'); pkg=result['package']; self.assertIs(pkg['productionAuthorized'],False)
+        archive=result_path.parent/'package/api.tar'; self.assertEqual(archive,Path(pkg['package']['path']))
+        shutil.copyfile(archive,self.package); self.package.chmod(0o600)
+        # Use the unmodified pinned coordinator (including real OpenCV pin) for actual release bytes.
+        shutil.copyfile(HOST/'cyf-api-flow-deploy',self.host/'cyf-api-flow-deploy')
+        with mock.patch.object(sys,'path',[str(old.ROOT/'ops/orchestration')]+sys.path):
+            from local_release import api_install_descriptor
+        self.approval=api_install_descriptor(dict(pkg,package=dict(pkg['package'],path=str(self.package))),sha(self.f.old),'forward-only')
+        self.write_approval(); env=dict(self.f.env)
+        for k in ('CYF_API_FLOW_TEST_TARGET_AVAILABLE_BYTES','CYF_API_FLOW_TEST_BACKUP_AVAILABLE_BYTES'):env.pop(k,None)
+        kit=self.root/'bin/cyf-api-kit'; entry='start) rm -f "$root/stopped" ;;'; source=kit.read_text(); self.assertEqual(source.count(entry),1)
+        kit.write_text(source.replace(entry,'start) cd "$root/service" || exit 2; exec "$JAVA_HOME/bin/java" -Xmx256m -jar cyf-api-kit.jar --spring.config.location=file:./missing-cutover-required.properties > "$root/boot.log" 2>&1 ;;'))
+        res=subprocess.run([str(self.installer)],env=env,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,timeout=120)
+        self.assertNotEqual(res.returncode,0); record=self.record(); self.assertEqual(record['status'],'failed')
+        self.assertEqual(record['recovery'],'forward_only_candidate_retained'); self.assertEqual(record['rollback_policy'],'forward-only')
+        with self.f.target.open('rb') as f:self.assertEqual(hashlib.file_digest(f,'sha256').hexdigest(),pkg['applicationJarSha256'])
+        self.assertEqual(record['receipt_sha256'],pkg['receiptSha256']); self.assertEqual(record['source'],pkg['identity'])
+        boot=(self.root/'boot.log').read_text();self.assertIn('APPLICATION FAILED TO START',boot);self.assertIn('missing-cutover-required.properties',boot)
+        self.assertEqual((self.root/'calls').read_text().splitlines().count('start'),1); self.assertTrue((self.root/'stopped').exists())
+
     def test_forward_only_policy_is_part_of_immutable_binding(self):
         original=self.m.native_binding(self.approval)
         self.approval['rollback_policy']='forward-only'
