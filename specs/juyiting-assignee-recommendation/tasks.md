@@ -388,6 +388,7 @@ B86 优先处理真实目录与认证的重复观察：区分会话、所有者�
 - `cyf-rb-1123-d131` 首次196.387秒，领取返回空，未通过：同分区中更早的历史训练事项使用另一份夹具需求来源。修订先用其原需求读取器实际领取历史行，在其租约内领取新点将的议事意图；不按目标ID跳过队首，不修改产品队列。
 - `cyf-rb-1123-d131r`，API `ee0027b3c5e6a4f5e827951e01631761d11ac8da`，原控制端观察进程143；已复核原worker仍在运行，未重启构建。同一worker最终BUILT/0，262.509秒，自plan输出至续传校验完成上界280.944秒。457项JUnit通过/0失败、错误或跳过；分层通过、fresh JAR SHA `5759f61d5cafe2beb52888ce24ede46b43b93fbce0e8658b9701c52b78fc24e8`。正式点将的同事项 DELIBERATE 交接与有效租约无重复领取通过，不表示 Chat 已接收或发布。
 - `cyf-rb-1123-d132`，API `c7ddf2753366d1d86065f80f7e6640da0be24d9c`，指定worker 251.758秒，457项JUnit通过，0失败/错误/跳过，分层与fresh bootJar通过。仅开发验证，未打交付包或安装；worker JAR SHA `c6a3c85ceeadf25b86dc8d86611913b63ee682a26112a6bc0b5ab8dbf3bacf83`。真实 Chat 悬赏绑定、重复绑定、Owner 隔离及正式会话 ACL 同次接入原生首动作，未验证 CHAT 轮次。
+- `cyf-rb-1123-d133`，API `f8018d0e4c5400bcb0ba4f5edc4a98f43f24f5f1`，指定worker 237.812秒，457项JUnit通过，0失败/错误/跳过，分层与fresh bootJar通过。仅开发验证，未打交付包或安装；worker JAR SHA `ed7f15fb14346e019faa4d46e0c4cf4e09cf31d97a3b9f40ac67d6163738c5f9`。隔离 MySQL 同一事项的正式 ChatBootstrap→TypedDiscussion→Deliberation 准入、真实授权、初始消息、轮次与可领取派发记录。重放无第二条，尚无执行步骤。实测 readyChat=1、registeredTaskMembers=0：原样本集合漏记该议事，属于预算完整性问题，不是实际多扣或少扣。任务展示DTO/设备可用能力和资料目录为夹具；未调用议事上游。
 
 **实测预算的参考路由维护（开发候选，不是生产配置变更）**
 
