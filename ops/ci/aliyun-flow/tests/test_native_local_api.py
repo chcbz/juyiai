@@ -217,6 +217,31 @@ class NativeLocalApiTest(unittest.TestCase):
         self.assertEqual(self.record()['status'],'failed');self.assertEqual(self.record()['recovery'],'restored_healthy')
         self.assertFalse((self.root/'stopped').exists())
 
+    def test_web_verification_failure_after_forward_only_api_install(self):
+        import sys
+        from test_web_native_local import NativeWebTransactionTest
+        site = NativeWebTransactionTest(); self.addCleanup(site.doCleanups); site.setUp()
+        with mock.patch.object(sys, 'path', [str(old.ROOT/'ops/orchestration')] + sys.path):
+            from local_release import api_install_descriptor
+        p = dict(identity=self.identity, package=self.approval['package'], receiptSha256=self.approval['receipt_sha256'],
+                 applicationJarSha256=self.approval['jar_sha256'])
+        self.approval = api_install_descriptor(p, self.approval['expected_previous_sha256'], 'forward-only')
+        self.write_approval(); result = self.install(); self.assertEqual(result.returncode, 0, result.stderr)
+        record = self.record(); self.assertEqual((record['status'], record['rollback_policy']), ('installed', 'forward-only'))
+        calls = (self.root/'calls').read_bytes()
+        def assert_api_unchanged():
+            self.assertEqual(self.record(), record); self.assertEqual(self.f.target.read_bytes(), self.jar)
+            self.assertEqual((self.root/'calls').read_bytes(), calls)
+        def public_mismatch(*args):
+            self.assertEqual((site.site/'index.html').read_bytes(), site.data['index.html'])
+            assert_api_unchanged(); raise SystemExit('injected public index mismatch')
+        site.online.side_effect = public_mismatch
+        with self.assertRaisesRegex(SystemExit, 'injected public index mismatch'): site.install()
+        site.assert_old(); self.assertFalse((site.site/'assets/lazy.js').exists()); assert_api_unchanged()
+        site.online.side_effect = None
+        repaired = site.install(); self.assertEqual(repaired['status'], 'online_verified')
+        self.assertEqual((site.site/'index.html').read_bytes(), site.data['index.html']); assert_api_unchanged()
+
     def test_forward_only_start_failure_never_restores_incompatible_jar(self):
         # Exercise the release controller's real descriptor, not a manually patched installer fixture.
         import sys
