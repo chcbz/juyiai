@@ -90,3 +90,5 @@ python3.11 ops/performance/recommendation_holdout.py labels.json run.json \
 - B49/E02：额外分别给出 `mediumPrecision`、`positivePrecision`（HIGH/MEDIUM）和 `suitableRatedTaskCoverage`（确有适配候选的任务里，至少一人被正确正向评级的比例）。各 caseTag 独立给出相同统计，标签可重叠，不合并相加。Top3 命中但只给正确候选 UNKNOWN 时，不计入正确正向评级覆盖。这些是诊断量，不降低原 HIGH precision / Hit@3 目标。
 
 - `FROZEN_API_RANKING_VERSION` 在留出运行前从固定候选及其实际加载的策略独立核对并保存，不从待评 `run.json` 回填。即使整批响应都一致地返回了另一版本（例如未加载配置而退回基础 RRF），也拒绝为原策略出具报告。无策略基线试验须明确固定基础版本。
+
+- `byResponseState` 单列 READY、NO_MATCH、NO_CANDIDATES 与 DEGRADED（仅出现的组）；特别检查人工判有可承办人但 API 返回 NO_MATCH 的任务，不把空名册并入。运行须保留原 `degradedReasons`；降级无原因或正常响应附降级原因的矛盾输入不能评分。

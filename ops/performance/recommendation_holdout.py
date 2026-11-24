@@ -114,7 +114,7 @@ def evaluate(labels, run, labels_sha):
         cases[key] = c; tasks.add(c['taskId'])
     holdout = {k for k,c in cases.items() if c['partition']=='HOLDOUT'}
     require(holdout, 'no holdout')
-    total, groups, seen = Group(), defaultdict(Group), set()
+    total, groups, states, seen = Group(), defaultdict(Group), defaultdict(Group), set()
     tags = {tag:Group() for tag in CASE_TAGS}
     for entry in run['results']:
         key = entry['caseId']; require(key in holdout and key not in seen, 'unexpected or duplicate result'); seen.add(key)
@@ -129,7 +129,10 @@ def evaluate(labels, run, labels_sha):
                     'UNAVAILABLE':'DEGRADED','LEXICAL_ONLY':'DEGRADED'}
         require(mode in expected and (mode=='NOT_NEEDED')==(not rows) and result['state']==expected[mode], 'inconsistent retrieval state')
         require(mode!='UNAVAILABLE' or all(level=='UNKNOWN' for _,level in rows), 'unavailable retrieval cannot rate candidates')
-        for group in (total,groups[mode],*(tags[tag] for tag in c['caseTags'])):
+        reasons = result.get('degradedReasons')
+        require(isinstance(reasons,list) and all(token(r) for r in reasons)
+                and bool(reasons)==(result['state']=='DEGRADED'), 'inconsistent degradation disclosure')
+        for group in (total,groups[mode],states[result['state']],*(tags[tag] for tag in c['caseTags'])):
             group.add(c['familyId'], c['candidates'], rows, mode)
     require(seen == holdout, 'missing holdout result; do not score a partial run')
     strata = {t:sum(t in cases[k]['caseTags'] for k in holdout) for t in CASE_TAGS}
@@ -137,7 +140,7 @@ def evaluate(labels, run, labels_sha):
                 format='recommendation-evaluation-v1', labelsSha256=labels_sha,
                 configurationSha256=run['configurationSha256'],rankingVersion=run['rankingVersion'],
                 ciMethod='two-sided Hoeffding; independent families, conditional fixed weights; marginal 95%',
-                overall=total.report(), byCaseTag={tag:g.report() for tag,g in tags.items()}, byRetrievalMode={m:g.report() for m,g in sorted(groups.items())})
+                overall=total.report(), byResponseState={s:g.report() for s,g in sorted(states.items())}, byCaseTag={tag:g.report() for tag,g in tags.items()}, byRetrievalMode={m:g.report() for m,g in sorted(groups.items())})
 
 
 def main():

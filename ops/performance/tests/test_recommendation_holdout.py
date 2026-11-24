@@ -19,7 +19,7 @@ class HoldoutTest(unittest.TestCase):
         self.labels['cases'].append(dict(caseId=key,taskId=key,taskVersion='2',familyId=family or key,
             partition='HOLDOUT',caseTags=[],factsSha256='a'*64,candidates=dict(zip(agents,judgements))))
         self.run['results'].append(dict(caseId=key,factsSha256='a'*64,data=dict(taskId=key,taskVersion='2',rankingVersion='rrf-v1',state=state,
-            retrievalMode=mode,candidateSetComplete=True,recommendations=[dict(agent=dict(agentId=p),recommendationLevel=l) for p,l in zip(agents,levels)])))
+            retrievalMode=mode,degradedReasons=(["QUERY_VECTOR_UNAVAILABLE"] if state=="DEGRADED" else []),candidateSetComplete=True,recommendations=[dict(agent=dict(agentId=p),recommendationLevel=l) for p,l in zip(agents,levels)])))
 
     def score(self):return evaluator.evaluate(self.labels,self.run,'0'*64)
 
@@ -58,6 +58,26 @@ class HoldoutTest(unittest.TestCase):
         self.assertEqual(0,partial['mediumPrecision']['value']);self.assertEqual(0,partial['suitableRatedTaskCoverage']['value'])
         self.assertEqual(partial,report['byCaseTag']['NEGATED_OR_CONDITIONAL']);self.assertEqual(2,overall['tasks'])
         self.assertIsNone(report['byCaseTag']['PARAPHRASE']['positivePrecision']['value'])
+
+    def test_no_match_is_not_conditioned_away_and_empty_roster_is_separate(self):
+        self.case('ready',['ACCEPTABLE'],['HIGH'],'HYBRID','READY')
+        self.case('miss',['ACCEPTABLE'],['UNKNOWN'],'HYBRID','NO_MATCH')
+        self.case('empty',[],[],'NOT_NEEDED','NO_CANDIDATES')
+        states=self.score()['byResponseState']
+        self.assertEqual({'READY','NO_MATCH','NO_CANDIDATES'},set(states))
+        self.assertEqual(0,states['NO_MATCH']['suitableRatedTaskCoverage']['value'])
+        self.assertEqual(1,states['NO_MATCH']['hitAt3']['value'])
+        self.assertIsNone(states['NO_CANDIDATES']['hitAt3']['value'])
+        self.assertEqual(.5,self.score()['overall']['suitableRatedTaskCoverage']['value'])
+
+    def test_cannot_score_a_response_that_hides_or_invents_degradation(self):
+        self.case('degraded',['ACCEPTABLE'],['MEDIUM'],'LEXICAL_ONLY','DEGRADED')
+        row=self.run['results'][0]['data']
+        for wrong in (None,[],['  '],'failed'):
+            row['degradedReasons']=wrong
+            with self.assertRaisesRegex(evaluator.Invalid,'disclosure'):self.score()
+        row.update(state='READY',retrievalMode='HYBRID',degradedReasons=['QUERY_VECTOR_UNAVAILABLE'])
+        with self.assertRaisesRegex(evaluator.Invalid,'disclosure'):self.score()
 
     def test_split_contamination_rejected(self):
         self.case('a',[],[],'NOT_NEEDED','NO_CANDIDATES','family');self.case('b',[],[],'NOT_NEEDED','NO_CANDIDATES','family')
