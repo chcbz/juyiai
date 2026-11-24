@@ -449,6 +449,8 @@ B86 优先处理真实目录与认证的重复观察：区分会话、所有者�
 
 - `cyf-rb-1123-d154`，Runtime `9d3fa7d6148a090e6238f2df151e7469e21bbb02`，指定 worker 109.553 秒失败：新联验在领取后复核原指纹时拒绝，尚未启动 CLI。测试直接传入含 `payload:undefined` 的内存对象；JSON 落盘会省略该字段，和原入站 JSON 报文的语义不同。保留失败，修正用例通过正式 `normalizeInboundMessage` 读取 JSON，不更改收件指纹或启动保护。
 
+- `cyf-rb-1123-d154r`，Runtime `b753631aba8442955de3a3a089a7bd9c2454e0f0`，指定 worker 112.421 秒，818 项中 808 通过、10 跳过、0 失败；制品 SHA `e9462d971e6b3a323825b423e55ee6d1fc57ee6ff97a0a199cea4dd4b429ce57`。用既有托管授权解析器配置 DIRECT_TEXT，固定 CLI、bwrap 网络隔离、原 inbox、逐调用出口和 HTTPS 对端均实际运行。正式 JSON 收件后可执行首轮；本地 TLS 对端观察到一次 `/custom/responses`、原请求 PENDING 已落盘、临时密钥和采集控制字段未发给对端。回复与输入12/输出3的夹具报告分别写入各自记录；重启关闭为 SEALED_INCOMPLETE，不重跑。业务输入、工具目录、认证会话围栏、密钥、响应和发送确认均为测试条件，不是生产注册、真实计费用量或独立误差样本；未发布。未要求 LOCAL_FILE 设备改变权限。
+
 **D151 起：议事出口与效果验收的开发计划**
 
 | 责任方 | 交付顺序与可验证的完成条件 |
