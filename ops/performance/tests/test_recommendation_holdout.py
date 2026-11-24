@@ -48,6 +48,17 @@ class HoldoutTest(unittest.TestCase):
         for c in self.labels['cases']:c['familyId']=c['caseId']
         self.assertLess(shared[0],self.score()['overall']['highPrecision']['ci95'][0])
 
+    def test_partial_and_conditional_rank_hits_do_not_hide_wrong_positive_ratings(self):
+        self.case('partial',['INSUFFICIENT','ACCEPTABLE'],['MEDIUM','UNKNOWN'],'HYBRID','READY')
+        self.labels['cases'][-1]['caseTags']=['NEGATED_OR_CONDITIONAL','PARTIAL_CAPABILITY']
+        self.case('match',['ACCEPTABLE'],['HIGH'],'HYBRID','READY')
+        report=self.score(); overall=report['overall']; partial=report['byCaseTag']['PARTIAL_CAPABILITY']
+        self.assertEqual(1,overall['hitAt3']['value']);self.assertEqual(.5,overall['suitableRatedTaskCoverage']['value'])
+        self.assertEqual(1,overall['highPrecision']['value']);self.assertEqual(.5,overall['positivePrecision']['value'])
+        self.assertEqual(0,partial['mediumPrecision']['value']);self.assertEqual(0,partial['suitableRatedTaskCoverage']['value'])
+        self.assertEqual(partial,report['byCaseTag']['NEGATED_OR_CONDITIONAL']);self.assertEqual(2,overall['tasks'])
+        self.assertIsNone(report['byCaseTag']['PARAPHRASE']['positivePrecision']['value'])
+
     def test_split_contamination_rejected(self):
         self.case('a',[],[],'NOT_NEEDED','NO_CANDIDATES','family');self.case('b',[],[],'NOT_NEEDED','NO_CANDIDATES','family')
         self.labels['cases'][0]['partition']='CALIBRATION'

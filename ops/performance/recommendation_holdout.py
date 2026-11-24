@@ -64,7 +64,7 @@ class Rate:
 class Group:
     def __init__(self):
         self.cases = self.candidates = self.insufficient = 0
-        self.rates = {k: Rate() for k in ('highPrecision','hitAt3','noMatchFalsePositive',
+        self.rates = {k: Rate() for k in ('highPrecision','mediumPrecision','positivePrecision','suitableRatedTaskCoverage','hitAt3','noMatchFalsePositive',
                                            'unknownCandidateRate','recommendedTaskRate','degradedTaskRate')}
 
     def add(self, family, labels, rows, mode):
@@ -78,7 +78,10 @@ class Group:
         def add(key, num, den):
             self.rates[key].add(family, num, den)
         add('highPrecision', sum(p in acceptable for p in high), len(high))
+        add('mediumPrecision', sum(p in acceptable for p in medium), len(medium))
+        add('positivePrecision', correct, len(positive))
         if acceptable:
+            add('suitableRatedTaskCoverage', correct > 0, 1)
             add('hitAt3', any(p in acceptable for p, _ in rows[:3]), 1)
         elif not insufficient and rows:  # No candidates is reported separately, not a trivially correct rejection.
             add('noMatchFalsePositive', recommended, 1)
@@ -109,6 +112,7 @@ def evaluate(labels, run, labels_sha):
     holdout = {k for k,c in cases.items() if c['partition']=='HOLDOUT'}
     require(holdout, 'no holdout')
     total, groups, seen = Group(), defaultdict(Group), set()
+    tags = {tag:Group() for tag in CASE_TAGS}
     for entry in run['results']:
         key = entry['caseId']; require(key in holdout and key not in seen, 'unexpected or duplicate result'); seen.add(key)
         c, result = cases[key], entry['data']
@@ -122,7 +126,7 @@ def evaluate(labels, run, labels_sha):
                     'UNAVAILABLE':'DEGRADED','LEXICAL_ONLY':'DEGRADED'}
         require(mode in expected and (mode=='NOT_NEEDED')==(not rows) and result['state']==expected[mode], 'inconsistent retrieval state')
         require(mode!='UNAVAILABLE' or all(level=='UNKNOWN' for _,level in rows), 'unavailable retrieval cannot rate candidates')
-        for group in (total,groups[mode]):
+        for group in (total,groups[mode],*(tags[tag] for tag in c['caseTags'])):
             group.add(c['familyId'], c['candidates'], rows, mode)
     require(seen == holdout, 'missing holdout result; do not score a partial run')
     strata = {t:sum(t in cases[k]['caseTags'] for k in holdout) for t in CASE_TAGS}
@@ -130,7 +134,7 @@ def evaluate(labels, run, labels_sha):
                 format='recommendation-evaluation-v1', labelsSha256=labels_sha,
                 configurationSha256=run['configurationSha256'],rankingVersion=run['rankingVersion'],
                 ciMethod='two-sided Hoeffding; independent families, conditional fixed weights; marginal 95%',
-                overall=total.report(), byRetrievalMode={m:g.report() for m,g in sorted(groups.items())})
+                overall=total.report(), byCaseTag={tag:g.report() for tag,g in tags.items()}, byRetrievalMode={m:g.report() for m,g in sorted(groups.items())})
 
 
 def main():
