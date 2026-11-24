@@ -436,6 +436,7 @@ B86 优先处理真实目录与认证的重复观察：区分会话、所有者�
 - `cyf-rb-1123-d148`，Runtime `6dc39082365c1e1d29ac76b52362003fe1bd1c24`，108.285 秒失败：环回 HTTPS 已返回 200，测试未等待采集在途写入就读 REQUEST 修订 2，文件尚不存在。原失败不改写；改用实际采集 drain 后核验，不加等待秒数，不把响应完成等同落盘。
 - `cyf-rb-1123-d148r`，Runtime `a86f4ea8f11933bfcca6da1c1b94171988808f14`；指定 worker 110.546 秒，804 通过、10 跳过、0 失败，未安装。SHA `70d7fcf2bf2d3c5ce129d6b93c87a2ae65a63378e0e3fc0e2cb4158e8b2baa77`。真实本地 HTTP→TLS 及文件持久化：转发前 PENDING 已落盘，客户端收到响应后等在途写入完成再核对逐响应报告（输入 5、输出 2，均为夹具）。原收件记录重启后重复关闭幂等，结果仍是来源未覆盖；进程/命名空间归属为夹具，未调用真实模型。带采集声明的普通及旧回退路径都不能静默直连，声明不进入模型上下文。
 - `cyf-rb-1123-d149`，API `7f93d9d0053c6f7212560ff931dcecf93733ba6b`，指定worker 306.114秒，467项JUnit通过，0失败/错误/跳过，分层与fresh bootJar通过。仅开发验证，未打交付包或安装；worker JAR SHA `2959bd6d22b0ddbe19b0075b9b279dbd8b0bb2f67def9ee87ded6a99dc105c6f`。原 typed bootstrap 准入事务内，支持声明和测试开关同时满足时，Agent 冻结成员 captureId，Chat 草稿使用同一 ID，关开关后原请求重放不新增。无适配声明不产生采集事实；回滚无成员/派发，原默认关闭路线仍可执行。声明来自受控注册夹具，未启用生产。
+- `cyf-rb-1123-d150`，API `f45cfd81aec9ad94d1f9318b2a6bf5c9c42c34e6`，指定worker 273.085秒，467项JUnit通过，0失败/错误/跳过，分层与fresh bootJar通过。仅开发验证，未打交付包或安装；worker JAR SHA `ece592ec6d8da6d9801306fd89e65e5f66bbdcc5a4d0f0f0e14533fb464ac148`。仅为同代会话第一条请求登记首轮采集，防止授给已有前序的 DELTA。用正式 API 领取并完成 BOOTSTRAP 冻结，取 hostedWire 的原始帧；在隔离事务回滚后，固定 Runtime a86f4ea8 经正式解码、收件、领取、采集和重启关闭，captureId/turn/dispatch 一致，零模型调用仍为 SEALED_INCOMPLETE。未发生产网、未登记真实计费用量。
   此批 306.114 秒，超过 API 300 秒目标 6.114 秒、未触及 600 秒上限：Gradle 281.667 秒、等待构建锁 0 秒、72 项缓存复用；其余含编排/回传，未据此判定为网关延迟。
 
 **实测预算的参考路由维护（开发候选，不是生产配置变更）**
