@@ -323,6 +323,7 @@ B86 优先处理真实目录与认证的重复观察：区分会话、所有者�
 
 - `cyf-rb-1123-d106`，API `2f6e5f0a3d2885420bbdd0eba202034d7ae631fe`。指定 worker 的 SSH 密钥交换在首次 findmnt 前被远端关闭（255）；未运行 Gradle，不算测试失败或通过。后续同候选重试前已通过同主机 SSH/磁盘检查。
 - `cyf-rb-1123-d106r`，API `2f6e5f0a3d2885420bbdd0eba202034d7ae631fe`，指定worker 270.618秒，455项JUnit通过，0失败/错误/跳过，分层与fresh bootJar通过。仅开发验证，未打交付包或安装；worker JAR SHA `c6ec8917ad74ecbb76e6898d2de1bec593cecd5f38c075ebd76ef17c33de7a22`。Java 认证会话夹具与固定 D105 Runtime Node codec 双向交换了真实协议字节（测量值为夹具）。核对冻结意图、回执相关性、字段白名单；事务内、跨提供者和未注册不发探针。不证明真实认证网络、真实路由定价或可执行报价。
+- `cyf-rb-1123-d107`，API `9d6fe21147e71f5461005b4fe85cb0f14f65b68d`，指定worker 256.737秒，455项JUnit通过，0失败/错误/跳过，分层与fresh bootJar通过。仅开发验证，未打交付包或安装；worker JAR SHA `592d293edce049a44a7b987cecd7bbd7d1715718a3028c6853a7facc4d4929f8`。Agent在同一事项根读取当前需求/材料及授权候选，按128个准确绑定一批读已冻结意图；无网络、无报价写入。MySQL验证重复候选、未授权候选、错误版本及材料脱链，旧意图仍存在但不再是当前结果。未实测108人延迟。核对AgentTaskCreateDTO/AgentServiceImpl.create与ChatActionExecutionService：普通创建没有输出模式或固定首动作，实际原生动作依赖确认后的grant；不能从空技能要求、候选能力或后来动作制造事前决策。在接业务入口前须明确哪类任务原本就能承诺执行策略，或补充派发契约并使后续执行遵守同一承诺。
 
 **后续开发顺序与验收（按责任方，并行准备数据，不等于发布批准）**
 
