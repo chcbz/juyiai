@@ -313,6 +313,31 @@ class NativeLocalApiTest(unittest.TestCase):
 
     @unittest.skipUnless(os.environ.get('CYF_CUTOVER_RECOVERY')=='isolated', 'requires offline full-service namespace and fixed LOCAL package')
     def test_fixed_api_repair_reaches_real_health_after_failure(self):
+        self._exercise_fixed_api_repair()
+
+    @unittest.skipUnless(os.environ.get('CYF_CUTOVER_PREISSUED_SESSION')=='stdin' and os.environ.get('CYF_CUTOVER_RECOVERY')=='isolated','requires an original live test subject and isolated API repair')
+    def test_original_runtime_session_authenticates_after_real_api_repair(self):
+        # Parent enrolled and issued this identity on a real API before stopping it.
+        # Only a private pipe carries the proof; never store it or print request headers.
+        import base64, http.client, sys
+        wire=json.loads(sys.stdin.buffer.readline(8192));self.assertEqual(wire['sessionGeneration'],'1')
+        def check_channel(generation,expected):
+            nonce=base64.b64encode(os.urandom(16)).decode();conn=http.client.HTTPConnection('127.0.0.1',18442,timeout=5)
+            try:
+                conn.request('GET','/ws/agent/channel',headers={'Connection':'Upgrade','Upgrade':'websocket',
+                    'Sec-WebSocket-Version':'13','Sec-WebSocket-Key':nonce,'Authorization':'AgentRuntime '+wire['sessionToken'],
+                    'X-Agent-Id':wire['canonicalAgentId'],'X-Agent-Installation-Id':wire['runtimeInstallationId'],
+                    'X-Agent-Host-Id':wire['hostId'],'X-Agent-Runtime-Id':wire['runtimeInstanceId'],'X-Agent-Session-Generation':generation})
+                response=conn.getresponse();self.assertEqual(response.status,expected)
+                if expected==101:
+                    self.assertEqual(response.getheader('Sec-WebSocket-Accept'),base64.b64encode(hashlib.sha1((nonce+'258EAFA5-E914-47DA-95CA-C5AB0DC85B11').encode()).digest()).decode())
+                else:self.assertEqual(json.load(response)['code'],'AGENT_RUNTIME_UNAUTHENTICATED')
+            finally:conn.close()
+        def verify():
+            check_channel('2',401);check_channel('1',101)
+        self._exercise_fixed_api_repair(verify)
+
+    def _exercise_fixed_api_repair(self, verify_recovered=None):
         # Parent binds only test inputs and private service dependencies, never a live install tree.
         import signal, socket, sys, urllib.request
         for ns in ('pid','mnt','net'):
@@ -355,6 +380,7 @@ sys.exit(1)
             with urllib.request.urlopen('http://127.0.0.1:18442/actuator/health',timeout=3) as r:
                 status=json.load(r)['status']; self.assertEqual(r.status,200);self.assertEqual(status.get('code') if isinstance(status,dict) else status,'UP')
             self.assertEqual((self.root/'calls').read_text().splitlines().count('start'),2)
+            if verify_recovered is not None:verify_recovered()
         finally:
             pid=self.root/'repair.pid'
             if pid.exists():
