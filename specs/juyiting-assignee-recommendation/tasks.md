@@ -319,6 +319,7 @@ B86 优先处理真实目录与认证的重复观察：区分会话、所有者�
 - `cyf-rb-1123-d103`，API `c2dc9ff0d3a92e9580e4b63dbbb78db0a95e78bb`，指定worker 226.161秒，449项JUnit通过，0失败/错误/跳过，分层与fresh bootJar通过。仅开发验证，未打交付包或安装；worker JAR SHA `c903e9a431b7b515d41a4508bdfdbc01d0b26b2c2f53c55eb6faecfccf22e7b7`。新增备案/评审单向终态迁移，防止标志恢复令旧准备重新有效。隔离MySQL实际观测报价先锁而撤回等待，同事务存65文后撤回提交、旧价保留且再次准备不可用；独立验证撤回评审/退役备案再尝试改回及正式用量投影修订均使旧准备失效。经济目录201条交错ID及单源尾部的四页精确对照为模拟分页，不是SQL吞吐实测。未发布或用真实账单。
 - `cyf-rb-1123-d104`，API `f3103f4f93a69d7215464def53e1a0da081142cf`，指定 worker 223.721 秒，失败。新增断言读取隔离夹具未建的 `agent_personal_workspace_execution`，无法证明冻结意图不触发派发。保留原日志；D104r 安装正式 v1_11 执行表脚本，保留原断言及全组选例，不将失败批次算作通过。
 - `cyf-rb-1123-d104r`，API `f4df40cf683a6187c7c803a5f74cbfc14ee67cbe`，指定worker 238.344秒，453项JUnit通过，0失败/错误/跳过，分层与fresh bootJar通过。仅开发验证，未打交付包或安装；worker JAR SHA `dc66b6681fc70128a0f8a5b6c0bf79385043621ea3b4d606af35da232d44fd77`。受限 TASK 初始本地原生意图可在原任务锁下固定：同时核实现行任务版本、需求、材料、候选身份/绑定/政策。重复原意图幂等，变更输出、过期绑定、材料撤销均拒绝，事务回滚不留记录。Chat实际派发和准备共用输出定义，ARTIFACTS命令保持旧字节语义，比较视图显式无数据schema；不新增执行/报价。仅为显式已选动作的内部生产者入口；开放事项不默认选择，尚未有点将前产品调用方/Runtime认证回执和参考路由绑定。
+- `cyf-rb-1123-d105`，Runtime `26807ae7383686757b8d1676cd1a00edcc2ca1aa`，指定worker 108.995秒，810项：800通过、10跳过、0失败。新增runtime.task.configuration.probe → runtime.task.configuration.measured，API预期在报价事务以外发出冻结意图SHA、准确会话和outputs；Runtime只读已测本地原生组，无权启动任务。接收须校验当前会话、requestId/correlationId、意图及显式许可路由，不单靠摘要认定价格。工作机Runtime套件实跑新传输用例（替身比较器）：跨主体/缺字段/过代/混入命令不进入测量，空测量不出组，回包不带路径；未验证Java收发、真实部署或真实供应商。 包SHA256 `e6293a272bdfab3fed16d413399516f100dbeeeea965b5d9cffe5cd82352be79`，未安装。
 
 **后续开发顺序与验收（未完成，不是发布批准）**
 
