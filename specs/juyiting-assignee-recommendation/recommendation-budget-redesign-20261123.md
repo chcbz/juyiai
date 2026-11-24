@@ -153,6 +153,8 @@ D155 开发回读：在首次独占该采集目录后、写 PLAN 前，Runtime �
 
 D157r 开发接口：`POST /internal/agent/chat/dispatches/{dispatch}/turns/{turn}/contexts/{context}/captures/{capture}/usage`，其中 context 为冻结 `sha256:` 后的 64 位小写摘要；同路径附加 `/receipts/{id}` 或 `/records/{id}` 分别 GET。按既有 V2 请求信封、Idempotency-Key 及 ACK 格式，不添加授权主体字段；Chat 将原 turn/dispatch 映射至 V2 采集的 executionId/runId，不创建工作区执行表行。Runtime 认证拦截器只放行准确方法和路径，查询串不作为范围输入。合法 PLAN 的持久回执不代表该事项已完整采集，更不代表扣费；旧聚合端点不代收上述请求。详情及验证边界见实施记录 D157/D157r。
 
+D158–159 开发回读：议事持有原 child 与出口的 writer 在停止、排空后写最终清单；不在用户回复路径等待 HTTP。已有后台 usage lane 提交封口后的证据，停止移交从同一私有源目录重新发现，复核原件或过期后的精简绑定。读取方不能伪造停止围栏；没有封口、错误归属或缺少逐记录回执时保持待传，不把旧 STARTED/TERMINAL 传完视作议事来源传完。已封、已收到逐条持久回执、覆盖完整是三个不同事实；当前纯文本议事即使全部 ACK 仍可为 INCOMPLETE。本批不清理来源，不授予新会话代传权限；真实跨端提交后掉线与大来源复核耗时另验。
+
 
 
 **待评审变更：多阶段事项怎样分组（不是现行报价策略）**
