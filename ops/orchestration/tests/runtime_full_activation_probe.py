@@ -1,4 +1,4 @@
-"""Isolated D179 full-program startup. Requires worker-prepared, digest-bound public dependencies.
+"""Isolated full-program startup using independently fixed source and archive pins. Requires worker-prepared, digest-bound public dependencies.
 
 Run only in a dedicated worker mount namespace and new ordinary-disk batch; never
 point this at an operator instance. Real API and credentials are not inputs.
@@ -27,13 +27,13 @@ def need(ok, why):
     if not ok: raise RuntimeError(why)
 
 
-def run(base, tools, pkg, src, deps, node):
+def run(base, tools, pkg, src, deps, node, expected):
     need(os.stat('/proc/self/ns/mnt').st_ino != os.stat('/proc/1/ns/mnt').st_ino, 'private worker mount namespace required')
     base.mkdir(mode=0o700); apps = base/'apps'; apps.mkdir(); instance = apps/'unified'; instance.mkdir(); app = instance/'app'; app.mkdir()
     records = instance/'release-records'; records.mkdir(); ctl = base/'control'; ctl.mkdir(); skeleton = base/'view'; (skeleton/'unified').mkdir(parents=True)
     build = json.loads((pkg.parent/'build-result.json').read_bytes()); archive = pkg/'runtime-code-1.3.118.tgz'
-    need(build['artifactSha256'] == sha(archive) == 'e58c644e175086671a81884fed9020ec360d7ca9f6fc0711a3292cfebb4ab911' and
-         build['commit'] == '6d152d8697c82b93f542e9e5cdbc30b5198db034' and build['tree'] == '568e897569b482e782fba2bb953c160904241d67', 'wrong fixed build')
+    need(build['status']=='PACKAGED_NOT_INSTALLED' and
+         (build['commit'],build['tree'],build['artifactSha256']) == expected and sha(archive)==expected[2], 'wrong fixed build')
     subprocess.run(['tar','-xzpf',archive,'-C',app],check=True); bridge = app/'codex-bridge'
     need(sha(bridge/'package-lock.json') == deps.name and (bridge/'package-lock.json').read_bytes()==(deps/'package-lock.json').read_bytes(), 'JS lock mismatch')
     (app/'node/bin').mkdir(parents=True); localnode = app/'node/bin/node'
@@ -90,4 +90,12 @@ if __name__=='__main__':
     if sys.argv[1]=='child':
         base, config=map(Path,sys.argv[2:4]); ctl=base/'control'
         activate_unified(base/'apps/unified',base/'view',authority=ActivationPin(ctl,ctl/'release.lock'),config=config,parent_ns=tuple(map(int,sys.argv[4:])))
-    else: run(*map(Path,sys.argv[1:]))
+    else:
+        # Do not derive the expected values from the worker package or build-result.json.
+        import argparse, re
+        parser=argparse.ArgumentParser()
+        for arg in ('base','tools','pkg','src','deps','node'): parser.add_argument(arg,type=Path)
+        parser.add_argument('--expected',nargs=3,metavar=('COMMIT','TREE','ARCHIVE_SHA'),required=True)
+        args=parser.parse_args(); expected=tuple(args.expected)
+        need(all(re.fullmatch('[a-f0-9]{%d}'%size,value) for size,value in zip((40,40,64),expected)),'invalid fixture pins')
+        run(args.base,args.tools,args.pkg,args.src,args.deps,args.node,expected)
