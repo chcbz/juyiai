@@ -24,6 +24,14 @@
 2. Agent / Chat / Economy：在同一隔离事项上从正式签名选择入口出发，经受认证设备会话比较、独立取价、正式点将及首次执行准入；用同一冻结意图、候选及输出检查跨层关联，重试只占款一次。配置摘要不能在测试里手填或从事后执行反推；Runtime 不鉴定报价资格，Economy 不连接设备，Chat 不计价。文件交付需另用实际生成的 `text/plain` 验收。
 3. 效果验收单独结论：按 §6 固定候选、数据规模、并发与缓存条件报告推荐及报价 P95；独立盲标计算 HIGH precision、Hit@3；用整事项留出样本计算预算 WAPE、P90 和可报价覆盖率。没有合格真值就报告不可评估，不以接口回归、合成用量或单次执行代替。
 
+**D131 起：先验证点将交接，再验证 Chat 展示。** 对照实际代码，`point-and-deliberate` 固定先发 `DELIBERATE`。Chat 的 `ChatBountyBootstrapAdmissionService` 在该分支创建议事请求并返回空 step；`ChatActionExecutionService.admit` 才在后续已验证的原生执行动作中，调用 Agent 创建 execution，并在同一事务写子请求、步骤及执行关联。D130r 的 `history-first` 是测试输入，不是该 Chat 动作。不能从 API 回执推定 Chat 漏发，也不能把执行硬挂到初始议事请求来“修复”。
+
+| 顺序 | 责任层 / 交付 | 通过条件 |
+| --- | --- | --- |
+| D131 · 点将交接 | Agent 回归在同一已报价、已点将的 MySQL 事项上，用正式 outbox 领取进程分区内意图，复用真实需求快照。API 候选 `1b887b2bfe56f7279287fa0243ed05cd8cc780d7`，验证结果单记。 | 领取为 DELIBERATE；owner/client/tenant、事项、需求修订、承办人、grant 及分派修订均与点将一致，租约期间不得重复领取。此断言不代表 Chat 已接收。 |
+| 后续 · 议事到答复 | 在 Chat 自有测试配置消费上述来源，从 typed discussion 的已验证动作进入 `ChatActionExecutionService.admit`，沿真实执行结果进入 `ChatBountyAssetProjector`。Agent 不依赖 Chat 实现，Economy 不参与展示。 | 同事项、同执行；授权会话只读到一条对应答复；重复通知不增消息、事件、附件或资金流水；越权不可读。不手写 RUNNING 关联，不把数据库读回当作浏览器验收。 |
+| 效果及发布 | 独立记录网关冷/热延迟、推荐盲标与整事项报价留出误差和可报价率。 | 费用缺来源继续排除；样本不足标为不可评估。无付费或部署授权不以生产试跑补证。 |
+
 D123 实测：Runtime 候选 `84ff581039fe96d7ea804923652d439d4c16204d` 在指定 SSH worker 上通过上述第一项（TAP 407），取数前无 PLAN、环回请求数为零；真实 CLI 随后对本地 TLS 夹具发出两次请求，落盘结构化 answer、零文件，四个分组字段逐项相符。两次均保留独立 token 分类且账单身份未知，采集正常关闭。811 项中 801 通过、0 失败、10 跳过，构建及回传 112.055 秒，产物已校验未安装。不是正式 WS、支付或生产模型服务联验。下一项仍须由 Java 实际发送的选择合同驱动，不能用两个组件中分别手写的测试常量证明一致。
 
 D124r → D125 跨批实测（未发布）：D124r 从签名 HTTP 的 `LOCAL_ANSWER` 选择、事务提交后的工作线程取得已落库的冻结意图，经 Chat 的正式 `NativeTaskProbeChannel` 发出请求。D125 固定该请求原字节（SHA-256 `91f70686f54f7faeb58839c03c60919f53ce296a62648cfcb9556b649d20435c`），通过 Runtime 的已注册测试会话与实际适配器处理；会话 HTTP、套接字、模型上游为隔离夹具。事前不发模型请求、不进命令队列；真实 CLI 按同一输出约束交付结构化答复、零文件。实际回包与原请求的 requestId、correlationId 和 intentSha256 对应，四个配置分组字段和执行 PLAN 逐项相符。Runtime `7576b6dbd16af33033f2c8907b10762bb540e9d6`，指定 worker 111.971 秒，801 通过／0 失败／10 跳过；受影响 TAP 407 通过。单独留存回包和分组的 SHA-256 `03c96cc7b6132484dc51fb64ba577a8c9d5b0b4ddc01d74ee8a58673f7953b86`。API 此次接收的是测试对端回包，真实 Runtime 回包与执行不是同一在线 HTTP 事务；不领取生产路由、定价或收费权限。下一步优先从正式报价的公开回执发起签名点将，复核真实任务、需求、材料、承办身份和第一次执行占用，不以直接调用 `billing.reserve` 代替。
