@@ -76,6 +76,7 @@
 | 条件 | state / retrievalMode | 等级与HTTP |
 | --- | --- | --- |
 | 身份/任务或候选事实不可可靠读取，或事实变化 | 无成功业务结果 | 原401/404/503，变化409；不以空数组掩盖 |
+| 候选非空，但权威本领与技能读取成功，所有候选均无可引用证据 | NO_MATCH / NOT_NEEDED | 完整手选名单，全 UNKNOWN、空 evidence、无降级原因；不编码查询、不开 PIT，保留最终授权与版本复核。权威读失败不适用；有授权证据但索引不可用仍走降级。 |
 | 可信候选集合确为空，未发起检索 | NO_CANDIDATES / NOT_NEEDED | 200/E0，空recommendations，degradedReasons为空 |
 | 非空候选、两路检索完整可用，有HIGH/MEDIUM | READY / HYBRID | 200/E0；按已校准混合模式评级 |
 | 非空候选、两路完整可用，无HIGH/MEDIUM | NO_MATCH / HYBRID | 200/E0；LOW须有已知不匹配依据，否则UNKNOWN |

@@ -125,9 +125,10 @@ def evaluate(labels, run, labels_sha):
         require(len(rows)==len(c['candidates']) and {p for p,_ in rows}==set(c['candidates']), 'candidate set mismatch')
         require(all(level in ('HIGH','MEDIUM','LOW','UNKNOWN') for _,level in rows), 'unknown recommendation level')
         mode = result['retrievalMode']; positive = any(level in ('HIGH','MEDIUM') for _,level in rows)
-        expected = {'NOT_NEEDED':'NO_CANDIDATES','HYBRID':'READY' if positive else 'NO_MATCH',
+        expected = {'NOT_NEEDED':'NO_MATCH' if rows else 'NO_CANDIDATES','HYBRID':'READY' if positive else 'NO_MATCH',
                     'UNAVAILABLE':'DEGRADED','LEXICAL_ONLY':'DEGRADED'}
-        require(mode in expected and (mode=='NOT_NEEDED')==(not rows) and result['state']==expected[mode], 'inconsistent retrieval state')
+        require(mode in expected and (rows or mode=='NOT_NEEDED') and result['state']==expected[mode], 'inconsistent retrieval state')
+        require(mode!='NOT_NEEDED' or all(r['recommendationLevel']=='UNKNOWN' and r.get('evidence')==[] for r in result['recommendations']), 'retrieval skipped with rated or cited evidence')
         require(mode!='UNAVAILABLE' or all(level=='UNKNOWN' for _,level in rows), 'unavailable retrieval cannot rate candidates')
         reasons = result.get('degradedReasons')
         require(isinstance(reasons,list) and all(token(r) for r in reasons)

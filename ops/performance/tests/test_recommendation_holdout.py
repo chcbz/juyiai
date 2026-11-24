@@ -79,6 +79,14 @@ class HoldoutTest(unittest.TestCase):
         row.update(state='READY',retrievalMode='HYBRID',degradedReasons=['QUERY_VECTOR_UNAVAILABLE'])
         with self.assertRaisesRegex(evaluator.Invalid,'disclosure'):self.score()
 
+    def test_empty_authorized_evidence_retains_candidates_in_holdout(self):
+        self.case('manual',['ACCEPTABLE'],['UNKNOWN'],'NOT_NEEDED','NO_MATCH')
+        row=self.run['results'][0]['data']['recommendations'][0];row['evidence']=[]
+        self.assertEqual(1,self.score()['byResponseState']['NO_MATCH']['candidates'])
+        self.assertEqual(0,self.score()['overall']['suitableRatedTaskCoverage']['value'])
+        row['evidence']=['spurious']
+        with self.assertRaises(evaluator.Invalid):self.score()
+
     def test_split_contamination_rejected(self):
         self.case('a',[],[],'NOT_NEEDED','NO_CANDIDATES','family');self.case('b',[],[],'NOT_NEEDED','NO_CANDIDATES','family')
         self.labels['cases'][0]['partition']='CALIBRATION'
