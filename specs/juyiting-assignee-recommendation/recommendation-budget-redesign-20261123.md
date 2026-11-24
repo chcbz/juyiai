@@ -135,6 +135,10 @@ Codex及本次执行的子来源（只持有执行临时token）
 
 **实际复用落点**：`runtime/conf/codex-bridge/typed-inspection-network.mjs`已有Runtime内HTTP server、执行Owner/netns绑定、nft出站限制和精确CONNECT控制；本模式为该出口增加受控HTTP处理，不再新增一套出口进程。`controlled-image-gpt-cli-egress-gate.mjs`已有“本地baseUrl/临时token、Runtime注入上游凭据”的同类实现，可复用其边界经验，但它当前的内存计数不是本方案的持久化模型调用清单。配置/鉴权接入落在既有`isolated-engine-profile.mjs`与`native-execution-runtime.mjs`，不把新的路由逻辑放入Economy或Web。
 
+**整事项边界补充（D133 实测后的实施约束）**：点将的初始 `DELIBERATE` 是实际工作，不是原生 `EXECUTE` 的别名。单承办正式事项的 Chat 准入事务必须在派发可领取前登记原始 turn、首次 dispatch 及请求摘要；幂等重放不产生新成员。Agent 负责冻结成员集合，Economy 只读经核验的成员交付与计量投影。即使原生执行已有完整证据，只要另一个成员没有逐调用覆盖，整事项不得输出部分成本或成为可用邻居。这不改变已确认的固定金额。
+
+未开通可靠逐调用采集的议事以缺来源登记，不把 STARTED/TERMINAL 或线程 token 补成零。`captureId` 已参与成员摘要：将来支持该路径时，须在**新准入**时绑定可靠来源身份，不能事后改写旧成员。Chat 须校验原派发、执行者和设备归属，再复用既有收件及计量协议；不能伪造 workspace execution 或降低原生端点授权。会话复用、附带资料、INSPECT、失败重试须逐条验证后才声明覆盖。普通非事项会话不计入；多人事项保留原有权限，未证明成员完备前不纳入该单承办预算范围。这是后续实现约束，不代表这些路径已完成实测。
+
 ##### A. 独立来源和完整性合同
 
 Runtime提供可信执行绑定的来源结果，API验证来源适配版本和原执行身份，Economy只消费归一化计量。`captureState`（来源已持久化）、`deliveryState`（API已ACK）、`coverageState`（本来源范围完整）分开，实际价格是否已知也独立。
