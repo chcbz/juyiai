@@ -58,6 +58,9 @@ class BudgetCoverageTest(unittest.TestCase):
         offer=dict(original=dict(taskId='observed',ownerJiacn='o',scope=dict(tenantId='t',clientId='c')),agentId='0',quoteId='q0',wen=65,referenceSha=self.h,featureSha=self.h,groupSha=self.h)
         join=lambda x:tool.reconcile_offers(self.roster,self.run,manifest,self.h,self.h,lambda pin:x)
         rows=join(offer)['requests'];self.assertEqual([[self.h,None],[None]],[[c['offerSha256'] for c in r['candidates']] for r in rows]);
+        evaluation=tool.evaluation_roster(self.roster,self.run,manifest,self.truth,self.h,self.h,self.h,self.h,lambda pin:offer)
+        self.assertEqual([(r['taskId'],r['offerSha256'],r['reason']) for r in evaluation['rows']],
+                         [('observed',self.h,'NOT_ACCEPTED'),('observed',None,'NOT_EXECUTED'),('absent',None,'EVIDENCE_UNAVAILABLE')])
         for patch in (dict(wen=66),dict(referenceSha='b'*64),dict(agentId='1'),dict(original={**offer['original'],'ownerJiacn':'other'})):
             with self.assertRaises(tool.Invalid):join(dict(offer,**patch))
         manifest['offers'].append(dict(quoteId='extra',offerSha256='b'*64))

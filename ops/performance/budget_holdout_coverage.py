@@ -179,14 +179,35 @@ def reconcile_offers(roster, observations, manifest, roster_sha, observations_sh
     return dict(format='budget-bound-forecasts-v1',observationsSha256=observations_sha,requests=output)
 
 
+def evaluation_roster(roster,observations,manifest,truth,roster_sha,observations_sha,manifest_sha,truth_sha,get_object):
+    """Assemble, never price, the complete offline input for Economy. Include unquoted and unmeasured items."""
+    require(sha(manifest_sha) and sha(truth_sha),'missing study pins')
+    assess(roster,observations,truth,roster_sha,observations_sha)
+    bound=reconcile_offers(roster,observations,manifest,roster_sha,observations_sha,get_object)
+    requests=rows_by(roster['requests'],'intentRef');outcomes=rows_by(truth['outcomes'],'intentRef');rows=[]
+    for request in bound['requests']:
+        key=request['intentRef'];facts=rows_by(outcomes[key]['candidates'],'agentId')
+        for item in request['candidates']:
+            fact=facts[item['agentId']];rows.append(dict(intentRef=key,taskId=requests[key]['taskId'],**item,
+                reason=fact['reason'],wholeTaskTruthSha256=fact.get('wholeTaskTruthSha256')))
+    return dict(format='budget-evaluation-roster-v1',observationsSha256=observations_sha,manifestSha256=manifest_sha,
+                truthSha256=truth_sha,referenceSha256=roster['referenceSha256'],rows=rows)
+
+
 def offers_main(argv):
     parser=argparse.ArgumentParser(description='Offline private offer join; input hashes must be independently retained.')
     for name in ('roster','observations','manifest'):
         parser.add_argument(name,type=Path);parser.add_argument('--'+name+'-sha256',required=True)
+    parser.add_argument('--truth',type=Path);parser.add_argument('--truth-sha256')
     parser.add_argument('--objects',type=Path,required=True);args=parser.parse_args(argv)
     try:
         r,o,m=[load(getattr(args,k),getattr(args,k+'_sha256')) for k in ('roster','observations','manifest')]
-        result=reconcile_offers(r,o,m,args.roster_sha256,args.observations_sha256,lambda pin:load(args.objects/pin,pin));result['manifestSha256']=args.manifest_sha256
+        require((args.truth is None)==(args.truth_sha256 is None),'truth and pin required together')
+        get_object=lambda pin:load(args.objects/pin,pin)
+        if args.truth is None:
+            result=reconcile_offers(r,o,m,args.roster_sha256,args.observations_sha256,get_object);result['manifestSha256']=args.manifest_sha256
+        else:
+            result=evaluation_roster(r,o,m,load(args.truth,args.truth_sha256),args.roster_sha256,args.observations_sha256,args.manifest_sha256,args.truth_sha256,get_object)
     except (KeyError,ValueError,TypeError,OSError) as e:
         parser.exit(2,'invalid offer inputs: '+(str(e) if isinstance(e,Invalid) else type(e).__name__)+'\n')
     print(json.dumps(result,sort_keys=True,allow_nan=False))
