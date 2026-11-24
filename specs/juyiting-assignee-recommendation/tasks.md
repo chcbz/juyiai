@@ -324,6 +324,13 @@ B86 优先处理真实目录与认证的重复观察：区分会话、所有者�
 - `cyf-rb-1123-d106`，API `2f6e5f0a3d2885420bbdd0eba202034d7ae631fe`。指定 worker 的 SSH 密钥交换在首次 findmnt 前被远端关闭（255）；未运行 Gradle，不算测试失败或通过。后续同候选重试前已通过同主机 SSH/磁盘检查。
 - `cyf-rb-1123-d106r`，API `2f6e5f0a3d2885420bbdd0eba202034d7ae631fe`，指定worker 270.618秒，455项JUnit通过，0失败/错误/跳过，分层与fresh bootJar通过。仅开发验证，未打交付包或安装；worker JAR SHA `c6ec8917ad74ecbb76e6898d2de1bec593cecd5f38c075ebd76ef17c33de7a22`。Java 认证会话夹具与固定 D105 Runtime Node codec 双向交换了真实协议字节（测量值为夹具）。核对冻结意图、回执相关性、字段白名单；事务内、跨提供者和未注册不发探针。不证明真实认证网络、真实路由定价或可执行报价。
 - `cyf-rb-1123-d107`，API `9d6fe21147e71f5461005b4fe85cb0f14f65b68d`，指定worker 256.737秒，455项JUnit通过，0失败/错误/跳过，分层与fresh bootJar通过。仅开发验证，未打交付包或安装；worker JAR SHA `592d293edce049a44a7b987cecd7bbd7d1715718a3028c6853a7facc4d4929f8`。Agent在同一事项根读取当前需求/材料及授权候选，按128个准确绑定一批读已冻结意图；无网络、无报价写入。MySQL验证重复候选、未授权候选、错误版本及材料脱链，旧意图仍存在但不再是当前结果。未实测108人延迟。核对AgentTaskCreateDTO/AgentServiceImpl.create与ChatActionExecutionService：普通创建没有输出模式或固定首动作，实际原生动作依赖确认后的grant；不能从空技能要求、候选能力或后来动作制造事前决策。在接业务入口前须明确哪类任务原本就能承诺执行策略，或补充派发契约并使后续执行遵守同一承诺。
+- `cyf-rb-1123-d108`，API `475044c75cccc9503fc244604973f91a8b8e1c82`，指定worker 270.306秒，456项JUnit通过，0失败/错误/跳过，分层与fresh bootJar通过。仅开发验证，未打交付包或安装；worker JAR SHA `d74d39efd8b7a3fce03dcd9b4f8fd071b8e3998d8fac985e8712790e990c50fd`。Agent 后台读取器将当前冻结决策、准确会话探测与 Economy 私有参考路由串起，仅返回临时观察。新增用例实测精确配置/Owner隔离、未启用、重复/错摘要清单、路由变更版本隔离和已加载映射不可变。尚未真实业务驱动、持久修订复核、真实样本校准或认证双端实联。
+
+**实测预算的参考路由维护（开发候选，不是生产配置变更）**
+
+- Economy 的 `jia.economy.task-budget.reference-routes-file` 与 `jia.economy.task-budget.reference-routes-sha256` 默认均空。启用时使用受控私有文件及独立固定的整文件 SHA-256，启动时一次性解析；不在请求内读文件，不提供 HTTP 写入。两者不符、格式不合法或同一键重复，整份映射不生效并记错误，不取第一条兜底。
+- 文件为 `schema=prepared-reference-routes-v1`、`entries[]`。每项 `key={tenant,client,owner,configuration:{version,executionSha,localRouteSha,toolSha,capturePolicy}}`，加 `channel,model,tier`。owner 是事项所有者而非承办者；无通配和跨所有者回退。v1 仅对应当前有完整计量适配的原生本地文本配置，计量口径 `MODEL_RESPONSE/INFERENCE/RESPONSES_TEXT_TOKENS_V1`。不把网关别名、报价参考模型或租户配置宣称为实际消费身份。
+- 参考路由版本由路由语义决定，渠道、模型或计价档改变后不得沿用旧兼容组；价格另外从现有价目冻结。清单通过不替代覆盖策略审核、用量完整性、真实基准或校准通过。后台读到的比较结果仍须能在报价写事务内复验稳定修订；只持有回执或内存 future 不能启用正式报价。
 
 **后续开发顺序与验收（按责任方，并行准备数据，不等于发布批准）**
 
