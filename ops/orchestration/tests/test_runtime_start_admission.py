@@ -50,8 +50,43 @@ class Admission(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'release binding'): verify(app, records, **args)
             current.write_text(json.dumps(record)); self.assertEqual(verify(app, records, **args), len(rows))
 
+            exercise_pin(self, Path(d), args)
             if os.environ.get('CYF_TEST_PROGRAM_VIEW'):
                 exercise_view(Path(d), app, records, args, record, current)
+
+
+def exercise_pin(test, base, pins):
+    import fcntl
+    from runtime_activation_pin import ActivationPin
+    instance = base / 'pin-instance'; control = base / 'control'
+    instance.mkdir(); control.mkdir(); app = base / 'app'; records = base / 'records'
+    current = records / 'current.json'; original = current.read_bytes(); record = json.loads(original)
+    app.rename(instance / 'app'); records.rename(instance / 'records')
+    current = instance / 'records/current.json'
+    record.update(artifactPath=str(instance / 'app'), artifactManifestPath=str(instance / 'records/candidate.manifest.json'))
+    current.write_text(json.dumps(record)); lock = control / 'release.lock'
+    with lock.open('xb') as owner, lock.open('rb') as competitor:
+        fcntl.flock(owner, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        pin = ActivationPin(control, lock)
+        with test.assertRaisesRegex(ValueError, 'not permitted'): pin.read_allowed()
+        g = pin.deny(owner.fileno(), previous=None)
+        with test.assertRaises(BlockingIOError): pin.deny(competitor.fileno(), previous=g)
+        kwargs = dict(instance=instance, records=current.parent, pins=pins)
+        with test.assertRaisesRegex(ValueError, 'binding'):
+            pin.allow(owner.fileno(), previous=g, **dict(kwargs, pins=dict(pins, tree='0'*40)))
+        with test.assertRaisesRegex(ValueError, 'not permitted'): pin.read_allowed()
+        ready = pin.allow(owner.fileno(), previous=g, **kwargs)
+        with test.assertRaisesRegex(ValueError, 'generation'): pin.deny(owner.fileno(), previous=g)
+        # A fresh interpreter (as systemd would use) can read without deadlocking on the held release lock.
+        tool = Path(__file__).resolve().parents[1]
+        proc = subprocess.run([sys.executable, '-c', 'import sys,json;sys.path.insert(0,sys.argv[1]);'
+            'from runtime_activation_pin import ActivationPin; print(json.dumps(ActivationPin(*sys.argv[2:]).read_allowed()))',
+            tool, control, lock], capture_output=True, text=True, timeout=5, check=True)
+        receipt = json.loads(proc.stdout); test.assertEqual((ready, pins, instance.stat().st_ino),
+            (receipt['generation'], receipt['pins'], receipt['inode']))
+        pin.deny(owner.fileno(), previous=ready)
+        with test.assertRaisesRegex(ValueError, 'not permitted'): ActivationPin(control, lock).read_allowed()
+    current.write_bytes(original); (instance / 'app').rename(app); (instance / 'records').rename(records)
 
 
 def exercise_view(base, app, records, pins, record, current):
@@ -61,8 +96,13 @@ def exercise_view(base, app, records, pins, record, current):
     record.update(artifactPath=str(app), artifactManifestPath=str(records / 'candidate.manifest.json'))
     (records / current.name).write_text(json.dumps(record))
     skeleton = base / 'view'; (skeleton / 'runtime').mkdir(parents=True)
-    apps.chmod(0o777); original = instance.stat(); ns = os.stat('/proc/self/ns/mnt')
-    data = json.dumps([str(instance), str(skeleton), original.st_dev, original.st_ino, ns.st_dev, ns.st_ino, pins])
+    from runtime_activation_pin import ActivationPin
+    control = base / 'view-control'; control.mkdir(); lock = control / 'release.lock'
+    with lock.open('xb') as owner:
+        pin = ActivationPin(control, lock); denied = pin.deny(owner.fileno(), previous=None)
+        pin.allow(owner.fileno(), previous=denied, instance=instance, records=records, pins=pins)
+    apps.chmod(0o777); ns = os.stat('/proc/self/ns/mnt')
+    data = json.dumps([str(instance), str(skeleton), str(control), ns.st_dev, ns.st_ino])
     # Parent acts only after child has admitted the complete installation. Its old path is then replaced.
     with subprocess.Popen(['unshare', '--mount', '--propagation', 'private', sys.executable, __file__, 'child', data],
                           text=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE) as child:
@@ -80,7 +120,10 @@ def exercise_view(base, app, records, pins, record, current):
 
 def child_view(raw):
     from runtime_program_view import protect_instance
-    inst, skeleton, dev, ino, nsdev, nsino, pins = json.loads(raw); inst = Path(inst)
+    from runtime_activation_pin import ActivationPin
+    inst, skeleton, control, nsdev, nsino = json.loads(raw); inst = Path(inst)
+    authority = ActivationPin(control, Path(control) / 'release.lock'); permit = authority.read_allowed()
+    dev, ino, pins = permit['device'], permit['inode'], permit['pins']
     try:
         protect_instance(inst, skeleton, device=dev, inode=ino + 1, parent_ns=(nsdev, nsino))
     except ValueError as exc:
@@ -93,6 +136,7 @@ def child_view(raw):
     print('admitted', flush=True)
     if input() != 'continue': raise ValueError('unexpected sync')
     verify(app, inst / 'records', **pins)
+    if authority.read_allowed() != permit: raise ValueError('activation generation changed')
     (inst / 'state-proof').touch(exist_ok=False)
     v = subprocess.run(['/bin/bash', app / 'runtime/validate.sh', '--root', app], capture_output=True, text=True)
     if not v.returncode or 'Runtime Node version:' not in v.stdout:
