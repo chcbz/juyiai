@@ -78,6 +78,7 @@ A capture owner must export the real Spring Boot HandlerMapping/management mappi
 ```sh
 python3.11 ops/performance/recommendation_holdout.py labels.json run.json \
   --expected-labels-sha256 "$FROZEN_LABELS_SHA" \
+  --expected-ranking-version "$FROZEN_API_RANKING_VERSION" \
   --expected-configuration-sha256 "$FROZEN_RANKING_CONFIG_SHA" > report.json
 ```
 
@@ -87,3 +88,5 @@ python3.11 ops/performance/recommendation_holdout.py labels.json run.json \
 - 区间是按任务族聚合的保守双侧Hoeffding边界，单项95%，非多指标联合保证；须满足不同任务族独立、评估分母权重固定的条件，不要求族内候选相互独立。报告只含计数、比率、区间及输入/评分程序摘要；不自动批准等级上线。正式验收前固定判据、抽样方案与适用人群，不能在看完留出结果后调整再用原集宣称达标。
 
 - B49/E02：额外分别给出 `mediumPrecision`、`positivePrecision`（HIGH/MEDIUM）和 `suitableRatedTaskCoverage`（确有适配候选的任务里，至少一人被正确正向评级的比例）。各 caseTag 独立给出相同统计，标签可重叠，不合并相加。Top3 命中但只给正确候选 UNKNOWN 时，不计入正确正向评级覆盖。这些是诊断量，不降低原 HIGH precision / Hit@3 目标。
+
+- `FROZEN_API_RANKING_VERSION` 在留出运行前从固定候选及其实际加载的策略独立核对并保存，不从待评 `run.json` 回填。即使整批响应都一致地返回了另一版本（例如未加载配置而退回基础 RRF），也拒绝为原策略出具报告。无策略基线试验须明确固定基础版本。

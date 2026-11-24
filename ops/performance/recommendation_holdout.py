@@ -145,10 +145,12 @@ def main():
     parser.add_argument('labels',type=Path); parser.add_argument('run',type=Path)
     parser.add_argument('--expected-labels-sha256',required=True)
     parser.add_argument('--expected-configuration-sha256',required=True)
+    parser.add_argument('--expected-ranking-version',required=True)
     args = parser.parse_args()
     try:
         labels, pin = read(args.labels); run, run_sha = read(args.run)
         require(pin == args.expected_labels_sha256 and run['configurationSha256'] == args.expected_configuration_sha256, 'external pin mismatch')
+        require(run['rankingVersion'] == args.expected_ranking_version, 'ranking version differs from frozen candidate')
         report = evaluate(labels,run,pin)
     except (KeyError, TypeError, ValueError, OSError) as error:
         parser.exit(2, 'invalid evaluation inputs: '+ (str(error) if isinstance(error,Invalid) else type(error).__name__)+'\n')

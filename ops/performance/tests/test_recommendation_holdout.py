@@ -76,7 +76,11 @@ class HoldoutTest(unittest.TestCase):
         self.case('sensitive-id',['NOT_ACCEPTABLE'],['UNKNOWN'],'HYBRID','NO_MATCH')
         with tempfile.TemporaryDirectory() as d:
             l,r=Path(d)/'labels',Path(d)/'run';l.write_text(json.dumps(self.labels));pin=sha256(l.read_bytes()).hexdigest()
-            self.run['labelsSha256']=pin;r.write_text(json.dumps(self.run));cmd=[sys.executable,evaluator.__file__,str(l),str(r),'--expected-labels-sha256',pin,'--expected-configuration-sha256','f'*64]
+            self.run['labelsSha256']=pin;r.write_text(json.dumps(self.run));cmd=[sys.executable,evaluator.__file__,str(l),str(r),'--expected-labels-sha256',pin,'--expected-ranking-version','rrf-v1','--expected-configuration-sha256','f'*64]
             output=subprocess.check_output(cmd);self.assertNotIn(b'sensitive-id',output);self.assertEqual(sha256(r.read_bytes()).hexdigest(),json.loads(output)['runSha256'])
             self.assertNotEqual(0,subprocess.run(cmd[:-1]+['b'*64],capture_output=True).returncode)
+            # A consistent run from a different policy must not be scored against this pin.
+            self.run['rankingVersion']=self.run['results'][0]['data']['rankingVersion']='wrong-policy'
+            r.write_text(json.dumps(self.run));rejected=subprocess.run(cmd,capture_output=True)
+            self.assertEqual(2,rejected.returncode);self.assertFalse(rejected.stdout);self.assertIn(b'frozen candidate',rejected.stderr)
             l.write_text('{"x":1,"x":1}');self.assertNotEqual(0,subprocess.run(cmd,capture_output=True).returncode)
