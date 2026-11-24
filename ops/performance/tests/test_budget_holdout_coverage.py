@@ -52,3 +52,33 @@ class BudgetCoverageTest(unittest.TestCase):
                 if pins:obj['rosterSha256' if name=='observations' else 'observationsSha256']=pins[-1]
                 p=Path(tmp)/name;p.write_text(json.dumps(obj));pins.append(hashlib.sha256(p.read_bytes()).hexdigest());cmd += [str(p),'--'+name+'-sha256',pins[-1]]
             output=subprocess.check_output(cmd);self.assertNotIn(b'sensitive-case',output);self.assertEqual(pins[-1],json.loads(output)['truthSha256']);(Path(tmp)/'truth').write_text('{}');r=subprocess.run(cmd,capture_output=True);self.assertEqual(2,r.returncode);self.assertFalse(r.stdout)
+    def wire(self):
+        self.case('k',['0'],['MEASURED']);req=self.roster['requests'][0];req.update(requestId='request',idempotencyKeySha256=self.h);self.roster['cutoffAtMs']=30
+        data=self.run['results'][0]['data'];data['observedAt']=15
+        a=dict(method='POST',path='/agent/tasks/k/quotes',sentAtMs=10,receivedAtMs=20,idempotencyKeySha256=self.h,requestIdHeader='request',responseIdHeader='request',httpStatus=200,
+               requestBody=json.dumps(dict(protocolVersion=1,requestId='request',data=dict(expectedTaskVersion='1',agentIds=['0']))),
+               responseBody=json.dumps(dict(protocolVersion=1,requestId='request',code='E0',msg='ok',data=data)))
+        log=dict(format='budget-transport-export-v1',rosterSha256=self.h,completeThroughMs=100,intents=[dict(intentRef='k',attempts=[a])]);return a,log
+
+    def test_freeze_uses_observed_responses_not_late_success_or_last_retry(self):
+        a,log=self.wire();attempts=log['intents'][0]['attempts'];score=lambda:tool.freeze_observations(self.roster,log,self.h,self.h)['results'][0]
+        retry=dict(a,sentAtMs=22,receivedAtMs=23,httpStatus=503,responseIdHeader=None,responseBody='gateway error');attempts.append(retry)
+        self.assertEqual('0',score()['data']['quotes'][0]['amount']['amountMinor']);a['receivedAtMs']=35;self.assertEqual(503,score()['httpStatus']);self.assertIsNone(score()['data']);retry['receivedAtMs']=36;self.assertIsNone(score()['httpStatus']);self.assertIsNone(score()['data'])
+
+    def test_freeze_refuses_cross_intent_replay_or_changed_winner(self):
+        a,log=self.wire();base=copy.deepcopy(a);attempts=log['intents'][0]['attempts'];attempts.append(a.copy())
+        for change in (dict(method='GET'),dict(path='/agent/tasks/foreign/quotes'),dict(idempotencyKeySha256='b'*64),dict(responseIdHeader='other'),dict(responseBody=base['responseBody'].replace('"amountMinor": "0"','"amountMinor": "1"')),dict(requestBody=base['requestBody'].replace('"1"','"9"'))):
+            attempts[-1]={**base,**change}
+            with self.assertRaises(tool.Invalid):tool.freeze_observations(self.roster,log,self.h,self.h)
+        attempts[-1]=base;self.roster['requests'].append(dict(self.roster['requests'][0],intentRef='alias'));log['intents'].append(dict(log['intents'][0],intentRef='alias'))
+        with self.assertRaisesRegex(tool.Invalid,'duplicate logical'):tool.freeze_observations(self.roster,log,self.h,self.h)
+
+    def test_freeze_cli_requires_complete_capture_before_opening_truth(self):
+        _,log=self.wire()
+        with tempfile.TemporaryDirectory() as td:
+            r,c=(Path(td)/k for k in ('r','c'));r.write_text(json.dumps(self.roster));pin=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();log['rosterSha256']=pin(r)
+            def run():
+                c.write_text(json.dumps(log));return subprocess.run([sys.executable,tool.__file__,'freeze',str(r),str(c),'--roster-sha256',pin(r),'--capture-sha256',pin(c)],capture_output=True)
+            result=run();self.assertEqual(0,result.returncode);out=json.loads(result.stdout);self.assertEqual(pin(c),out['results'][0]['evidenceSha256']);self.assertNotIn(b'idempotencyKey',result.stdout)
+            self.truth['observationsSha256']=hashlib.sha256(result.stdout).hexdigest();report=tool.assess(self.roster,out,self.truth,pin(r),self.truth['observationsSha256']);self.assertEqual(1,report['quotedWithTruth'])
+            log['completeThroughMs']=29;fail=run();self.assertEqual(2,fail.returncode);self.assertFalse(fail.stdout)

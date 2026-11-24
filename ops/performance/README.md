@@ -102,3 +102,15 @@ python3.11 ops/performance/recommendation_holdout.py labels.json run.json \
 3. 最后独立核对结果：`{format:"budget-truth-inventory-v1", observationsSha256, outcomes:[{intentRef,candidates:[{agentId,reason,evidenceSha256,wholeTaskTruthSha256}]}]}`。`MEASURED` 仅限 Economy 已核同一事项、候选及参考价的完整真值；给出对应工件摘要，不能把另一个候选的执行移用。其余原因 `NOT_EXECUTED / NOT_ACCEPTED / CANCELLED / USAGE_INCOMPLETE / REFERENCE_PRICE_MISSING / EVIDENCE_UNAVAILABLE`，真值指针为空。已有真实执行但计量不完整不当作零。证据的真实性、独立冻结时序、源到指针的核对归采集/真值责任方；哈希只防换件，不证明这些前提。
 
 报告分别列请求有任一报价、请求全部有报价、候选报价覆盖；HTTP 错误和无响应保留在分母。另列候选取价缺真值率、原因和「有报价且有真值」交集，不按可测子集重算覆盖。原 Economy 整事项参考价重算、分族留出与误差算法不复制到该工具；此报告不能单独证明 WAPE/P90 或许可上线。只对事前固定范围/观察截止点解释结果，原件和标识符不随汇总报告输出。
+
+**从传输观测生成第 2 份工件，而不是手填 HTTP 状态。** 在查看成本真值之前执行：
+
+```sh
+(umask 077; python3.11 ops/performance/budget_holdout_coverage.py freeze roster.json capture.json \
+  --roster-sha256 "$R" --capture-sha256 "$C" > observations.json)
+```
+
+- 同一授权主体/付款人一份私有名册，取价前增加 `cutoffAtMs`，按意图冻结 `requestId` 和原 `Idempotency-Key` 的 UTF-8 SHA-256 (`idempotencyKeySha256`)。同任务同幂等键不能用不同 `intentRef` 重复计数。
+- 受信的非生产客户端提供 `capture.json`：`format=budget-transport-export-v1, rosterSha256, completeThroughMs, intents[]`；每个 `intentRef` 一条按发起顺序排列的 `attempts[]`。每次仅保留 `method,path,sentAtMs,requestIdHeader,idempotencyKeySha256,requestBody,receivedAtMs,httpStatus,responseIdHeader,responseBody`；时间是该采集端同一时基的毫秒数，body 为原 JSON 文本（错误响应可非 JSON），未收到时最后四项为 null。保留的是取价路径，**不导出** Authorization、Cookie、全量请求头、会话或供应商凭据。名册、导出、`observations.json` 均私有，非聚合报告。只使用进程正常退出的完整文件。
+- 使用原任务路径、版本、候选、请求与响应关联 ID、幂等键摘要及报价批次核对。截止前收到过成功信封，使用该不可变业务结果（`UNAVAILABLE` 也是有效业务结果）；同键多次成功的业务数据必须相同。否则使用截止前最后实际收到的 HTTP 错误，完全没看到响应则是 `NO_RESPONSE`。不把截止后才收到的成功提前；没有发出或不能证明导出覆盖截止时间则拒绝该次评测，不把缺采样当传输超时。预先约定这一截止语义，不统计单次网络尝试成功率。
+- `evidenceSha256` 绑定完整传输导出，`intentRef` 指向其中一项。工具不运行代理、不发请求、不补授权，不能仅凭采集方填写的水位或时间戳证明观察无缺口；采集方必须独立留存其完整性依据。

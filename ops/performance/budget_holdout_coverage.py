@@ -5,6 +5,7 @@ import hashlib
 import json
 from pathlib import Path
 import re
+import sys
 
 
 class Invalid(ValueError):
@@ -94,14 +95,77 @@ def assess(roster, observations, truth, roster_sha, observations_sha):
                 quotedWithTruth=paired, quotedWithoutTruth=quoted-paired)
 
 
-def load(path, pin):
+def parse_json(raw):
     def unique(pairs):
         obj=dict(pairs); require(len(obj)==len(pairs),'duplicate JSON field'); return obj
+    def invalid_number(_):raise Invalid('non-finite JSON number')
+    return json.loads(raw,object_pairs_hook=unique,parse_constant=invalid_number)
+
+
+def load(path, pin):
     raw=path.read_bytes(); require(sha(pin) and hashlib.sha256(raw).hexdigest()==pin,'external artifact pin mismatch')
-    return json.loads(raw,object_pairs_hook=unique)
+    return parse_json(raw)
+
+
+def freeze_observations(roster, capture, roster_sha, capture_sha):
+    """One logical intent per denominator; only responses observed by the predeclared cutoff count."""
+    from urllib.parse import quote
+    require(roster['format']=='budget-roster-v1' and capture['format']=='budget-transport-export-v1'
+            and sha(roster_sha) and sha(capture_sha) and capture['rosterSha256']==roster_sha, 'wrong capture or roster')
+    cutoff=roster['cutoffAtMs']; end=capture['completeThroughMs']
+    require(type(cutoff) is int and cutoff>=0 and type(end) is int and end>=cutoff, 'capture does not cover cutoff')
+    intents=rows_by(roster['requests'],'intentRef'); logs=rows_by(capture['intents'],'intentRef'); output=[]; bindings=set()
+    require(intents and intents.keys()==logs.keys(), 'missing or surplus intent log')
+    for key,req in intents.items():
+        ids=req['agentIds']; attempts=logs[key]['attempts']; rid=req['requestId']; idem=req['idempotencyKeySha256']
+        require(text(req['taskId']) and text(req['taskVersion']) and isinstance(ids,list) and ids and all(map(text,ids)) and len(ids)==len(set(ids)), 'invalid roster request')
+        require(text(rid) and sha(idem) and isinstance(attempts,list) and attempts, 'missing sent intent evidence')
+        binding=(req['taskId'],idem)  # One private payer/scope per roster, as fixed by its capture owner.
+        require(binding not in bindings,'duplicate logical quote intent'); bindings.add(binding)
+        success=None; status=None; last_sent=-1; last_reply=-1
+        for a in attempts:
+            sent=a['sentAtMs']; seen=a['receivedAtMs']
+            require(type(sent) is int and 0<=sent<=end and sent>=last_sent, 'invalid send order'); last_sent=sent
+            require(a['method']=='POST' and a['path']=='/agent/tasks/'+quote(req['taskId'],safe='')+'/quotes'
+                    and a['requestIdHeader']==rid and a['idempotencyKeySha256']==idem, 'wrong quote operation')
+            body=parse_json(a['requestBody']); require(type(body['protocolVersion']) is int and body['protocolVersion']==1 and body['requestId']==rid, 'invalid request envelope')
+            agents=body['data']['agentIds'];require(body['data']['expectedTaskVersion']==req['taskVersion'] and isinstance(agents,list) and set(agents)==set(ids),'wrong quote input')
+            code=a['httpStatus']
+            if seen is None:
+                require(code is None and a['responseBody'] is None and a['responseIdHeader'] is None, 'contradictory absent response');continue
+            require(type(seen) is int and sent<=seen<=end and type(code) is int, 'invalid response observation')
+            if seen>cutoff:continue
+            if code!=200:
+                require(400<=code<=599 and a['responseIdHeader'] in (None,rid), 'invalid error response')
+                if seen>=last_reply:status=code;last_reply=seen
+                continue  # Errors can originate outside the application (e.g. gateway timeout).
+            env=parse_json(a['responseBody']);require(type(env['protocolVersion']) is int and env['protocolVersion']==1 and env['code']=='E0'
+                        and env['requestId']==rid==a['responseIdHeader'], 'uncorrelated quote response')
+            data=env['data'];require(data['taskId']==req['taskId'] and data['taskVersion']==req['taskVersion'] and type(data['observedAt']) is int and data['observedAt']>=0,'wrong quote snapshot')
+            rows=rows_by(data['quotes'],'agentId');require(rows.keys()==set(ids),'partial quote response')
+            for row in rows.values():available(row)
+            require(len({r['recommendationId'] for r in rows.values()})==1 and (success is None or success==data),'mixed or changed quote batch');success=data
+        require(attempts[0]['sentAtMs']<=cutoff,'not sent by cutoff')
+        output.append(dict(intentRef=key,httpStatus=200 if success is not None else status,data=success,evidenceSha256=capture_sha))
+    return dict(format='budget-forecast-observations-v1',rosterSha256=roster_sha,results=output)
+
+
+def freeze_main(argv):
+    parser=argparse.ArgumentParser(description='Freeze private forecast observations before opening truth. No network access.')
+    for name in ('roster','capture'):
+        parser.add_argument(name,type=Path);parser.add_argument('--'+name+'-sha256',required=True)
+    args=parser.parse_args(argv)
+    try:
+        r=load(args.roster,args.roster_sha256);c=load(args.capture,args.capture_sha256)
+        result=freeze_observations(r,c,args.roster_sha256,args.capture_sha256)
+    except (KeyError,ValueError,TypeError,OSError) as e:
+        parser.exit(2,'invalid capture inputs: '+(str(e) if isinstance(e,Invalid) else type(e).__name__)+'\n')
+    print(json.dumps(result,sort_keys=True,allow_nan=False))
 
 
 def main():
+    if sys.argv[1:2]==['freeze']:
+        return freeze_main(sys.argv[2:])
     parser=argparse.ArgumentParser(description=__doc__)
     for key in ('roster','observations','truth'):
         parser.add_argument(key,type=Path); parser.add_argument('--'+key+'-sha256',required=True)
