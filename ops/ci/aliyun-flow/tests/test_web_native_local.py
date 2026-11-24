@@ -74,6 +74,7 @@ class NativeWebTransactionTest(NativeWebManifestTest):
         self.old_record=json.dumps(dict(status='online_verified',run_id='123',commit='d'*40)).encode()
         (self.state/'record.json').write_bytes(self.old_record);(self.state/'record.json').chmod(0o600)
         self.web.ROOT=self.state;self.web.SITE=self.site
+        self.real_local_online=self.web.local_online
         self.online=self.mock.patch.object(self.web,'local_online',return_value=2).start();self.addCleanup(self.mock.patch.stopall)
         self.data['assets/lazy.js']=b'lazy source';self.manifest['files']['assets/lazy.js']=dict(size=len(self.data['assets/lazy.js']),sha256=hashlib.sha256(self.data['assets/lazy.js']).hexdigest())
         self.seal()
@@ -137,6 +138,32 @@ class NativeWebTransactionTest(NativeWebManifestTest):
         self.online.side_effect=SystemExit('public bytes mismatch')
         with self.assertRaises(SystemExit):self.install()
         self.assert_old();self.assertFalse((self.site/'assets/lazy.js').exists())
+
+    @unittest.skipUnless(__import__('os').environ.get('CYF_CUTOVER_WEB_PACKAGE'), 'explicit candidate artifact required')
+    def test_fixed_cutover_artifact_recovers_to_verified_loopback_bytes(self):
+        import functools, http.server, os, threading
+        # W07 is the reviewed candidate, not a rebuild or a mutable latest alias.
+        package=Path(os.environ['CYF_CUTOVER_WEB_PACKAGE']);sha='b1352304711b2c35b424a05f10d6e1d69d311b2975c61ed96000b3a483c273aa'
+        source=dict(commit='a1b857a54a8efbd0ed7dc5614d2d528dc594a339',tree='5fce70189430334f257d9865d8b618d09adf0bce',version='1.16.153',buildId='cyf-rb-1123-w07')
+        self.descriptor.update(package=dict(path=str(package),size=105540299,sha256=sha),source=source);self.write_descriptor()
+        def mismatch(record,expected,deadline):
+            self.assertEqual(record,source); self.assertEqual(len(expected),626)
+            self.assertEqual(hashlib.sha256((self.site/'index.html').read_bytes()).hexdigest(),expected['index.html']['sha256'])
+            raise SystemExit('injected verification failure after publishing fixed index')
+        self.online.side_effect=mismatch
+        with self.assertRaisesRegex(SystemExit,'injected verification failure'):self.install()
+        self.assert_old();self.assertEqual({str(p.relative_to(self.site)) for p in self.site.rglob('*') if p.is_file()},
+                                         {'index.html','assets/main.js','unrelated-old.js'})
+        class Handler(http.server.SimpleHTTPRequestHandler):
+            def log_message(self,*args):pass
+        with http.server.ThreadingHTTPServer(('127.0.0.1',0),functools.partial(Handler,directory=str(self.site))) as server:
+            thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start()
+            try:
+                self.web.SITE_URL=f'http://127.0.0.1:{server.server_port}/'
+                self.online.side_effect=self.real_local_online
+                record=self.install();self.assertEqual(record['status'],'online_verified');self.assertEqual(record['source'],source)
+                self.assertEqual(record['artifact_sha256'],sha);self.assertGreater(record['onlineVerifiedFiles'],1)
+            finally:server.shutdown();thread.join()
 
     def interrupted(self):
         original=self.web.atomic_file
