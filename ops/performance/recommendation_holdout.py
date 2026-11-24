@@ -58,7 +58,10 @@ class Rate:
             # Conditional on evaluation denominators. Permit arbitrary within-family dependence.
             radius = math.sqrt(math.log(40) * sum(w*w for w in self.family_weights.values()) / 2) / self.total
             interval = [max(0., rate-radius), min(1., rate+radius)]
-        return dict(numerator=self.success, denominator=self.total, value=rate, ci95=interval)
+        # Count only families that contributed to this metric's denominator; expose no family IDs.
+        return dict(numerator=self.success, denominator=self.total, value=rate, ci95=interval,
+                    contributingFamilies=sum(n > 0 for n in self.family_weights.values()),
+                    largestFamilyDenominatorShare=max(self.family_weights.values())/self.total if self.total else None)
 
 
 class Group:

@@ -48,6 +48,15 @@ class HoldoutTest(unittest.TestCase):
         for c in self.labels['cases']:c['familyId']=c['caseId']
         self.assertLess(shared[0],self.score()['overall']['highPrecision']['ci95'][0])
 
+    def test_family_support_follows_each_denominator_not_task_count(self):
+        self.case('many',['ACCEPTABLE']*3,['HIGH']*3,'HYBRID','READY','A')
+        self.case('one',['ACCEPTABLE'],['HIGH'],'HYBRID','READY','B')
+        self.case('none',['ACCEPTABLE'],['UNKNOWN'],'HYBRID','NO_MATCH','C')
+        rates=self.score()['overall']
+        for metric, count, share in [('highPrecision',2,.75),('hitAt3',3,1/3),('mediumPrecision',0,None)]:
+            self.assertEqual(count,rates[metric]['contributingFamilies'])
+            self.assertEqual(share,rates[metric]['largestFamilyDenominatorShare'])
+
     def test_partial_and_conditional_rank_hits_do_not_hide_wrong_positive_ratings(self):
         self.case('partial',['INSUFFICIENT','ACCEPTABLE'],['MEDIUM','UNKNOWN'],'HYBRID','READY')
         self.labels['cases'][-1]['caseTags']=['NEGATED_OR_CONDITIONAL','PARTIAL_CAPABILITY']
