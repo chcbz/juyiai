@@ -452,14 +452,14 @@ B86 优先处理真实目录与认证的重复观察：区分会话、所有者�
 - `cyf-rb-1123-d154r`，Runtime `b753631aba8442955de3a3a089a7bd9c2454e0f0`，指定 worker 112.421 秒，818 项中 808 通过、10 跳过、0 失败；制品 SHA `e9462d971e6b3a323825b423e55ee6d1fc57ee6ff97a0a199cea4dd4b429ce57`。用既有托管授权解析器配置 DIRECT_TEXT，固定 CLI、bwrap 网络隔离、原 inbox、逐调用出口和 HTTPS 对端均实际运行。正式 JSON 收件后可执行首轮；本地 TLS 对端观察到一次 `/custom/responses`、原请求 PENDING 已落盘、临时密钥和采集控制字段未发给对端。回复与输入12/输出3的夹具报告分别写入各自记录；重启关闭为 SEALED_INCOMPLETE，不重跑。业务输入、工具目录、认证会话围栏、密钥、响应和发送确认均为测试条件，不是生产注册、真实计费用量或独立误差样本；未发布。未要求 LOCAL_FILE 设备改变权限。
 
 - `cyf-rb-1123-d155`，Runtime `f1d9f8a8a8082979fcaa266f5c74b00b6ac4322d`，指定 worker 112.409 秒，808 通过、10 跳过、0 失败；SHA `6c159d91a97f97d0cee825de3bbc8864747376050f3ce9db67b05ea5ae278c9e`。初次独占采集时在原私有来源目录写一次最小归属绑定，落盘在 PLAN 之前，不复制提示词、回复或完整业务归档。通过原 inbox 的归档和去重清理实际退役测试数据；验证仅余去重标记时能重核、两者均过期后首次关闭及重复关闭均可、绑定篡改拒绝、无业务记录不能重开引擎。D154r 的实际 CLI 用例在本候选再次通过。没有实现 API 持久 ACK 或批准清理，未启用/部署。
-- `cyf-rb-1123-d156`，API `286f4660870b8124769827b103e8610d0307861d`，指定worker 300.161秒，467项JUnit通过，0失败/错误/跳过，分层与fresh bootJar通过。仅开发验证，未打交付包或安装；worker JAR SHA `a5af1b4b40b96dc844b7abbe2a92be9f08b839cba80dbffc204652d47220ecc4`。D156a 验证通过，成员查询按原准入记录拒绝错绑；本批没有提供逐调用 HTTP ACK。
+- `cyf-rb-1123-d156`，API `286f4660870b8124769827b103e8610d0307861d`，指定worker 300.161秒，467项JUnit通过，0失败/错误/跳过，分层与fresh bootJar通过。仅开发验证，未打交付包或安装；worker JAR SHA `a5af1b4b40b96dc844b7abbe2a92be9f08b839cba80dbffc204652d47220ecc4`。300秒目标超出0.161秒，未触及600秒上限；Gradle实耗277.699秒、锁等待0秒、72项缓存复用，其余含编排及回传，不归因为锁等待或网络故障。D156a 验证通过，成员查询按原准入记录拒绝错绑；本批没有提供逐调用 HTTP ACK。
 - 后续接收端核对：已有 `ChatUsageCostRecorder` 是 STARTED/TERMINAL 观测，不是逐调用 ACK；原生提交端的 `NativeCaptureAuthority` 依赖真实 workspace execution，不能借用其入口伪造议事执行。应沿 `withAuthenticatedDevice` 在事务内复验原派发、成员 captureId 及快照，再复用 Economy journal 与既有提交后结算边界；收件与样本资格分开。专项验证重复 POST、提交后断连 GET 同回执、换设备和缺 final 均不得重复计价或抬升完整性。
 
 **D156 起：接收端分批实施；不以设备落盘代替服务端持久回执**
 
 | 批次与责任层 | 交付及验收 | 当前状态 |
 | --- | --- | --- |
-| D156a · Agent 成员归属 | 复用成员唯一键，以任务所有者、原 turn/dispatch、原准入摘要（不是 contextHash）和 captureId 做一次存在性查询；无新表、无回填。原准入写接口不变。 | API 候选 `286f4660870b8124769827b103e8610d0307861d`；MySQL 正例及错所有者、错摘要、尾空格别名和空 capture 反例纳入指定 worker 定向验证。 |
+| D156a · Agent 成员归属 | 复用成员唯一键，以任务所有者、原 turn/dispatch、原准入摘要（不是 contextHash）和 captureId 做一次存在性查询；无新表、无回填。原准入写接口不变。 | API 候选 `286f4660870b8124769827b103e8610d0307861d`；指定 worker MySQL 正例及错所有者、错摘要、尾空格别名和空 capture 反例已通过。 |
 | D156b · Chat 接收授权 | 在设备认证事务内组合原发送围栏、单承办、冻结快照和 Agent 成员查询；发送前、换代、替换派发不能收件。`contextSnapshot.facts` 是 hostedWire 从冻结 `factsManifest` 构造的，不能要求数据库 outbox 另存一份 wire。 | 未接入；先以同事务真实记录验证，再开放 POST/GET。 |
 | D157 · API 与 Runtime 交付 | 复用 journal 幂等写及提交后关联；设备后台按议事来源投递。提交成功后模拟断连，GET 须返回原 receipt；不得让回复等待外部回传。 | 未完成。核对 Economy 的 `NATIVE_RESPONSE_USAGE`：Runtime 与服务端以同一渠道及 provider response 定义逐响应身份；旧 CHAT STARTED/TERMINAL 另有观测键。两类不能直接相加；需用同一响应回放验证不会重复计价，不能为接入而伪造 workspace execution。 |
 | 效果验收 · 推荐 / 预算分别判定 | 推荐独立盲标及有负载 P95；预算按整事项留出验证 WAPE、P90 和覆盖率，未核实覆盖、无真值或未获付费授权则报告缺口。 | 不随上述任一批构建通过而通过。 |
