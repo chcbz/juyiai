@@ -430,6 +430,7 @@ B86 优先处理真实目录与认证的重复观察：区分会话、所有者�
 - `cyf-rb-1123-d144s`，API `79bd4041a92c8e7a503a30fad6bb25d007945dc7`，指定worker 263.314秒，465项JUnit通过，0失败/错误/跳过，分层与fresh bootJar通过。仅开发验证，未打交付包或安装；worker JAR SHA `4ae09527984d4e311eadef699b7d931255ac4dea1e335887265c456bae5289e4`。隔离事项先因缺执行者绑定被拒；仅补真实 persona 对应的离线绑定后，分别验证缺派发来源、单设备、错误上下文/会话代次和不可逆混合派发。仅证明点时匹配，不授予样本资格。
 - `cyf-rb-1123-d145`，API `52345f713b30590734c762587f8ebdb7437bfb10`，指定worker 272.033秒，466项JUnit通过，0失败/错误/跳过，分层与fresh bootJar通过。仅开发验证，未打交付包或安装；worker JAR SHA `65bd744bde67be681a283696e6eff27ebb0e63bb50452567f32e21fdbf493fbf`。原派发须明确为 bounty 且参与名单恰为该执行者；拒绝缺失/格式不符/多人/错人/非悬赏，不读无资格来源行。原 STARTED/TERMINAL 语义及整事项集成路径分别回归；未启用计量或报价。
 - `cyf-rb-1123-d146`，API `84ca813af13d065144089b49be7e138ad572a4ba`，指定worker 335.552秒，467项JUnit通过，0失败/错误/跳过，分层与fresh bootJar通过。仅开发验证，未打交付包或安装；worker JAR SHA `0ed2574166d1800ab82fbf2d453d73095ffb3351507953aa36de2c8deae352f0`。两个独立隔离事项对照同设备/跨设备重试：Runtime 收件 ACK 后仅可能 OBSERVED，同设备且当前 dispatch/context 对应的 final 落库后为 FINAL_BOUND；混合重试即使有 final 仍 UNMATCHED。替换 dispatch/context 的单测也不认领。原成员 capture 仍为空；归属不是逐调用完整性。多阶段分组方案在详设中单列待评审，不改变现版估价。
+  构建耗时未达 300 秒目标（600 秒硬限内）：Gradle 321.838 秒、锁等待 0 秒、77 项缓存复用；新增正向整事项用例 25.906 秒，换设备用例 37.072 秒。新增覆盖解释部分增长，余量不能仅凭汇总归因为网络或 CPU。未通过删测缩短。
 
 **实测预算的参考路由维护（开发候选，不是生产配置变更）**
 
