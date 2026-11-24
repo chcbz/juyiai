@@ -432,6 +432,8 @@ B86 优先处理真实目录与认证的重复观察：区分会话、所有者�
 - `cyf-rb-1123-d146`，API `84ca813af13d065144089b49be7e138ad572a4ba`，指定worker 335.552秒，467项JUnit通过，0失败/错误/跳过，分层与fresh bootJar通过。仅开发验证，未打交付包或安装；worker JAR SHA `0ed2574166d1800ab82fbf2d453d73095ffb3351507953aa36de2c8deae352f0`。两个独立隔离事项对照同设备/跨设备重试：Runtime 收件 ACK 后仅可能 OBSERVED，同设备且当前 dispatch/context 对应的 final 落库后为 FINAL_BOUND；混合重试即使有 final 仍 UNMATCHED。替换 dispatch/context 的单测也不认领。原成员 capture 仍为空；归属不是逐调用完整性。多阶段分组方案在详设中单列待评审，不改变现版估价。
   构建耗时未达 300 秒目标（600 秒硬限内）：Gradle 321.838 秒、锁等待 0 秒、77 项缓存复用；新增正向整事项用例 25.906 秒，换设备用例 37.072 秒。新增覆盖解释部分增长，余量不能仅凭汇总归因为网络或 CPU。未通过删测缩短。
 
+- `cyf-rb-1123-d147`，Runtime `416abc241ab694a08a9a1583923ada7da530cdd5`；指定 worker 109.914 秒，814 项中 804 通过、10 跳过、0 失败。产物 SHA `ddb887e201bef3f56ae692e0c4494aa09db51fb5c99bccdd5b924fbc438a6463`，未安装。新用例均实际通过：从已领取的单承办议事收件记录读原 turn/dispatch/context 及显式采集身份；无登记不创建来源。新源复用逐请求预写及停止后的恢复，不伪造 workspace 命令。原生恢复也校验原命令快照与 PLAN，不一致时不生成 FINAL。议事登记由夹具提供，尚无生产发送端；未声明共享模型出口或逐调用完整性。
+
 **实测预算的参考路由维护（开发候选，不是生产配置变更）**
 
 - Economy 的 `jia.economy.task-budget.reference-routes-file` 与 `jia.economy.task-budget.reference-routes-sha256` 默认均空。启用时使用受控私有文件及独立固定的整文件 SHA-256，启动时一次性解析；不在请求内读文件，不提供 HTTP 写入。两者不符、格式不合法或同一键重复，整份映射不生效并记错误，不取第一条兜底。
