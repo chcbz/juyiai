@@ -114,3 +114,14 @@ python3.11 ops/performance/recommendation_holdout.py labels.json run.json \
 - 受信的非生产客户端提供 `capture.json`：`format=budget-transport-export-v1, rosterSha256, completeThroughMs, intents[]`；每个 `intentRef` 一条按发起顺序排列的 `attempts[]`。每次仅保留 `method,path,sentAtMs,requestIdHeader,idempotencyKeySha256,requestBody,receivedAtMs,httpStatus,responseIdHeader,responseBody`；时间是该采集端同一时基的毫秒数，body 为原 JSON 文本（错误响应可非 JSON），未收到时最后四项为 null。保留的是取价路径，**不导出** Authorization、Cookie、全量请求头、会话或供应商凭据。名册、导出、`observations.json` 均私有，非聚合报告。只使用进程正常退出的完整文件。
 - 使用原任务路径、版本、候选、请求与响应关联 ID、幂等键摘要及报价批次核对。截止前收到过成功信封，使用该不可变业务结果（`UNAVAILABLE` 也是有效业务结果）；同键多次成功的业务数据必须相同。否则使用截止前最后实际收到的 HTTP 错误，完全没看到响应则是 `NO_RESPONSE`。不把截止后才收到的成功提前；没有发出或不能证明导出覆盖截止时间则拒绝该次评测，不把缺采样当传输超时。预先约定这一截止语义，不统计单次网络尝试成功率。
 - `evidenceSha256` 绑定完整传输导出，`intentRef` 指向其中一项。工具不运行代理、不发请求、不补授权，不能仅凭采集方填写的水位或时间戳证明观察无缺口；采集方必须独立留存其完整性依据。
+
+**把覆盖名册交给 Economy 计算描述性误差。** 私有 `manifest.json` 格式为 `{format:"budget-offer-manifest-v1",observationsSha256,scope:{tenantId,clientId,ownerJiacn},offers:[{quoteId,offerSha256}]}`。`objects/` 内按 SHA-256 存原字节。`offerSha256` 必须来自 Economy 用相应意图和实际响应核对后冻结的预测；不得看过结局再构造报价。先运行 `offers`（不传 truth）冻结并核对预测。独立核真后的名册才进入下一步：
+
+```sh
+(umask 077; python3.11 ops/performance/budget_holdout_coverage.py offers roster.json observations.json manifest.json \
+  --roster-sha256 "$R" --observations-sha256 "$O" --manifest-sha256 "$M" --objects objects \
+  --truth truth.json --truth-sha256 "$T" > evaluation.json)
+```
+
+- 对 `evaluation.json` 独立留存摘要；其内容仍私有。`FrozenCalibrationStudy.scoreObserved(scope, owner, rosterSha, objects)` 只读受信的已固定工件，按原价册和逐操作量重算。对象提供器须限于本研究的内容寻址私有目录；同一目录中含预测、价册、`outcomePoint` 生成的完整结局及该名册，不接受客户端自报的真值或摘要作为可信来源。
+- 请求/候选按原分母报告；误差按唯一事项。重复指向同一预测与同一结局只计一次，不同来源声称是同一事项的确认结局则拒绝并核对来源。零真值单列绝对误差；缺真值不进误差、不删请求。无可用分母时不出比率。此汇总不是自动校准、置信区间、上线许可或供应商开票成本。
