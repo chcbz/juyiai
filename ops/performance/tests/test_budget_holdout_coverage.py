@@ -74,6 +74,14 @@ class BudgetCoverageTest(unittest.TestCase):
                responseBody=json.dumps(dict(protocolVersion=1,requestId='request',code='E0',msg='ok',data=data)))
         log=dict(format='budget-transport-export-v1',rosterSha256=self.h,completeThroughMs=100,intents=[dict(intentRef='k',attempts=[a])]);return a,log
 
+    def test_bootstrap_uses_predeclared_whole_task_families_and_signed_long_seed(self):
+        _,log=self.wire();freeze=lambda:tool.freeze_observations(self.roster,log,self.h,self.h)
+        self.assertIsNone(tool.bootstrap_plan(self.roster));self.roster['bootstrap']={'seed':-3,'families':{'k':'family'}};freeze()
+        for bad in ({'seed':True,'families':{'k':'family'}},{'seed':2**63,'families':{'k':'family'}},
+                    {'seed':3,'families':{}},{'seed':3,'families':{'k':'family','extra':'family'}},{'seed':3,'families':{'k':' '}}):
+            self.roster['bootstrap']=bad
+            with self.assertRaises(tool.Invalid):freeze()
+
     def test_freeze_uses_observed_responses_not_late_success_or_last_retry(self):
         a,log=self.wire();attempts=log['intents'][0]['attempts'];score=lambda:tool.freeze_observations(self.roster,log,self.h,self.h)['results'][0]
         retry=dict(a,sentAtMs=22,receivedAtMs=23,httpStatus=503,responseIdHeader=None,responseBody='gateway error');attempts.append(retry)

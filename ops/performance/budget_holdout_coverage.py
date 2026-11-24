@@ -107,11 +107,22 @@ def load(path, pin):
     return parse_json(raw)
 
 
+def bootstrap_plan(roster):
+    # Optional descriptive intervals: the collection owner fixes seed and family assignments before sending.
+    plan=roster.get('bootstrap')
+    if plan is None:return None
+    require(isinstance(plan,dict) and type(plan.get('seed')) is int and -(2**63)<=plan['seed']<2**63,'invalid frozen bootstrap seed')
+    groups=plan.get('families');tasks={r['taskId'] for r in roster['requests']}
+    require(isinstance(groups,dict) and groups.keys()==tasks and all(map(text,groups.values())),'incomplete or surplus frozen families')
+    return dict(seed=plan['seed'],families=groups)
+
+
 def freeze_observations(roster, capture, roster_sha, capture_sha):
     """One logical intent per denominator; only responses observed by the predeclared cutoff count."""
     from urllib.parse import quote
     require(roster['format']=='budget-roster-v1' and capture['format']=='budget-transport-export-v1'
             and sha(roster_sha) and sha(capture_sha) and capture['rosterSha256']==roster_sha, 'wrong capture or roster')
+    bootstrap_plan(roster)
     cutoff=roster['cutoffAtMs']; end=capture['completeThroughMs']
     require(type(cutoff) is int and cutoff>=0 and type(end) is int and end>=cutoff, 'capture does not cover cutoff')
     intents=rows_by(roster['requests'],'intentRef'); logs=rows_by(capture['intents'],'intentRef'); output=[]; bindings=set()
@@ -191,7 +202,7 @@ def evaluation_roster(roster,observations,manifest,truth,roster_sha,observations
             fact=facts[item['agentId']];rows.append(dict(intentRef=key,taskId=requests[key]['taskId'],**item,
                 reason=fact['reason'],wholeTaskTruthSha256=fact.get('wholeTaskTruthSha256')))
     return dict(format='budget-evaluation-roster-v1',observationsSha256=observations_sha,manifestSha256=manifest_sha,
-                truthSha256=truth_sha,referenceSha256=roster['referenceSha256'],rows=rows)
+                truthSha256=truth_sha,referenceSha256=roster['referenceSha256'],rows=rows,bootstrap=bootstrap_plan(roster))
 
 
 def offers_main(argv):
