@@ -263,6 +263,13 @@ class NativeLocalApiTest(unittest.TestCase):
         self.assertEqual(record['recovery'],'forward_only_candidate_retained')
         self.assertTrue((self.root/'stopped').exists())
         self.assertEqual((self.root/'calls').read_text().splitlines().count('start'),1)
+        # Optional bounded rendezvous with the isolated Java receiver. The parent may not
+        # repair until it verified the closed listener, the untouched inbox and MySQL counts.
+        if os.environ.get('CYF_TEST_PENDING_RECEIPT_WINDOW')=='1':
+            import sys, select
+            print('API_FORWARD_ONLY_FAILED_STOPPED',flush=True)
+            self.assertTrue(select.select([sys.stdin],[],[],30)[0], 'missing receiver outage observation')
+            self.assertEqual(sys.stdin.readline(),'REPAIR\n')
         # Retrying derives policy from the same durable descriptor, not env.
         again=self.install(); self.assertEqual(again.returncode,0,again.stderr)
         self.assertEqual(self.f.target.read_bytes(),self.jar)
