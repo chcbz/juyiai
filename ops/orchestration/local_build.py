@@ -122,6 +122,8 @@ def export_package(args, command, identity, fixture):
                       'fixtureSha256': fixture, 'reports': [producer.record(p) for p in reports]})
     inputs = [args.source / 'settings.gradle', args.source / 'starter/build.gradle',
               LOCAL_INIT, METADATA_INIT, Path(__file__).resolve()]
+    if any(arg.startswith('-P') for arg in raw_argv):
+        inputs.append(args.output / 'inputs.json')
     log = build / 'gradle-execution.log'
     # Evidence records must live below the build root, not point at an external
     # mutable console. Preserve original bytes exactly (including task timings).

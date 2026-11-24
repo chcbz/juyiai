@@ -513,6 +513,26 @@ class LocalPackageTest(unittest.TestCase):
             m.validate_argv(argv + ['-Dorg.gradle.jvmargs=-javaagent:/unsafe'],
                             {':starter:bootJar'}, [{'path': '/safe/local-release-metadata.init.gradle'}])
 
+    def test_owned_fixture_properties_require_bound_plan_and_unchanged_argv(self):
+        inv=self.f.ev['invocation']; argv=inv['argv']; argv.append('-PownedCapabilityEsPort=1234')
+        self.rejected(self.run_fixture,'EVIDENCE_INVALID')
+        identity=self.f.identity; path=self.f.build.parent/'inputs.json'
+        path.write_bytes(m.canonical(dict(format='cyf-local-fast-build-input-v1',batchId=identity['buildId'],version=identity['version'],
+            source={k:identity[k] for k in ('commit','tree')},command=['driver','--',*argv])))
+        ref=m.record(path); inv['inputs'].append(ref); inv['fixtureSha256']=ref['sha256']
+        for item in self.f.ev['tests']: item['fixtureSha256']=ref['sha256']
+        argv[-1]='-PownedCapabilityEsPort=1235'; self.rejected(self.run_fixture,'EVIDENCE_INVALID')
+        argv[-1]='-PownedCapabilityEsPort=1234'; self.run_fixture()
+
+    def test_public_fixture_grammar_rejects_secrets_duplicates_and_escaped_paths(self):
+        args=self.f.ev['invocation']['argv']; tasks=set(self.f.tasks)|{':validateLayering',':starter:bootJar'}
+        for extra in (['-Ppassword=x'],['-PownedCapabilityEsPort=65536'],['-PownedCapabilityEsPort=0'],
+                      ['-PownedCapabilityEsLoad=true']*2,['-PownedRuntimeRepairFixture=/tmp/x'],
+                      ['-PownedCutoverController='+str(self.f.source.parent)+'/controller/../other'],
+                      ['-PownedPickupCodex=https://example.invalid'],['-PmeasuredBatchQuoteLoad=false']):
+            with self.subTest(args=extra),self.assertRaises(m.Rejected):
+                m.validate_argv(args+extra,tasks,self.f.ev['invocation']['inputs'],self.f.source)
+
     def test_actual_test_filter_argv_is_preserved_not_executed(self):
         argv = self.f.ev['invocation']['argv']
         i = argv.index(':agent:test')
