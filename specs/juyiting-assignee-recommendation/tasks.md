@@ -456,6 +456,8 @@ B86 优先处理真实目录与认证的重复观察：区分会话、所有者�
 - `cyf-rb-1123-d156b`，API `1ff2de978c5e62fa36ac6e8230b1b9434dfad344`，指定worker 277.813秒，467项JUnit通过，0失败/错误/跳过，分层与fresh bootJar通过。仅开发验证，未打交付包或安装；worker JAR SHA `c6d5dedbe71ce9e9602066c2575844e19d5c6f18aae8673243a0698414b9cd73`。原发送围栏已记但尚未收到业务派发ACK时拒绝；同一派发ACK后、尚无业务final时可取回原成员绑定。换代、换摘要、换capture均拒绝；认证主体是夹具，不是实际HTTP收件或成本回执。
 - 后续接收端核对：已有 `ChatUsageCostRecorder` 是 STARTED/TERMINAL 观测，不是逐调用 ACK；原生提交端的 `NativeCaptureAuthority` 依赖真实 workspace execution，不能借用其入口伪造议事执行。应沿 `withAuthenticatedDevice` 在事务内复验原派发、成员 captureId 及快照，再复用 Economy journal 与既有提交后结算边界；收件与样本资格分开。专项验证重复 POST、提交后断连 GET 同回执、换设备和缺 final 均不得重复计价或抬升完整性。
 
+- `cyf-rb-1123-d157`，API `bdfa2608fd96ac87c55e1d5be5209f57bc7adab9`，指定 worker 50.535 秒失败。`validateLayering` 的 G1 拦截 Chat 引用另一个域 Agent 的 HTTP 实现类。原结果保留；不豁免 G1、不用全限定名绕开。修订为 Agent API 暴露内部 intake 契约；两个 Controller 各自渲染 HTTP，应答绑定、关联、持久化及提交后结算继续复用原 journal。未形成可发布制品。
+
 **D156 起：接收端分批实施；不以设备落盘代替服务端持久回执**
 
 | 批次与责任层 | 交付及验收 | 当前状态 |
