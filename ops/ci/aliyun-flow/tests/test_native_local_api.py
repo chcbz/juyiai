@@ -218,7 +218,15 @@ class NativeLocalApiTest(unittest.TestCase):
         self.assertFalse((self.root/'stopped').exists())
 
     def test_forward_only_start_failure_never_restores_incompatible_jar(self):
-        self.approval['rollback_policy']='forward-only'; self.write_approval()
+        # Exercise the release controller's real descriptor, not a manually patched installer fixture.
+        import sys
+        with mock.patch.object(sys,'path',[str(old.ROOT/'ops/orchestration')]+sys.path):
+            from local_release import api_install_descriptor
+        p=dict(identity=self.identity,package=self.approval['package'],receiptSha256=self.approval['receipt_sha256'],
+               applicationJarSha256=self.approval['jar_sha256'])
+        prev=self.approval['expected_previous_sha256'];self.assertEqual(self.approval,api_install_descriptor(p,prev,'compatible'))
+        with self.assertRaises(ValueError):api_install_descriptor(p,prev,'guess')
+        self.approval=api_install_descriptor(p,prev,'forward-only'); self.write_approval()
         lifecycle=self.root/'bin/cyf-api-kit'
         lifecycle.write_text(lifecycle.read_text().replace('start) rm -f',
             'start) if [ -f "$root/fail-next-start" ]; then rm "$root/fail-next-start"; exit 1; fi; rm -f'))
