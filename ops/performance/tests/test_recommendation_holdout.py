@@ -159,3 +159,28 @@ class HoldoutTest(unittest.TestCase):
             r.write_text(json.dumps(self.run));rejected=subprocess.run(cmd,capture_output=True)
             self.assertEqual(2,rejected.returncode);self.assertFalse(rejected.stdout);self.assertIn(b'frozen candidate',rejected.stderr)
             l.write_text('{"x":1,"x":1}');self.assertNotEqual(0,subprocess.run(cmd,capture_output=True).returncode)
+
+    def test_blind_cli_roundtrip_to_original_score(self):
+        self.case('private-task',['ACCEPTABLE','INSUFFICIENT'],['HIGH','UNKNOWN'],'HYBRID','READY')
+        c=self.labels['cases'][0]; facts=dict(format='recommendation-blind-facts-v1',cases=[dict(c,taskText='复核预算',candidates={'a1':[],'a0':['有完整预算复核能力']})]);
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);src=root/'facts';ans=root/'returned';src.write_text(json.dumps(facts));pin=lambda p:sha256(p.read_bytes()).hexdigest()
+            cmd=[sys.executable,evaluator.__file__,'blind',str(src),'--expected-facts-sha256',pin(src)];sheet=json.loads(subprocess.check_output(cmd))
+            raw=json.dumps(sheet);self.assertFalse(any(k in raw for k in ('private-task','familyId','partition','a0"','a1"','rankingVersion','recommendationLevel')))
+            for row in sheet['cases'][0]['candidates']:
+                self.assertIsNone(row['judgement']);row['judgement']='ACCEPTABLE' if row['capabilityFacts'] else 'INSUFFICIENT'
+            ans.write_text(json.dumps(sheet));imported=json.loads(subprocess.check_output(cmd+['--filled',str(ans),'--expected-filled-sha256',pin(ans)]));self.assertEqual(self.labels,imported)
+            self.assertEqual(1,evaluator.evaluate(imported,self.run,'0'*64)['overall']['highPrecision']['numerator'])
+            for changed in ('decision','text','missing','pin'):
+                invalid=copy.deepcopy(sheet);row=invalid['cases'][0]['candidates'][0]
+                if changed=='decision':row['judgement']=None
+                if changed=='text':row['capabilityFacts']=['private-replacement']
+                if changed=='missing':invalid['cases'][0]['candidates'].pop()
+                if changed=='pin':invalid['sourceSha256']='0'*64
+                ans.write_text(json.dumps(invalid));res=subprocess.run(cmd+['--filled',str(ans),'--expected-filled-sha256',pin(ans)],capture_output=True);self.assertEqual(2,res.returncode);self.assertFalse(res.stdout);self.assertNotIn(b'private-replacement',res.stderr)
+
+    def test_blind_projection_does_not_inherit_rank_order_or_result_fields(self):
+        self.case('first',[],[],'NOT_NEEDED','NO_CANDIDATES');self.case('second',[],[],'NOT_NEEDED','NO_CANDIDATES');cases=[dict(c,taskText='task',candidates={f'a{i}':[f'fact {i}'] for i in range(8)}) for c in self.labels['cases']];cases[0]['candidates']={}
+        source=dict(format='recommendation-blind-facts-v1',cases=cases);sheet=evaluator.blind_material(source,'0'*64);cases.reverse();cases[0]['candidates']=dict(reversed(list(cases[0]['candidates'].items())));self.assertEqual(sheet,evaluator.blind_material(source,'0'*64))
+        cases[0]['recommendations']=[]
+        with self.assertRaises(evaluator.Invalid):evaluator.blind_material(source,'0'*64)

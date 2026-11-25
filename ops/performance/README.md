@@ -75,6 +75,18 @@ A capture owner must export the real Spring Boot HandlerMapping/management mappi
 
 `recommendation_holdout.py` 是离线评分工具，不生成标签、不训练阈值、不调用模型或写业务数据。先由标注人员在**不看推荐结果**时冻结任务、当时可披露的授权能力快照、任务族和可接受候选。任务归属只出现一次，同模板/同源改写归同一个 `familyId`，校准与留出不能混用。事实快照由采集责任方核验；工具只核对摘要相等，不能证明来源真实。文件及独立冻结摘要留在获授权的非生产证据区，不提交私有任务或响应。
 
+**先盲标，再运行推荐。** 采集人准备私有 `facts.json`，格式 `{"format":"recommendation-blind-facts-v1","cases":[…]}`。每项沿用下述 `labels.json` 的 case 元数据，但 `candidates` 是完整授权候选 ID 到可披露能力事实字符串数组的映射，并增加 `taskText`（事前需求、附件要点及约束）。候选确无材料用空数组；不能只摘取检索命中的能力或跳过无能力记录者。采集人负责核对原始快照摘要、授权、完整性，去掉正文中的姓名、排序、推荐理由等提示。工具不能检查自然语言是否泄题；材料不足以脱敏时不要分发。
+
+```sh
+umask 077
+python3.11 ops/performance/recommendation_holdout.py blind facts.json --expected-facts-sha256 "$FACTS_PIN" > worksheet.json
+# 只将 worksheet.json 交给有权查看事实的独立标注人；不要同时提供映射、推荐响应或分区。
+# 返回并独立固定 filled.json 后：
+python3.11 ops/performance/recommendation_holdout.py blind facts.json --expected-facts-sha256 "$FACTS_PIN" --filled filled.json --expected-filled-sha256 "$FILLED_PIN" > labels.json
+```
+
+每人只改自己的 `judgement`：能力事实足以覆盖**整项**需求填 `ACCEPTABLE`；已知不能满足必要条件填 `NOT_ACCEPTABLE`；证据不足以判断填 `INSUFFICIENT`。不要强选一人，可以多人适配或全不适配。序号是表内代号，不是排名。工具核对来源摘要、每个位置及所见文本；未填不等于资料不足，缺项或材料被改动则拒绝整份导入。没有候选的事项保留。发布留出结果前单独保存人工回件和标签摘要；此流程不证明标注人独立、输入系真实事实或标签正确。
+
 ```sh
 python3.11 ops/performance/recommendation_holdout.py labels.json run.json \
   --expected-labels-sha256 "$FROZEN_LABELS_SHA" \

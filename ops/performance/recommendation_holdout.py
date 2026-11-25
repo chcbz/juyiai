@@ -6,6 +6,7 @@ import json
 import math
 from pathlib import Path
 import re
+import sys
 
 
 CASE_TAGS = ('SHORT_DESCRIPTION','MULTI_ATTACHMENT','NEGATED_OR_CONDITIONAL','PARAPHRASE','PARTIAL_CAPABILITY')
@@ -100,23 +101,30 @@ class Group:
                     **{k:r.report() for k,r in self.rates.items()})
 
 
-def evaluate(labels, run, labels_sha):
-    require(labels['format'] == 'recommendation-labels-v1' and run['format'] == 'recommendation-run-v1', 'unknown format')
-    require(run['labelsSha256'] == labels_sha and digest(labels_sha), 'label manifest digest mismatch')
-    require(digest(run['configurationSha256']) and token(run['rankingVersion']), 'unbound ranking configuration')
+def partition_cases(rows):
+    require(isinstance(rows,list), 'invalid case catalog')
     cases = {}; tasks = set(); partitions = {}
-    for c in labels['cases']:
+    for c in rows:
         key, family, part = c['caseId'], c['familyId'], c['partition']
         require(token(key) and token(family) and token(c['taskId']) and token(c['taskVersion']) and digest(c['factsSha256']), 'unbound case')
         require(key not in cases and c['taskId'] not in tasks, 'duplicate case or task')
         require(part in ('CALIBRATION','HOLDOUT') and partitions.setdefault(family,part) == part, 'family crosses partitions')
         tags = c['caseTags']
         require(isinstance(tags,list) and all(t in CASE_TAGS for t in tags) and len(set(tags))==len(tags), 'unrecognized or duplicate case tag')
-        judgements = c['candidates']
-        require(isinstance(judgements,dict) and all(token(k) and v in ('ACCEPTABLE','NOT_ACCEPTABLE','INSUFFICIENT') for k,v in judgements.items()), 'invalid candidate judgements')
-        cases[key] = c; tasks.add(c['taskId'])
+        cases[key]=c;tasks.add(c['taskId'])
     holdout = {k for k,c in cases.items() if c['partition']=='HOLDOUT'}
     require(holdout, 'no holdout')
+    return cases, holdout
+
+
+def evaluate(labels, run, labels_sha):
+    require(labels['format'] == 'recommendation-labels-v1' and run['format'] == 'recommendation-run-v1', 'unknown format')
+    require(run['labelsSha256'] == labels_sha and digest(labels_sha), 'label manifest digest mismatch')
+    require(digest(run['configurationSha256']) and token(run['rankingVersion']), 'unbound ranking configuration')
+    cases, holdout = partition_cases(labels['cases'])
+    for c in cases.values():
+        judgements = c['candidates']
+        require(isinstance(judgements,dict) and all(token(k) and v in ('ACCEPTABLE','NOT_ACCEPTABLE','INSUFFICIENT') for k,v in judgements.items()), 'invalid candidate judgements')
     total, groups, states, seen = Group(), defaultdict(Group), defaultdict(Group), set()
     tags = {tag:Group() for tag in CASE_TAGS}
     roster_sizes = {name:Group() for name in ('EMPTY','ONE_TO_THREE','FOUR_OR_MORE')}
@@ -159,7 +167,53 @@ def evaluate(labels, run, labels_sha):
                 overall=total.report(), byResponseState={s:g.report() for s,g in sorted(states.items())}, byCaseTag={tag:g.report() for tag,g in tags.items()}, byRetrievalMode={m:g.report() for m,g in sorted(groups.items())})
 
 
+def blind_material(source, pin, filled=None):
+    """Offline projection of operator-approved text, never a read from ranked API results."""
+    require(isinstance(source, dict) and set(source) == {'format','cases'} and source['format']=='recommendation-blind-facts-v1', 'invalid facts catalog')
+    cases, _ = partition_cases(source['cases'])
+    sheets=[]; labels=[]
+    # Case ordering and candidate ordering must not inherit a retrieval rank or a partition block.
+    def order(key): return sha256(key.encode()).digest()
+    for c in cases.values():
+        require(set(c)=={'caseId','familyId','partition','taskId','taskVersion','factsSha256','caseTags','taskText','candidates'} and token(c['taskText']), 'unexpected blind facts fields')
+        candidates=c['candidates'];require(isinstance(candidates,dict) and all(token(k) and isinstance(v,list) and all(token(x) for x in v) for k,v in candidates.items()), 'invalid capability facts')
+    answers=None
+    if filled is not None:
+        require(isinstance(filled,dict) and set(filled)=={'format','sourceSha256','cases'} and filled['format']=='recommendation-blind-sheet-v1' and filled['sourceSha256']==pin and isinstance(filled['cases'],list) and len(filled['cases'])==len(cases),'wrong or incomplete worksheet')
+        answers=filled['cases']
+    for n,c in enumerate(sorted(cases.values(),key=lambda x:order(x['caseId']))):
+        sheet={'case':n+1,'taskText':c['taskText'],'candidates':[]}; sheets.append(sheet)
+        label={k:c[k] for k in ('caseId','familyId','partition','taskId','taskVersion','factsSha256','caseTags')};label['candidates']={};labels.append(label)
+        ids=sorted(c['candidates'],key=lambda k:order(json.dumps([c['caseId'],k],ensure_ascii=False)))
+        if answers is not None:
+            response=answers[n]; require(isinstance(response,dict) and set(response)==set(sheet) and type(response['case']) is int and response['case']==n+1 and response['taskText']==sheet['taskText'] and isinstance(response['candidates'],list) and len(response['candidates'])==len(ids),'changed or incomplete case')
+        for i,k in enumerate(ids):
+            row={'candidate':i+1,'capabilityFacts':c['candidates'][k],'judgement':None};sheet['candidates'].append(row)
+            if answers is not None:
+                item=response['candidates'][i]; require(isinstance(item,dict) and set(item)==set(row) and type(item['candidate']) is int and item['candidate']==i+1 and item['capabilityFacts']==row['capabilityFacts'],'changed candidate or facts')
+                decision=item['judgement'];require(decision in ('ACCEPTABLE','NOT_ACCEPTABLE','INSUFFICIENT'),'missing or unknown judgement');label['candidates'][k]=decision
+    if answers is not None:return dict(format='recommendation-labels-v1',cases=labels)
+    return dict(format='recommendation-blind-sheet-v1',sourceSha256=pin,cases=sheets)
+
+
+def blind_main(argv):
+    parser=argparse.ArgumentParser(description='Prepare a private blind worksheet, or import independent human decisions before ranking.')
+    parser.add_argument('facts',type=Path);parser.add_argument('--expected-facts-sha256',required=True)
+    parser.add_argument('--filled',type=Path);parser.add_argument('--expected-filled-sha256');args=parser.parse_args(argv)
+    try:
+        source,pin=read(args.facts);require(pin==args.expected_facts_sha256,'external facts pin mismatch')
+        require((args.filled is None)==(args.expected_filled_sha256 is None),'filled sheet and pin required together')
+        filled=None
+        if args.filled is not None:
+            filled,got=read(args.filled);require(got==args.expected_filled_sha256 and isinstance(filled,dict),'invalid frozen answers')
+        result=blind_material(source,pin,filled)
+    except (KeyError,TypeError,ValueError,OSError) as error:
+        parser.exit(2,'invalid blind inputs: '+(str(error) if isinstance(error,Invalid) else type(error).__name__)+'\n')
+    print(json.dumps(result,ensure_ascii=False,allow_nan=False,indent=2))
+
+
 def main():
+    if sys.argv[1:2]==['blind']: return blind_main(sys.argv[2:])
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('labels',type=Path); parser.add_argument('run',type=Path)
     parser.add_argument('--expected-labels-sha256',required=True)
