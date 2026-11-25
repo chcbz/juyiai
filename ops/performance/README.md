@@ -91,6 +91,8 @@ python3.11 ops/performance/recommendation_holdout.py labels.json run.json \
 
 - `FROZEN_API_RANKING_VERSION` 在留出运行前从固定候选及其实际加载的策略独立核对并保存，不从待评 `run.json` 回填。即使整批响应都一致地返回了另一版本（例如未加载配置而退回基础 RRF），也拒绝为原策略出具报告。无策略基线试验须明确固定基础版本。
 
+- `byRosterSize` 按完整授权候选数分为空、1–3人、4人以上。存在可接受候选时，1–3人组无需排序也必定 Hit@3；单看总体可能掩盖大名册的排序失败。另看4人以上组的命中分母、区间与业务覆盖，不剔除小名册或改变详设主指标。
+
 - `byResponseState` 单列 READY、NO_MATCH、NO_CANDIDATES 与 DEGRADED（仅出现的组）；特别检查人工判有可承办人但 API 返回 NO_MATCH 的任务，不把空名册并入。运行须保留原 `degradedReasons`；降级无原因或正常响应附降级原因的矛盾输入不能评分。
 
 ## 预算请求覆盖与缺真值清单（非生产，详设 §4、§6.1）

@@ -38,6 +38,18 @@ class HoldoutTest(unittest.TestCase):
         self.assertEqual(3/5,overall['recommendedTaskRate']['value']);self.assertEqual(1,overall['insufficientTasks'])
         self.assertIsNone(report['byRetrievalMode']['NOT_NEEDED']['highPrecision']['ci95'])
 
+    def test_hit_at_three_separates_rosters_that_cannot_miss(self):
+        self.case('empty',[],[],'NOT_NEEDED','NO_CANDIDATES')
+        self.case('three',['NOT_ACCEPTABLE']*2+['ACCEPTABLE'],['UNKNOWN']*3,'HYBRID','NO_MATCH')
+        self.case('four',['NOT_ACCEPTABLE']*3+['ACCEPTABLE'],['UNKNOWN']*4,'HYBRID','NO_MATCH')
+        self.case('none',['NOT_ACCEPTABLE']*4,['UNKNOWN']*4,'HYBRID','NO_MATCH')
+        report=self.score(); groups=report['byRosterSize']
+        self.assertEqual(.5,report['overall']['hitAt3']['value'])
+        for key,tasks,den,value in [('EMPTY',1,0,None),('ONE_TO_THREE',1,1,1),('FOUR_OR_MORE',2,1,0)]:
+            self.assertEqual(tasks,groups[key]['tasks'])
+            self.assertEqual(den,groups[key]['hitAt3']['denominator'])
+            self.assertEqual(value,groups[key]['hitAt3']['value'])
+
     def test_no_high_is_not_success_and_insufficient_high_is_not_credited(self):
         self.case('t',['ACCEPTABLE'],['UNKNOWN'],'HYBRID','NO_MATCH');self.assertIsNone(self.score()['overall']['highPrecision']['value'])
         self.case('x',['INSUFFICIENT'],['HIGH'],'HYBRID','READY');self.assertEqual(0,self.score()['overall']['highPrecision']['value'])

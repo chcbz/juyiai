@@ -119,6 +119,7 @@ def evaluate(labels, run, labels_sha):
     require(holdout, 'no holdout')
     total, groups, states, seen = Group(), defaultdict(Group), defaultdict(Group), set()
     tags = {tag:Group() for tag in CASE_TAGS}
+    roster_sizes = {name:Group() for name in ('EMPTY','ONE_TO_THREE','FOUR_OR_MORE')}
     for entry in run['results']:
         key = entry['caseId']; require(key in holdout and key not in seen, 'unexpected or duplicate result'); seen.add(key)
         c, result = cases[key], entry['data']
@@ -136,7 +137,8 @@ def evaluate(labels, run, labels_sha):
         reasons = result.get('degradedReasons')
         require(isinstance(reasons,list) and all(token(r) for r in reasons)
                 and bool(reasons)==(result['state']=='DEGRADED'), 'inconsistent degradation disclosure')
-        for group in (total,groups[mode],states[result['state']],*(tags[tag] for tag in c['caseTags'])):
+        size = 'EMPTY' if not rows else 'ONE_TO_THREE' if len(rows) <= 3 else 'FOUR_OR_MORE'
+        for group in (total,roster_sizes[size],groups[mode],states[result['state']],*(tags[tag] for tag in c['caseTags'])):
             group.add(c['familyId'], c['candidates'], rows, mode)
     require(seen == holdout, 'missing holdout result; do not score a partial run')
     strata = {t:sum(t in cases[k]['caseTags'] for k in holdout) for t in CASE_TAGS}
@@ -144,6 +146,7 @@ def evaluate(labels, run, labels_sha):
                 format='recommendation-evaluation-v1', labelsSha256=labels_sha,
                 configurationSha256=run['configurationSha256'],rankingVersion=run['rankingVersion'],
                 ciMethod='two-sided Hoeffding; independent families, conditional fixed weights; marginal 95%',
+                byRosterSize={k:g.report() for k,g in roster_sizes.items()},
                 overall=total.report(), byResponseState={s:g.report() for s,g in sorted(states.items())}, byCaseTag={tag:g.report() for tag,g in tags.items()}, byRetrievalMode={m:g.report() for m,g in sorted(groups.items())})
 
 
