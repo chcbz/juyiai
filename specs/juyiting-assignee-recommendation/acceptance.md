@@ -136,3 +136,16 @@ D335r 补上生成器到正式消费者的联验：固定 `MeteredPeerMySqlTest`
 API固定a14425f79e1fbcc56f399f3732d98809b6639984，配置修复不重建：新建缺失专用能力索引、为原应用身份补最小读写权限、启用原后台修复；44条能力证据均完成OpenAI text-embedding-3-small/1024维编码，聊天记忆索引不动。真实自有事项接口与浏览器均200/E0、HYBRID、6候选、无检索降级，泛化不可用提示消失；旧版本409、新报价仍503暂停，事项版本/状态不变。
 
 该事项实际NO_MATCH、页面“资料不足”，不是READY或匹配质量通过。首次API16.101秒、随后页面服务端3.828秒，不宣称性能达标；NO_MATCH页面无“重新推荐”按钮，本轮没有该点击通过证据。健康UP、制品摘要MATCH仅是附加核验。接单/报价仍暂停，预算/校准/真实派发和生产FULL仍未完成。内部证据在任务develop-release-20261125-124421/recommend-read-1125-01/es-repair/REPORT.md；原失败/降级记录保留。
+
+## 2026-11-25 校准缺失说明上线实测
+
+- API commit: `3ccda06a8bb6ebc0693626a861aca7dd30913bd0`；tree: `662ffa5023526a57a6d743b89fa0420266444dde`。
+- JAR SHA-256: `9adf679621de429b0da8547138d1fbdde2f6740f93ccd82b6d9c625ff6478ae1`。
+- 指定SSH worker必要测试117项通过，构建/回传154.325秒；原受控安装退出0，HEALTH UP、摘要MATCH。Web/Runtime未改。
+- 生产真实认证接口与UI串行通过：HYBRID、6候选、无degradedReasons；有依据但未校准的UNKNOWN明确解释为匹配等级尚未完成校准。不代表匹配效果达标。
+- 旧版本409 RECOMMENDATION_STALE；报价503 TASK_ASSIGNEE_ADMISSION_PAUSED；自有测试事项无业务变化。只读浏览器已关闭。
+- 性能未通过：本次推荐29972ms，记录与此前热请求分开，不能以健康/功能通过掩盖；未做P95/并发验收。
+- NO_MATCH页无重新推荐按钮，未验证该按钮。生产FULL未执行，原10成功42失败不变。
+- 基准首次派发/赞助结算、独立校准与费用真实数据、性能验收、受控恢复及FULL仍未完成。
+
+内部证据：`calibration-disclosure-1125-01/REPORT.md`及同目录摘要清单（任务区按TTL保留，不作为公开资源）。
