@@ -84,6 +84,7 @@ python3.11 ops/performance/recommendation_holdout.py labels.json run.json \
 
 - `labels.json`：`format=recommendation-labels-v1`，`cases[]` 每项为 `caseId, familyId, partition(CALIBRATION/HOLDOUT), taskId, taskVersion, factsSha256, candidates, caseTags`。`candidates` 将当时**全部**授权候选ID映射到 `ACCEPTABLE / NOT_ACCEPTABLE / INSUFFICIENT`。`caseTags` 可以为空或多选：`SHORT_DESCRIPTION, MULTI_ATTACHMENT, NEGATED_OR_CONDITIONAL, PARAPHRASE, PARTIAL_CAPABILITY`。报告列出留出样本数量为零的类型。
 - `run.json`：`format=recommendation-run-v1`，`labelsSha256, configurationSha256, rankingVersion, results[]`。每个留出任务一项 `caseId, factsSha256, data`；`data` 使用真实推荐接口信封中的业务对象，保留用户实际看到的候选顺序。配置摘要绑定实际候选代码、检索/排序参数、索引与编码代次、评级策略。固定同一输入下的降级场景另存一份运行，不复制任务当独立样本。存在失败或缺失的请求，不丢弃后计算整体成功率；保留原始失败并将该运行标为无法完整评分。
+- 引用必须保留真实 `evidence` 数组；有等级（HIGH/MEDIUM/LOW）的候选至少一条，每条可展示引用须保留非空 `id/kind/label/description` 与 `available:true`。UNKNOWN 可无引用。评分前拒绝页面也无法展示的证据，不静默删除候选或把其等级改为 UNKNOWN；错误及统计报告不输出引用正文。此检查不证明引用真实、归属正确或足以完成任务。
 - `highPrecision` 分母含所有HIGH（含人工认为资料不足的HIGH，不能计为正确）；`hitAt3` 按可接受集合非空的任务计，包括只排入前三而未给正等级的情况。两者不能替代业务覆盖（至少一个HIGH/MEDIUM的任务比例）。确定无匹配且有候选的任务另报误推荐率，资料不足不当作确定无匹配。UNKNOWN按候选计，降级按任务计，整体与各检索模式分别报告。没有分母时输出 `null`，不是0或100%。
 - 区间是按任务族聚合的保守双侧Hoeffding边界，单项95%，非多指标联合保证；须满足不同任务族独立、评估分母权重固定的条件，不要求族内候选相互独立。报告只含计数、比率、区间及输入/评分程序摘要；不自动批准等级上线。正式验收前固定判据、抽样方案与适用人群，不能在看完留出结果后调整再用原集宣称达标。
 

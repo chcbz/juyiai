@@ -19,7 +19,7 @@ class HoldoutTest(unittest.TestCase):
         self.labels['cases'].append(dict(caseId=key,taskId=key,taskVersion='2',familyId=family or key,
             partition='HOLDOUT',caseTags=[],factsSha256='a'*64,candidates=dict(zip(agents,judgements))))
         self.run['results'].append(dict(caseId=key,factsSha256='a'*64,data=dict(taskId=key,taskVersion='2',rankingVersion='rrf-v1',state=state,
-            retrievalMode=mode,degradedReasons=(["QUERY_VECTOR_UNAVAILABLE"] if state=="DEGRADED" else []),candidateSetComplete=True,recommendations=[dict(agent=dict(agentId=p),recommendationLevel=l) for p,l in zip(agents,levels)])))
+            retrievalMode=mode,degradedReasons=(["QUERY_VECTOR_UNAVAILABLE"] if state=="DEGRADED" else []),candidateSetComplete=True,recommendations=[dict(agent=dict(agentId=p),recommendationLevel=l,evidence=[] if l=='UNKNOWN' else [dict(id="ability:1",kind="DECLARED_ABILITY",label="fixture",description="fixture only",available=True)]) for p,l in zip(agents,levels)])))
 
     def score(self):return evaluator.evaluate(self.labels,self.run,'0'*64)
 
@@ -108,6 +108,26 @@ class HoldoutTest(unittest.TestCase):
         row['evidence']=['spurious']
         with self.assertRaises(evaluator.Invalid):self.score()
 
+    def test_ratings_require_disclosed_evidence_before_scoring(self):
+        self.case('t',['ACCEPTABLE'],['HIGH'],'HYBRID','READY')
+        result=self.run['results'][0]['data']; row=result['recommendations'][0]
+        citation=row['evidence'][0]
+        for level in ('HIGH','MEDIUM','LOW','UNKNOWN'):
+            row['recommendationLevel']=level
+            result['state']='READY' if level in ('HIGH','MEDIUM') else 'NO_MATCH'
+            invalid = [None, {}, [None], [dict(citation, available=1)], [dict(citation, available=False)]]
+            invalid.extend([{**citation, k: ' '}] for k in ('id', 'kind', 'label', 'description'))
+            for evidence in invalid:
+                with self.subTest(level=level,evidence=evidence):
+                    row['evidence']=evidence
+                    with self.assertRaisesRegex(evaluator.Invalid,'evidence'):self.score()
+            row['evidence']=[]
+            if level=='UNKNOWN':self.score()
+            else:
+                with self.assertRaisesRegex(evaluator.Invalid,'evidence'):self.score()
+            row['evidence']=[dict(citation,additionalField='ignored')]
+            self.score()
+
     def test_split_contamination_rejected(self):
         self.case('a',[],[],'NOT_NEEDED','NO_CANDIDATES','family');self.case('b',[],[],'NOT_NEEDED','NO_CANDIDATES','family')
         self.labels['cases'][0]['partition']='CALIBRATION'
@@ -128,6 +148,12 @@ class HoldoutTest(unittest.TestCase):
             self.run['labelsSha256']=pin;r.write_text(json.dumps(self.run));cmd=[sys.executable,evaluator.__file__,str(l),str(r),'--expected-labels-sha256',pin,'--expected-ranking-version','rrf-v1','--expected-configuration-sha256','f'*64]
             output=subprocess.check_output(cmd);self.assertNotIn(b'sensitive-id',output);self.assertEqual(sha256(r.read_bytes()).hexdigest(),json.loads(output)['runSha256'])
             self.assertNotEqual(0,subprocess.run(cmd[:-1]+['b'*64],capture_output=True).returncode)
+            # Even an unscored UNKNOWN row must not make a visibly invalid response scoreable.
+            row=self.run['results'][0]['data']['recommendations'][0]
+            row['evidence']=[dict(label='private-evidence-marker', available=False)]
+            r.write_text(json.dumps(self.run)); rejected=subprocess.run(cmd,capture_output=True)
+            self.assertEqual(2,rejected.returncode);self.assertFalse(rejected.stdout)
+            self.assertNotIn(b'private-evidence-marker',rejected.stderr);row['evidence']=[]
             # A consistent run from a different policy must not be scored against this pin.
             self.run['rankingVersion']=self.run['results'][0]['data']['rankingVersion']='wrong-policy'
             r.write_text(json.dumps(self.run));rejected=subprocess.run(cmd,capture_output=True)

@@ -128,6 +128,15 @@ def evaluate(labels, run, labels_sha):
         rows = [(r['agent']['agentId'],r['recommendationLevel']) for r in result['recommendations']]
         require(len(rows)==len(c['candidates']) and {p for p,_ in rows}==set(c['candidates']), 'candidate set mismatch')
         require(all(level in ('HIGH','MEDIUM','LOW','UNKNOWN') for _,level in rows), 'unknown recommendation level')
+        # Score only ratings the user can actually see. This checks disclosure, not
+        # whether the cited capability is true or covers the task (blind labels decide that).
+        for row in result['recommendations']:
+            evidence = row.get('evidence')
+            require(isinstance(evidence, list) and (evidence or row['recommendationLevel'] == 'UNKNOWN'),
+                    'missing recommendation evidence')
+            require(all(isinstance(e, dict) and e.get('available') is True
+                        and all(token(e.get(k)) for k in ('id', 'kind', 'label', 'description')) for e in evidence),
+                    'invalid recommendation evidence')
         mode = result['retrievalMode']; positive = any(level in ('HIGH','MEDIUM') for _,level in rows)
         expected = {'NOT_NEEDED':'NO_MATCH' if rows else 'NO_CANDIDATES','HYBRID':'READY' if positive else 'NO_MATCH',
                     'UNAVAILABLE':'DEGRADED','LEXICAL_ONLY':'DEGRADED'}
