@@ -60,6 +60,25 @@ def available(row):
     return True
 
 
+class ObservedQuoteIdentities:
+    """One immutable batch per logical intent, one priced item per quote, within a frozen study."""
+    def __init__(self):
+        self.batches = set()
+        self.quotes = set()
+
+    def record(self, items):
+        batches = {item['recommendationId'] for item in items}
+        require(len(batches) == 1, 'mixed quote batches')
+        batch = next(iter(batches))
+        require(batch not in self.batches, 'batch reused by another intent')
+        self.batches.add(batch)
+        for item in items:
+            if item['state'] == 'AVAILABLE':
+                quote = item['quoteId']
+                require(quote not in self.quotes, 'quote reused by another candidate or intent')
+                self.quotes.add(quote)
+
+
 def assess(roster, observations, truth, roster_sha, observations_sha):
     require(all(isinstance(x,dict) for x in (roster,observations,truth)), 'invalid study artifact')
     require(roster['format']=='budget-roster-v1' and observations['format']=='budget-forecast-observations-v1'
@@ -70,6 +89,7 @@ def assess(roster, observations, truth, roster_sha, observations_sha):
     requests=rows_by(roster['requests'],'intentRef'); results=rows_by(observations['results'],'intentRef'); outcomes=rows_by(truth['outcomes'],'intentRef')
     require(requests and requests.keys()==results.keys()==outcomes.keys(), 'incomplete or surplus request observation')
     items=quoted=any_quote=full_quote=missing=paired=0
+    identities = ObservedQuoteIdentities()
     plan=bootstrap_plan(roster)
     priced_families=set(); measured_families=set(); paired_families=set()
     states=Counter(); reasons=Counter(); unavailable=Counter(); no_result=Counter()
@@ -83,7 +103,7 @@ def assess(roster, observations, truth, roster_sha, observations_sha):
             present={agent for agent,row in rows.items() if available(row)}
             for agent in rows.keys()-present:
                 reason=rows[agent]['unavailableReason']; unavailable[reason if reason in QUOTE_REASONS else 'OTHER']+=1
-            require(len({r['recommendationId'] for r in rows.values()})==1, 'mixed quote batches')
+            identities.record(rows.values())
             state='FULL' if len(present)==len(ids) else 'MIXED' if present else 'UNAVAILABLE'
         else:
             require(data is None and (status is None or type(status) is int and 400<=status<=599), 'invalid failed request observation')
@@ -145,6 +165,7 @@ def freeze_observations(roster, capture, roster_sha, capture_sha):
     require(type(cutoff) is int and cutoff>=0 and type(end) is int and end>=cutoff, 'capture does not cover cutoff')
     intents=rows_by(roster['requests'],'intentRef'); logs=rows_by(capture['intents'],'intentRef'); output=[]; bindings=set()
     require(intents and intents.keys()==logs.keys(), 'missing or surplus intent log')
+    identities = ObservedQuoteIdentities()
     for key,req in intents.items():
         ids=req['agentIds']; attempts=logs[key]['attempts']; rid=req['requestId']; idem=req['idempotencyKeySha256']
         require(text(req['taskId']) and text(req['taskVersion']) and isinstance(ids,list) and ids and all(map(text,ids)) and len(ids)==len(set(ids)), 'invalid roster request')
@@ -173,8 +194,9 @@ def freeze_observations(roster, capture, roster_sha, capture_sha):
             data=env['data'];require(data['taskId']==req['taskId'] and data['taskVersion']==req['taskVersion'] and type(data['observedAt']) is int and data['observedAt']>=0,'wrong quote snapshot')
             rows=rows_by(data['quotes'],'agentId');require(rows.keys()==set(ids),'partial quote response')
             for row in rows.values():available(row)
-            require(len({r['recommendationId'] for r in rows.values()})==1 and (success is None or success==data),'mixed or changed quote batch');success=data
+            require(success is None or success==data,'changed quote batch');success=data
         require(attempts[0]['sentAtMs']<=cutoff,'not sent by cutoff')
+        if success is not None:identities.record(success['quotes'])  # Count the winner, not its HTTP replays.
         output.append(dict(intentRef=key,httpStatus=200 if success is not None else status,data=success,evidenceSha256=capture_sha))
     return dict(format='budget-forecast-observations-v1',rosterSha256=roster_sha,results=output)
 
@@ -187,7 +209,7 @@ def reconcile_offers(roster, observations, manifest, roster_sha, observations_sh
     scope=manifest['scope']; require(all(text(scope[k]) for k in ('tenantId','clientId','ownerJiacn')), 'missing private scope')
     candidates=rows_by(manifest['offers'],'quoteId'); reqs=rows_by(roster['requests'],'intentRef'); seen=rows_by(observations['results'],'intentRef')
     require(reqs and reqs.keys()==seen.keys() and sha(roster['referenceSha256']), 'incomplete observation population')
-    output=[]; used={}
+    output=[]; used={}; identities=ObservedQuoteIdentities()
     for key,req in reqs.items():
         ids=req['agentIds'];require(isinstance(ids,list) and ids and all(map(text,ids)) and len(set(ids))==len(ids), 'invalid roster candidates')
         reply=seen[key]; status=reply['httpStatus']; data=reply['data']; bound={}
@@ -202,6 +224,7 @@ def reconcile_offers(roster, observations, manifest, roster_sha, observations_sh
                         and o['agentId']==agent and o['quoteId']==qid and type(o['wen']) is int and str(o['wen'])==q['amount']['amountMinor']
                         and o['referenceSha']==roster['referenceSha256'] and sha(o['groupSha']) and sha(o['featureSha']), 'offer does not match forecast')
                 bound[agent]=pin
+            identities.record(quotes.values())
         else:require(data is None and (status is None or type(status) is int and 400<=status<=599),'invalid absent forecast')
         output.append(dict(intentRef=key,candidates=[dict(agentId=i,offerSha256=bound.get(i)) for i in ids]))
     require(len(used)==len(candidates),'unobserved offer in manifest')

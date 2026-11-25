@@ -118,6 +118,7 @@ python3.11 ops/performance/recommendation_holdout.py labels.json run.json \
 - 同一授权主体/付款人一份私有名册，取价前增加 `cutoffAtMs`，按意图冻结 `requestId` 和原 `Idempotency-Key` 的 UTF-8 SHA-256 (`idempotencyKeySha256`)。同任务同幂等键不能用不同 `intentRef` 重复计数。
 - 受信的非生产客户端提供 `capture.json`：`format=budget-transport-export-v1, rosterSha256, completeThroughMs, intents[]`；每个 `intentRef` 一条按发起顺序排列的 `attempts[]`。每次仅保留 `method,path,sentAtMs,requestIdHeader,idempotencyKeySha256,requestBody,receivedAtMs,httpStatus,responseIdHeader,responseBody`；时间是该采集端同一时基的毫秒数，body 为原 JSON 文本（错误响应可非 JSON），未收到时最后四项为 null。保留的是取价路径，**不导出** Authorization、Cookie、全量请求头、会话或供应商凭据。名册、导出、`observations.json` 均私有，非聚合报告。只使用进程正常退出的完整文件。
 - 使用原任务路径、版本、候选、请求与响应关联 ID、幂等键摘要及报价批次核对。截止前收到过成功信封，使用该不可变业务结果（`UNAVAILABLE` 也是有效业务结果）；同键多次成功的业务数据必须相同。否则使用截止前最后实际收到的 HTTP 错误，完全没看到响应则是 `NO_RESPONSE`。不把截止后才收到的成功提前；没有发出或不能证明导出覆盖截止时间则拒绝该次评测，不把缺采样当传输超时。预先约定这一截止语义，不统计单次网络尝试成功率。
+- 同一意图多次读回同一份报价，只计一次。不同意图不能共用批次，不同候选或意图不能共用 `quoteId`；即使候选同人、金额相等或在同一任务族也不可混算。无价项没有 `quoteId`，不是相互重复的报价。发现身份冲突即拒绝本次导出或报告，不拆行、补价或影响在线报价。
 - `evidenceSha256` 绑定完整传输导出，`intentRef` 指向其中一项。工具不运行代理、不发请求、不补授权，不能仅凭采集方填写的水位或时间戳证明观察无缺口；采集方必须独立留存其完整性依据。
 
 **把覆盖名册交给 Economy 计算描述性误差。** 私有 `manifest.json` 格式为 `{format:"budget-offer-manifest-v1",observationsSha256,scope:{tenantId,clientId,ownerJiacn},offers:[{quoteId,offerSha256}]}`。`objects/` 内按 SHA-256 存原字节。`offerSha256` 必须来自 Economy 用相应意图和实际响应核对后冻结的预测；不得看过结局再构造报价。先运行 `offers`（不传 truth）冻结并核对预测。独立核真后的名册才进入下一步：

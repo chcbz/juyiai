@@ -18,7 +18,7 @@ class BudgetCoverageTest(unittest.TestCase):
 
     def case(self,key,amounts,reasons,status=200):
         ids=[str(i) for i in range(len(amounts))];self.roster['requests'].append(dict(intentRef=key,taskId=key,taskVersion='1',agentIds=ids))
-        rows=[dict(agentId=i,state='AVAILABLE' if v is not None else 'UNAVAILABLE',quoteId='q'+i if v is not None else None,recommendationId='batch',amount=None if v is None else dict(currency='WEN',amountMinor=v),unavailableReason='NO_BASELINE' if v is None else None) for i,v in zip(ids,amounts)]
+        rows=[dict(agentId=i,state='AVAILABLE' if v is not None else 'UNAVAILABLE',quoteId=key+'-q'+i if v is not None else None,recommendationId=key+'-batch',amount=None if v is None else dict(currency='WEN',amountMinor=v),unavailableReason='NO_BASELINE' if v is None else None) for i,v in zip(ids,amounts)]
         self.run['results'].append(dict(intentRef=key,httpStatus=status,evidenceSha256=self.h,data=dict(taskId=key,taskVersion='1',quotes=rows) if status==200 else None))
         self.truth['outcomes'].append(dict(intentRef=key,candidates=[dict(agentId=i,reason=r,evidenceSha256=self.h,wholeTaskTruthSha256=self.h if r=='MEASURED' else None) for i,r in zip(ids,reasons)]))
 
@@ -57,6 +57,24 @@ class BudgetCoverageTest(unittest.TestCase):
             self.roster,self.run,self.truth=copy.deepcopy((a,b,c));alter()
             with self.assertRaises(tool.Invalid):self.score()
 
+    def test_distinct_candidates_and_intents_cannot_reuse_an_offer(self):
+        self.case('first',['15','15'],['MEASURED','MEASURED'])
+        self.case('second',['15'],['MEASURED']);self.assertEqual(3,self.score()['quotedWithTruth'])
+        first,second=[r['data']['quotes'] for r in self.run['results']]
+        for row,field in [(first[1],'quoteId'),(second[0],'quoteId'),(second[0],'recommendationId')]:
+            with self.subTest(field=field):
+                saved=row[field];row[field]=first[0][field]
+                with self.assertRaises(tool.Invalid):self.score()
+                row[field]=saved
+
+    def test_retry_can_repeat_a_batch_but_a_new_intent_cannot(self):
+        a,log=self.wire();log['intents'][0]['attempts'].append(dict(a,sentAtMs=21,receivedAtMs=22))
+        freeze=lambda:tool.freeze_observations(self.roster,log,self.h,self.h)
+        self.assertEqual(1,len(freeze()['results']))
+        self.roster['requests'].append(dict(self.roster['requests'][0],intentRef='new',idempotencyKeySha256='b'*64))
+        log['intents'].append(dict(intentRef='new',attempts=[dict(a,idempotencyKeySha256='b'*64)]))
+        with self.assertRaises(tool.Invalid):freeze()
+
     def test_no_fabricated_money_or_whole_task_truth(self):
         self.case('key',['1'],['MEASURED']);row=self.run['results'][0]['data']['quotes'][0];fact=self.truth['outcomes'][0]['candidates'][0]
         for invalid in ('-1','01',1,'1.1',str(2**63)):
@@ -77,13 +95,20 @@ class BudgetCoverageTest(unittest.TestCase):
             output=subprocess.check_output(cmd);self.assertNotIn(b'sensitive-case',output);self.assertEqual(pins[-1],json.loads(output)['truthSha256']);(Path(tmp)/'truth').write_text('{}');r=subprocess.run(cmd,capture_output=True);self.assertEqual(2,r.returncode);self.assertFalse(r.stdout)
     def test_bind_published_offer_not_another_scope_price_or_missing_response(self):
         self.case('observed',['65',None],['NOT_ACCEPTED','NOT_EXECUTED']);self.case('absent',[None],['EVIDENCE_UNAVAILABLE'],None)
-        scope=dict(tenantId='t',clientId='c',ownerJiacn='o'); manifest=dict(format='budget-offer-manifest-v1',observationsSha256=self.h,scope=scope,offers=[dict(quoteId='q0',offerSha256=self.h)])
-        offer=dict(original=dict(taskId='observed',ownerJiacn='o',scope=dict(tenantId='t',clientId='c')),agentId='0',quoteId='q0',wen=65,referenceSha=self.h,featureSha=self.h,groupSha=self.h)
+        scope=dict(tenantId='t',clientId='c',ownerJiacn='o'); manifest=dict(format='budget-offer-manifest-v1',observationsSha256=self.h,scope=scope,offers=[dict(quoteId='observed-q0',offerSha256=self.h)])
+        offer=dict(original=dict(taskId='observed',ownerJiacn='o',scope=dict(tenantId='t',clientId='c')),agentId='0',quoteId='observed-q0',wen=65,referenceSha=self.h,featureSha=self.h,groupSha=self.h)
         join=lambda x:tool.reconcile_offers(self.roster,self.run,manifest,self.h,self.h,lambda pin:x)
         rows=join(offer)['requests'];self.assertEqual([[self.h,None],[None]],[[c['offerSha256'] for c in r['candidates']] for r in rows]);
         evaluation=tool.evaluation_roster(self.roster,self.run,manifest,self.truth,self.h,self.h,self.h,self.h,lambda pin:offer)
         self.assertEqual([(r['taskId'],r['offerSha256'],r['reason']) for r in evaluation['rows']],
                          [('observed',self.h,'NOT_ACCEPTED'),('observed',None,'NOT_EXECUTED'),('absent',None,'EVIDENCE_UNAVAILABLE')])
+        # Same task and candidate, same immutable object: another intent cannot publish the old offer.
+        new_req=dict(self.roster['requests'][0],intentRef='new');self.roster['requests'].append(new_req)
+        new_result=copy.deepcopy(self.run['results'][0]);new_result['intentRef']='new'
+        for row in new_result['data']['quotes']:row['recommendationId']='new-batch'
+        self.run['results'].append(new_result)
+        with self.assertRaisesRegex(tool.Invalid,'quote reused'):join(offer)
+        self.roster['requests'].pop();self.run['results'].pop()
         for patch in (dict(wen=66),dict(referenceSha='b'*64),dict(agentId='1'),dict(original={**offer['original'],'ownerJiacn':'other'})):
             with self.assertRaises(tool.Invalid):join(dict(offer,**patch))
         manifest['offers'].append(dict(quoteId='extra',offerSha256='b'*64))
