@@ -50,15 +50,21 @@ class RuntimeNativeNginxTest(unittest.TestCase):
     def test_protocol6_native_operations_and_denied_aliases(self):
         self.assertTrue(self.accepts('GET', '/internal/agent/executions/commands'))
         self.assertFalse(self.accepts('POST', '/internal/agent/executions/commands'))
+        call = '/internal/agent/executions/a/runs/b/tool-calls/c'
+        for method in ('GET','POST','PUT','DELETE','HEAD'): self.assertFalse(self.accepts(method,call))
+        for path in (call+'/extra',call+'%2f',call[:-1]): self.assertFalse(self.accepts('POST',path))
         for suffix in ('lease', 'lease/renew', 'inputs', 'inputs/ref/content',
                        'outputs/out/content', 'effects/e/start', 'effects/e/result',
-                       'resume', 'result-commits/manifest', 'failure', 'usage', 'provider-usage'):
+                       'resume', 'skill-selection', 'result-commits/manifest', 'business/fixture-resource/lookup', 'business/fixture-resource/commit', 'business/fixture-resource/receipt', 'failure', 'usage', 'provider-usage'):
             path = '/internal/agent/executions/pwe_a/runs/run_b/' + suffix
             self.assertTrue(self.accepts('POST', path), path)
             for wrong in ('GET', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'):
                 self.assertFalse(self.accepts(wrong, path), (wrong, path))
         for path in ('/internal/agent/executions', '/internal/agent/executions/commands/extra',
                      '/internal/agent/executions/pwe_a/runs/run_b/admin',
+                     '/internal/agent/executions/a/runs/b/business/r/write',
+                     '/internal/agent/executions/a/runs/b/skill-selection/commit',
+                     '/internal/agent/executions/a/runs/b/business/r/extra/lookup',
                      '/internal/agent/executions/pwe_a/runs/run_b/inputs/../content',
                      '/internal/agent/executions/pwe_a/runs/run_b/start',
                      '/internal/agent/executions/' + 'a' * 101 + '/runs/b/lease',
