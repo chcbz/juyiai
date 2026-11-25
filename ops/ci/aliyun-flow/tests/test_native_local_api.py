@@ -217,8 +217,41 @@ class NativeLocalApiTest(unittest.TestCase):
         self.assertEqual(self.record()['status'],'failed');self.assertEqual(self.record()['recovery'],'restored_healthy')
         self.assertFalse((self.root/'stopped').exists())
 
+    def test_web_verification_failure_after_forward_only_api_install(self):
+        import sys
+        from test_web_native_local import NativeWebTransactionTest
+        site = NativeWebTransactionTest(); self.addCleanup(site.doCleanups); site.setUp()
+        with mock.patch.object(sys, 'path', [str(old.ROOT/'ops/orchestration')] + sys.path):
+            from local_release import api_install_descriptor
+        p = dict(identity=self.identity, package=self.approval['package'], receiptSha256=self.approval['receipt_sha256'],
+                 applicationJarSha256=self.approval['jar_sha256'])
+        self.approval = api_install_descriptor(p, self.approval['expected_previous_sha256'], 'forward-only')
+        self.write_approval(); result = self.install(); self.assertEqual(result.returncode, 0, result.stderr)
+        record = self.record(); self.assertEqual((record['status'], record['rollback_policy']), ('installed', 'forward-only'))
+        calls = (self.root/'calls').read_bytes()
+        def assert_api_unchanged():
+            self.assertEqual(self.record(), record); self.assertEqual(self.f.target.read_bytes(), self.jar)
+            self.assertEqual((self.root/'calls').read_bytes(), calls)
+        def public_mismatch(*args):
+            self.assertEqual((site.site/'index.html').read_bytes(), site.data['index.html'])
+            assert_api_unchanged(); raise SystemExit('injected public index mismatch')
+        site.online.side_effect = public_mismatch
+        with self.assertRaisesRegex(SystemExit, 'injected public index mismatch'): site.install()
+        site.assert_old(); self.assertFalse((site.site/'assets/lazy.js').exists()); assert_api_unchanged()
+        site.online.side_effect = None
+        repaired = site.install(); self.assertEqual(repaired['status'], 'online_verified')
+        self.assertEqual((site.site/'index.html').read_bytes(), site.data['index.html']); assert_api_unchanged()
+
     def test_forward_only_start_failure_never_restores_incompatible_jar(self):
-        self.approval['rollback_policy']='forward-only'; self.write_approval()
+        # Exercise the release controller's real descriptor, not a manually patched installer fixture.
+        import sys
+        with mock.patch.object(sys,'path',[str(old.ROOT/'ops/orchestration')]+sys.path):
+            from local_release import api_install_descriptor
+        p=dict(identity=self.identity,package=self.approval['package'],receiptSha256=self.approval['receipt_sha256'],
+               applicationJarSha256=self.approval['jar_sha256'])
+        prev=self.approval['expected_previous_sha256'];self.assertEqual(self.approval,api_install_descriptor(p,prev,'compatible'))
+        with self.assertRaises(ValueError):api_install_descriptor(p,prev,'guess')
+        self.approval=api_install_descriptor(p,prev,'forward-only'); self.write_approval()
         lifecycle=self.root/'bin/cyf-api-kit'
         lifecycle.write_text(lifecycle.read_text().replace('start) rm -f',
             'start) if [ -f "$root/fail-next-start" ]; then rm "$root/fail-next-start"; exit 1; fi; rm -f'))
@@ -230,10 +263,130 @@ class NativeLocalApiTest(unittest.TestCase):
         self.assertEqual(record['recovery'],'forward_only_candidate_retained')
         self.assertTrue((self.root/'stopped').exists())
         self.assertEqual((self.root/'calls').read_text().splitlines().count('start'),1)
+        # Optional bounded rendezvous with the isolated Java receiver. The parent may not
+        # repair until it verified the closed listener, the untouched inbox and MySQL counts.
+        if os.environ.get('CYF_TEST_PENDING_RECEIPT_WINDOW')=='1':
+            import sys, select
+            print('API_FORWARD_ONLY_FAILED_STOPPED',flush=True)
+            self.assertTrue(select.select([sys.stdin],[],[],30)[0], 'missing receiver outage observation')
+            self.assertEqual(sys.stdin.readline(),'REPAIR\n')
         # Retrying derives policy from the same durable descriptor, not env.
         again=self.install(); self.assertEqual(again.returncode,0,again.stderr)
         self.assertEqual(self.f.target.read_bytes(),self.jar)
         self.assertEqual(self.record()['status'],'installed')
+
+    @unittest.skipUnless(os.environ.get('CYF_CUTOVER_API_RESULT_SHA'), 'requires fixed LOCAL package and isolated worker')
+    def test_fixed_api_bootjar_config_failure_retains_exact_candidate(self):
+        # Real JAR/installer/JVM; one deliberate Spring config failure, NOT evidence of healthy boot.
+        self.assertNotEqual(os.stat('/proc/self/ns/net').st_ino,os.stat('/proc/1/ns/net').st_ino)
+        self.assertNotEqual(os.stat('/proc/self/ns/mnt').st_ino,os.stat('/proc/1/ns/mnt').st_ino)
+        self._fixed_api_bootjar_failure()
+
+    def _fixed_api_bootjar_failure(self):
+        import shutil, sys
+        self.assertNotIn(subprocess.check_output(['stat','-f','-c','%T',self.root],text=True).strip(),('tmpfs','ramfs'))
+        result_path=Path(os.environ['CYF_CUTOVER_API_RESULT']); raw=result_path.read_bytes()
+        self.assertEqual(sha(raw),os.environ['CYF_CUTOVER_API_RESULT_SHA']); result=json.loads(raw)
+        self.assertEqual(result['status'],'BUILT'); pkg=result['package']; self.assertIs(pkg['productionAuthorized'],False)
+        archive=result_path.parent/'package/api.tar'; self.assertEqual(archive,Path(pkg['package']['path']))
+        shutil.copyfile(archive,self.package); self.package.chmod(0o600)
+        # Use the unmodified pinned coordinator (including real OpenCV pin) for actual release bytes.
+        shutil.copyfile(HOST/'cyf-api-flow-deploy',self.host/'cyf-api-flow-deploy')
+        with mock.patch.object(sys,'path',[str(old.ROOT/'ops/orchestration')]+sys.path):
+            from local_release import api_install_descriptor
+        self.approval=api_install_descriptor(dict(pkg,package=dict(pkg['package'],path=str(self.package))),sha(self.f.old),'forward-only')
+        self.write_approval(); env=dict(self.f.env)
+        for k in ('CYF_API_FLOW_TEST_TARGET_AVAILABLE_BYTES','CYF_API_FLOW_TEST_BACKUP_AVAILABLE_BYTES'):env.pop(k,None)
+        kit=self.root/'bin/cyf-api-kit'; entry='start) rm -f "$root/stopped" ;;'; source=kit.read_text(); self.assertEqual(source.count(entry),1)
+        kit.write_text(source.replace(entry,'start) cd "$root/service" || exit 2; exec "$JAVA_HOME/bin/java" -Xmx256m -jar cyf-api-kit.jar --spring.config.location=file:./missing-cutover-required.properties > "$root/boot.log" 2>&1 ;;'))
+        res=subprocess.run([str(self.installer)],env=env,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,timeout=120)
+        self.assertNotEqual(res.returncode,0)
+        self.assertTrue((self.root/'state/record.json').is_file(),res.stderr[-900:])
+        record=self.record(); self.assertEqual(record['status'],'failed')
+        self.assertEqual(record['recovery'],'forward_only_candidate_retained'); self.assertEqual(record['rollback_policy'],'forward-only')
+        with self.f.target.open('rb') as f:self.assertEqual(hashlib.file_digest(f,'sha256').hexdigest(),pkg['applicationJarSha256'])
+        self.assertEqual(record['receipt_sha256'],pkg['receiptSha256']); self.assertEqual(record['source'],pkg['identity'])
+        boot=(self.root/'boot.log').read_text();self.assertIn('APPLICATION FAILED TO START',boot);self.assertIn('missing-cutover-required.properties',boot)
+        self.assertEqual((self.root/'calls').read_text().splitlines().count('start'),1); self.assertTrue((self.root/'stopped').exists())
+
+        return env,pkg
+
+    @unittest.skipUnless(os.environ.get('CYF_CUTOVER_RECOVERY')=='isolated', 'requires offline full-service namespace and fixed LOCAL package')
+    def test_fixed_api_repair_reaches_real_health_after_failure(self):
+        self._exercise_fixed_api_repair()
+
+    @unittest.skipUnless(os.environ.get('CYF_CUTOVER_PREISSUED_SESSION')=='stdin' and os.environ.get('CYF_CUTOVER_RECOVERY')=='isolated','requires an original live test subject and isolated API repair')
+    def test_original_runtime_session_authenticates_after_real_api_repair(self):
+        # Parent enrolled and issued this identity on a real API before stopping it.
+        # Only a private pipe carries the proof; never store it or print request headers.
+        import base64, http.client, sys
+        wire=json.loads(sys.stdin.buffer.readline(8192));self.assertEqual(wire['sessionGeneration'],'1')
+        def check_channel(generation,expected):
+            nonce=base64.b64encode(os.urandom(16)).decode();conn=http.client.HTTPConnection('127.0.0.1',18442,timeout=5)
+            try:
+                conn.request('GET','/ws/agent/channel',headers={'Connection':'Upgrade','Upgrade':'websocket',
+                    'Sec-WebSocket-Version':'13','Sec-WebSocket-Key':nonce,'Authorization':'AgentRuntime '+wire['sessionToken'],
+                    'X-Agent-Id':wire['canonicalAgentId'],'X-Agent-Installation-Id':wire['runtimeInstallationId'],
+                    'X-Agent-Host-Id':wire['hostId'],'X-Agent-Runtime-Id':wire['runtimeInstanceId'],'X-Agent-Session-Generation':generation})
+                response=conn.getresponse();self.assertEqual(response.status,expected)
+                if expected==101:
+                    self.assertEqual(response.getheader('Sec-WebSocket-Accept'),base64.b64encode(hashlib.sha1((nonce+'258EAFA5-E914-47DA-95CA-C5AB0DC85B11').encode()).digest()).decode())
+                else:self.assertEqual(json.load(response)['code'],'AGENT_RUNTIME_UNAUTHENTICATED')
+            finally:conn.close()
+        def verify():
+            check_channel('2',401);check_channel('1',101)
+        self._exercise_fixed_api_repair(verify)
+
+    def _exercise_fixed_api_repair(self, verify_recovered=None):
+        # Parent binds only test inputs and private service dependencies, never a live install tree.
+        import signal, socket, sys, urllib.request
+        for ns in ('pid','mnt','net'):
+            self.assertNotEqual(os.stat('/proc/self/ns/'+ns).st_ino, int(os.environ['CYF_FIXTURE_PARENT_'+ns.upper()]))
+        self.assertFalse(Path('/home/isp/conf').exists()); self.assertFalse(Path('/home/isp/hosts').exists())
+        self.assertEqual(subprocess.check_output(['ip','route','show','default']),b'')
+        env,pkg=self._fixed_api_bootjar_failure()
+        before=self.record(); approval=self.approval_path.read_bytes()
+        with self.assertRaises(ConnectionRefusedError):socket.create_connection(('127.0.0.1',18442),1)
+        # Changing the isolated service configuration is the repair. The package, descriptor,
+        # target, durable failed record, database and test namespace are NOT replaced.
+        kit=self.root/'bin/cyf-api-kit';src=kit.read_text();start=src.index('start)');end=src.index(';;',start)+2
+        src=src[:start]+'''start) python3 "$root/fixture-jvm.py" start "$root" || exit 1; rm -f "$root/stopped" ;;
+'''+src[end:];src=src.replace('echo HEALTH=UP','exec python3 "$root/fixture-jvm.py" health "$root"');kit.write_text(src)
+        (self.root/'fixture-jvm.py').write_text('''import json, os, pathlib, subprocess, sys, time, urllib.request
+root=pathlib.Path(sys.argv[2]); endpoint='http://127.0.0.1:18442/actuator/health'
+def healthy():
+    try:
+        with urllib.request.urlopen(endpoint,timeout=2) as r:
+            status=json.load(r)['status'];return r.status==200 and (status.get('code') if isinstance(status,dict) else status)=='UP'
+    except (ValueError,KeyError,OSError):return False
+if sys.argv[1]=='health':sys.exit(0 if healthy() else 1)
+with (root/'repair-boot.log').open('wb') as log:
+    p=subprocess.Popen([os.environ['JAVA_HOME']+'/bin/java','-Xmx512m','-Djava.io.tmpdir=/tmp','-jar','cyf-api-kit.jar','--spring.config.additional-location=file:/work/fixture.properties','--spring.profiles.active=rb-isolated'],cwd=root/'service',stdin=subprocess.DEVNULL,stdout=log,stderr=log,close_fds=True)
+(root/'repair.pid').write_text(str(p.pid));deadline=time.monotonic()+75
+while p.poll() is None and time.monotonic()<deadline:
+    if healthy():sys.exit(0)
+    time.sleep(.25)
+if p.poll() is None:p.terminate();p.wait(timeout=10)
+sys.exit(1)
+''')
+        try:
+            again=subprocess.run([str(self.installer)],env=env,capture_output=True,text=True,timeout=110)
+            self.assertEqual(again.returncode,0,again.stderr[-900:]); after=self.record()
+            self.assertEqual(after['status'],'installed'); self.assertEqual(after['rollback_policy'],'forward-only')
+            for key in ('source','binding_sha256','receipt_sha256','candidate_sha256','previous_sha256'):
+                self.assertEqual(before[key],after[key],key)
+            self.assertEqual(json.loads(approval)['expected_previous_sha256'],sha(self.f.old))
+            with self.f.target.open('rb') as f:self.assertEqual(hashlib.file_digest(f,'sha256').hexdigest(),pkg['applicationJarSha256'])
+            with urllib.request.urlopen('http://127.0.0.1:18442/actuator/health',timeout=3) as r:
+                status=json.load(r)['status']; self.assertEqual(r.status,200);self.assertEqual(status.get('code') if isinstance(status,dict) else status,'UP')
+            self.assertEqual((self.root/'calls').read_text().splitlines().count('start'),2)
+            if verify_recovered is not None:verify_recovered()
+        finally:
+            pid=self.root/'repair.pid'
+            if pid.exists():
+                n=int(pid.read_text());proc=Path('/proc')/str(n)
+                if (proc/'cwd').exists() and (proc/'cwd').samefile(self.root/'service') and (proc/'exe').samefile(Path(env['JAVA_HOME'])/'bin/java'):
+                    os.kill(n,signal.SIGTERM)
 
     def test_forward_only_policy_is_part_of_immutable_binding(self):
         original=self.m.native_binding(self.approval)

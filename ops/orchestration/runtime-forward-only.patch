@@ -1,0 +1,20 @@
+--- a/install.py
++++ b/install.py
+@@ -111,12 +111,9 @@
+ except BaseException as ex:
+  report.update(status='FAIL',error=type(ex).__name__+': '+str(ex))
+- # After uncertain activation never overwrite new business state, writer ownership or receipts.
+- if stopped and not start_attempted and prop('MainPID')=='0':
+-  if old_saved:
+-   if APP.exists(): APP.rename(BACK/'failed-candidate')
+-   (BACK/'old-program').rename(APP)
+-   for name in ('current.json','current.manifest.json'): shutil.copy2(BACK/'release-records'/name,RECORDS/name)
+-  assert manifest(APP)==baseline
+-  admin('systemctl','start',UNIT);report['oldServiceRestarted']=int(prop('MainPID'))>0
++ # This transaction is bound to forward-only. Another component may already have written
++ # incompatible data, even if this candidate has never started. Do not restore/start the donor.
++ if stopped:
++  report.update(recovery='forward_only_repair_required', predecessorMoved=old_saved,
++                candidateStartAttempted=start_attempted)
+  raise
+ finally:report['seconds']=round(time.monotonic()-started,3);atomic(TASK/'installation-result.json',report);print(json.dumps(report))

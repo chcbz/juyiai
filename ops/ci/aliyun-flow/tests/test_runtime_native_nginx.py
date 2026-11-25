@@ -17,7 +17,7 @@ class RuntimeNativeNginxTest(unittest.TestCase):
         return any(p.fullmatch(path) and m.fullmatch(method) for p, m in self.routes)
 
     def test_complete_native_contract(self):
-        self.assertEqual(len(self.routes), 19)
+        self.assertEqual(len(self.routes), 20)
         reads = [
             '/tasks/workspace-executions/commands', '/tasks/conversation-executions/commands',
             '/skill-installations/a/package', '/tasks/a/runs/b/inputs',
@@ -71,6 +71,16 @@ class RuntimeNativeNginxTest(unittest.TestCase):
                      '/internal/agent/executions/a%2fb/runs/c/lease'):
             for method in ('GET', 'POST'):
                 self.assertFalse(self.accepts(method, path), (method, path))
+
+    def test_metered_usage_readback_only_by_receipt_or_exact_record(self):
+        root = '/internal/agent/executions/a/runs/b/usage/'
+        for key in ('receipts/r:1', 'receipts/' + 'a'*100, 'records/' + 'a'*64):
+            self.assertTrue(self.accepts('GET', root + key))
+            for method in ('POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'):
+                self.assertFalse(self.accepts(method, root + key))
+        for key in ('receipts', 'receipts/', 'receipts/' + 'a'*101, 'receipts/r/next',
+                    'records/r', 'records/' + 'A'*64, 'records/' + 'a'*65, 'records'):
+            self.assertFalse(self.accepts('GET', root + key))
 
     def test_archive_maintenance_methods(self):
         for suffix in ('', '/a/source', '/a/result'):

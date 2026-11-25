@@ -256,7 +256,24 @@ def xml_summary(data):
         raise Rejected('TEST_EVIDENCE_INVALID') from None
 
 
-def validate_argv(argv, required_tasks, inputs):
+def public_fixture_property(name, value, source):
+    # Public evidence grammar, not fixture execution/admission. Paths are compared, never opened.
+    if name in ('ownedCutoverController', 'ownedMeteredRuntime'):
+        sibling = 'controller' if name == 'ownedCutoverController' else 'runtime'
+        return source.name == 'api' and value == str(source.parent / sibling)
+    if name == 'ownedCapabilityEsPort':
+        return re.fullmatch('[1-9][0-9]{0,4}', value) and int(value) <= 65535
+    patterns = {
+        'measuredBatchQuoteLoad': 'true', 'ownedCapabilityEsLoad': 'true',
+        'ownedCapabilityEsCluster': 'cyf-rb-fixture-[a-f0-9]{32}',
+        'ownedPickupCodex': r'/home/isp/apps/cyf-runtime-build-codex-[0-9]+\.[0-9]+\.[0-9]+/bin/codex',
+        'ownedRuntimeRepairFixture': '/home/isp/state/cyf-local-build/rb-joint-[a-z0-9-]+',
+        'ownedCutoverWebPackage': r'/home/isp/state/cyf-local-build/tasks/cyf-[a-z0-9-]+/web/package/web\.tgz',
+    }
+    return name in patterns and re.fullmatch(patterns[name], value)
+
+
+def validate_argv(argv, required_tasks, inputs, fixture_source=None):
     require(type(argv) is list and bool(argv) and all(type(x) is str for x in argv))
     require(Path(argv[0]).name in ('gradle', 'gradlew'))
     # Public grammar only. Preserve exact task/filter ordering; never execute argv.
@@ -266,6 +283,7 @@ def validate_argv(argv, required_tasks, inputs):
               '-Dorg.gradle.jvmargs=-Xmx512m -XX:+UseSerialGC -XX:MaxMetaspaceSize=384m -XX:ActiveProcessorCount=2 -XX:TieredStopAtLevel=1'}
     task = re.compile(r':[A-Za-z0-9_:-]+\Z')
     index = 1
+    seen_properties = set()
     previous_task = None
     metadata_init_seen = False
     while index < len(argv):
@@ -278,6 +296,12 @@ def validate_argv(argv, required_tasks, inputs):
             require(index + 1 < len(argv) and Path(argv[index + 1]).is_absolute()
                     and str(Path(argv[index + 1])) == argv[index + 1])
             index += 2
+        elif arg.startswith('-P'):
+            name, sep, value = arg[2:].partition('=')
+            require(fixture_source is not None and sep and name not in seen_properties and
+                    public_fixture_property(name, value, fixture_source))
+            seen_properties.add(name)
+            index += 1
         elif arg == '--tests':
             require(previous_task in required_tasks and previous_task not in (':starter:bootJar', ':validateLayering') and
                     index + 1 < len(argv) and re.fullmatch(r'[A-Za-z0-9_.*$-]+', argv[index + 1]))
@@ -346,7 +370,23 @@ def verify_evidence(evidence_data, identity, source, build):
     boot = exact(ev['bootJar'], ('task', 'proof'))
     require(boot['task'] == ':starter:bootJar')
     task_executed(log, boot['task'])
-    validate_argv(inv['argv'], tasks | {':validateLayering', boot['task']}, inputs)
+    argv = inv['argv']
+    require(type(argv) is list and all(type(arg) is str for arg in argv))
+    fixture_source = None
+    if any(arg.startswith('-P') for arg in argv):
+        # Bind exact ordered invocation to the original pre-build input digest shared by all tests.
+        plan_path = build.parent / 'inputs.json'
+        ref = next((r for r in inputs if r['path'] == str(plan_path)), None)
+        require(ref is not None and ref['sha256'] == inv['fixtureSha256'] and
+                all(t['fixtureSha256'] == ref['sha256'] for t in ev['tests']))
+        plan = strict_json(checked_record(ref)[1])
+        require(type(plan) is dict and plan.get('format') == 'cyf-local-fast-build-input-v1' and
+                plan.get('batchId') == identity['buildId'] and plan.get('version') == identity['version'] and
+                plan.get('source') == {k:identity[k] for k in ('commit','tree')})
+        command = plan.get('command')
+        require(type(command) is list and command.count('--') == 1 and command[command.index('--')+1:] == argv)
+        fixture_source = source
+    validate_argv(argv, tasks | {':validateLayering', boot['task']}, inputs, fixture_source)
     proof_path, proof_data = checked_record(boot['proof'], build)
     require(proof_path == build / 'local-bootjar-proof.json')
     proof = strict_json(proof_data)

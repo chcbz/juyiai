@@ -52,6 +52,18 @@ def fixed_source(path, expected):
     return dict(commit=expected, tree=git('rev-parse', 'HEAD^{tree}'))
 
 
+def api_install_descriptor(package, previous_sha, rollback_policy):
+    """Pure construction: no filesystem/install effects. The native helper validates the complete binding."""
+    if rollback_policy not in ('compatible', 'forward-only'):
+        raise ValueError('unknown LOCAL API rollback policy')
+    descriptor = dict(schema_version=4, source_kind='LOCAL', source=package['identity'], package=package['package'],
+                      receipt_sha256=package['receiptSha256'], jar_sha256=package['applicationJarSha256'],
+                      expected_previous_sha256=previous_sha, consumed=False)
+    if rollback_policy == 'forward-only':
+        descriptor['rollback_policy'] = rollback_policy
+    return descriptor
+
+
 def private_json(path, value):
     temp = path.with_suffix('.tmp')
     with temp.open('w') as stream:
@@ -93,6 +105,8 @@ def main():
     parser.add_argument('--api-regression-arg', action='append', default=[])
     parser.add_argument('--web-regression-test', action='append', default=[])
     parser.add_argument('--install', action='store_true')
+    parser.add_argument('--api-rollback-policy', choices=('compatible','forward-only'), default='compatible',
+                        help='pin LOCAL API recovery; select forward-only when an older reader cannot consume retained data')
     parser.add_argument('--web-runtime-config', type=Path, help='expected public VITE configuration; required for SSH release')
     parser.add_argument('--build-host', help='explicit configured SSH worker; installation stays on this host')
     parser.add_argument('--remote-root', type=Path, help='fresh worker sources below /home/isp/wsps/cyf-build/')
@@ -244,9 +258,7 @@ def main():
             raise ValueError('production changed during build; do not overwrite another owner')
         if any(sha(Path(path)) != digest for path, digest in result['tools'].items()):
             raise ValueError('release tools changed during build')
-        descriptor = dict(schema_version=4, source_kind='LOCAL', source=p['identity'], package=p['package'],
-                          receipt_sha256=p['receiptSha256'], jar_sha256=p['applicationJarSha256'],
-                          expected_previous_sha256=before_api, consumed=False)
+        descriptor = api_install_descriptor(p, before_api, args.api_rollback_policy)
         private_json(api / 'install-descriptor.json', descriptor)
         # Outside both timed build cgroups: the new production JVM must survive
         # their teardown. Installer retains its existing durable rollback/health.
@@ -261,6 +273,7 @@ def main():
             raise ValueError('temporary startup diagnostics leaked into production JVM')
         api_record = json.loads(API_RECORD.read_text())
         if (api_record['source_kind'] != 'LOCAL' or api_record['status'] != 'installed'
+                or api_record.get('rollback_policy','compatible') != args.api_rollback_policy
                 or api_record['source'] != p['identity'] or sha(API_JAR) != p['applicationJarSha256']
                 or sha(api_record['backup']) != before_api):
             raise ValueError('API installed source/artifact/backup mismatch')

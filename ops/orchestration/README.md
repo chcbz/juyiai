@@ -209,6 +209,8 @@ systemd-run --unit="cyf-${BATCH}" --wait --pipe --collect \
 
 ### LOCAL 发布涉及不兼容数据迁移（2026-11-07核验补充）
 
+组合发布入口通过 `--api-rollback-policy forward-only` 将不可回退决策固化进该次 API 安装描述并核对安装回执；不是给启动脚本设置临时环境变量。若旧reader不能识别已写入的 usage/报价格式，须明确选用该参数，由兼容新格式的版本前修。未选参数保持已有兼容发布语义，并不推定具体业务候选可回退；该参数不执行迁移，不改变 Web/Runtime 的回退策略。
+
 原API schema4 LOCAL descriptor可选`rollback_policy`，省略或`compatible`沿用原程序回退；显式`forward-only`用于已执行不兼容数据迁移的候选。该字段参与不可变binding并写入安装record，故障恢复从同一descriptor读取，不依赖一次性环境变量。启动失败保留候选和证据，不自动启动旧schema不兼容JAR；只有完成明确的数据恢复/兼容评估后才可另行回退。此能力不执行或授权迁移，也不恢复旧schema3准入框架。来源/摘要/备份/锁/健康保护不变；定向回归`ops/ci/aliyun-flow/tests/test_native_local_api.py`覆盖旧descriptor、forward-only失败及同源恢复。CYF当前主机已适配，源码与现行安装目录差异按任务handoff保留，不整文件覆盖旧修复。
 
 ### 2026-11-13 本地OpenCV解析范围
@@ -267,6 +269,8 @@ Web/API复用 `local_release.py`，每次在原固定源码参数上显式追加
 
 4. 本 worker 是 Ubuntu26/uutils，原测试会把 cat/sleep 复制成不同名称后验证原生 inode；用 `build_command(..., runtime_source=..., native_fixtures=[('/usr/bin/gnucat','/usr/lib/cargo/bin/coreutils/cat'),('/usr/bin/gnusleep','/usr/lib/cargo/bin/coreutils/sleep')])`，只在该 systemd mount namespace 绑定 GNU 工具，不改系统命令。原生沙箱需要的 AppArmor profile 仅匹配隔离视图 `/runtime/codex-resources/bwrap` 并授予 userns；配置 `/home/isp/conf/cyf-build/runtime-bwrap.apparmor`，系统链接 `/etc/apparmor.d/cyf-runtime-build-bwrap`。**不关闭全局 AppArmor/userns 限制，不以跳过真实隔离用例替代依赖准备。** 其它主机按实际工具/内核决定，不机械安装该兼容绑定。
 5. `build_command` 的远端期限与 `collect('runtime', ..., timeout=remaining)` 共用600秒。源码/依赖准备另计，不能拆测试与打包续时；`build-result.json`、原 TAP、package manifest、原 tgz、工具/binary/resources SHA均回传，重复源码/payload及 scratch 不回传。包仍是 LOCAL 来源，不伪造 Flow Run。
+针对 11 月 21 日安装事务的故障修订：`runtime-forward-only.patch` 仅适配原件 SHA-256 `384d0ab31a1b311057d9a47794e540e92d0fedfc37cb350ac2a9a38816859fde`，不修改现用安装器，不是独立发布命令。该历史脚本固定了旧候选，不能原样用于新版本。在**隔离副本**核对来源并用 `git apply --check` 后应用；测试 `tests/test_runtime_forward_only_recovery.py` 读取环境变量 `CYF_TEST_RUNTIME_INSTALL_SOURCE` 指定的精确原件，在私有目录测试实际替换/异常分支，不能用另一来源或测试通过代替正式版本绑定、发布锁、排空及接管。停止之后失败只保留原件、失败回执与候选形态，须显式前修，不自行启动旧 reader。该约束不阻止事务外的重启；实际切换仍须保证其他入口不能激活旧版。
+
 6. 构建不是安装授权。按既有 Runtime 发布锁、前代 CAS、固定目录/备份/forward-only 边界发布；若另一 Owner 正发布，告警并等待，不抢锁/降级。已验证上线的**同一源码及全部 portable 字节/模式、原安装清单/依赖和实时通道**均一致时可锁内幂等确认，不重复搬文件、重启、认证迁移或收费回归；保留原安装来源，只新增精确远程验证回执，不把包 SHA 不同但代码相等伪称为同一原包。
 
 实测及失败原始回执见[迁移handoff](../../docs/implementation/handoffs/REMOTE-BUILD-MIGRATION-20261116.md)。本入口不编译 Runtime 专用 Codex 源码补丁，不修改全机 Codex，也不自动部署其他任务最新候选。
