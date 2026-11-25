@@ -28,6 +28,20 @@ class BudgetCoverageTest(unittest.TestCase):
         self.case('mixed',['0',None],['NOT_EXECUTED','NOT_ACCEPTED']);self.case('full',['100'],['MEASURED']);self.case('unavailable',[None],['MEASURED']);self.case('failed',[None],['CANCELLED'],503);self.case('no-response',[None],['EVIDENCE_UNAVAILABLE'],None)
         r=self.score();self.assertEqual(2/5,r['anyQuoteRequestCoverage']['value']);self.assertEqual(1/5,r['fullQuoteRequestCoverage']['value']);self.assertEqual(2/6,r['candidateQuoteCoverage']['value']);self.assertEqual((1,1),(r['quotedWithTruth'],r['quotedWithoutTruth']));self.assertEqual(4/6,r['missingTruthRate']['value']);self.assertEqual({s:1 for s in ('FULL','MIXED','UNAVAILABLE','HTTP_ERROR','NO_RESPONSE')},r['requestStates'])
 
+    def test_family_support_keeps_unquoted_and_unpaired_families_in_view(self):
+        self.case('a',['2'],['MEASURED']);self.case('b',['3'],['MEASURED'])
+        self.case('c',['3'],['NOT_EXECUTED']);self.case('d',[None],['MEASURED'],503)
+        self.assertIsNone(self.score()['familySupport'])
+        self.roster['bootstrap']=dict(seed=1,families={'a':'privateA','b':'privateA','c':'privateB','d':'privateC'})
+        report=self.score();support=report['familySupport']
+        self.assertEqual(dict(rostered=3,withQuote=2,withMeasuredTruth=2,withPairedForecast=1),support)
+        self.assertEqual(2,report['quotedWithTruth']);self.assertNotIn('privateA',json.dumps(report))
+        # Quote and truth in the same family but on different observations do not form a pair.
+        self.roster['bootstrap']['families']['d']='privateB'
+        self.assertEqual(dict(rostered=2,withQuote=2,withMeasuredTruth=2,withPairedForecast=1),self.score()['familySupport'])
+        del self.roster['bootstrap']['families']['c']
+        with self.assertRaises(tool.Invalid):self.score()
+
     def test_unquoted_denominator_separates_business_reasons_from_no_response_and_truth(self):
         self.case('mixed',['0',None,None,None],['MEASURED','NOT_EXECUTED','NOT_EXECUTED','CANCELLED'])
         quotes=self.run['results'][0]['data']['quotes'];quotes[2]['unavailableReason']='PRICE_MISSING';quotes[3]['unavailableReason']='private-future-reason'

@@ -70,6 +70,8 @@ def assess(roster, observations, truth, roster_sha, observations_sha):
     requests=rows_by(roster['requests'],'intentRef'); results=rows_by(observations['results'],'intentRef'); outcomes=rows_by(truth['outcomes'],'intentRef')
     require(requests and requests.keys()==results.keys()==outcomes.keys(), 'incomplete or surplus request observation')
     items=quoted=any_quote=full_quote=missing=paired=0
+    plan=bootstrap_plan(roster)
+    priced_families=set(); measured_families=set(); paired_families=set()
     states=Counter(); reasons=Counter(); unavailable=Counter(); no_result=Counter()
     for key, req in requests.items():
         ids=req['agentIds']; require(isinstance(ids,list) and ids and all(map(text,ids)) and len(ids)==len(set(ids)) and text(req['taskId']) and text(req['taskVersion']), 'invalid request scope')
@@ -88,11 +90,17 @@ def assess(roster, observations, truth, roster_sha, observations_sha):
             state='NO_RESPONSE' if status is None else 'HTTP_ERROR'
             no_result[state]+=len(ids)
         states[state]+=1; items+=len(ids); quoted+=len(present); any_quote+=bool(present); full_quote+=len(present)==len(ids)
+        if plan:
+            family=plan['families'][req['taskId']]
+            if present:priced_families.add(family)
         facts=rows_by(outcomes[key]['candidates'],'agentId'); require(facts.keys()==set(ids), 'partial or surplus truth inventory')
         for agent, fact in facts.items():
             reason=fact['reason']; require(sha(fact['evidenceSha256']), 'missing outcome evidence pin')
             if reason=='MEASURED':
                 require(sha(fact.get('wholeTaskTruthSha256')), 'missing verified whole-task reference')
+                if plan:
+                    measured_families.add(family)
+                    if agent in present:paired_families.add(family)
                 paired+=agent in present
             else:
                 require(reason in MISSING and fact.get('wholeTaskTruthSha256') is None, 'ambiguous missing truth'); missing+=1; reasons[reason]+=1
@@ -100,7 +108,9 @@ def assess(roster, observations, truth, roster_sha, observations_sha):
                 anyQuoteRequestCoverage=rate(any_quote,len(requests)), fullQuoteRequestCoverage=rate(full_quote,len(requests)),
                 candidateQuoteCoverage=rate(quoted,items), unavailableCandidateReasons=dict(unavailable),
                 noResultCandidateReasons=dict(no_result), missingTruthRate=rate(missing,items), missingTruthReasons=dict(reasons),
-                quotedWithTruth=paired, quotedWithoutTruth=quoted-paired)
+                quotedWithTruth=paired, quotedWithoutTruth=quoted-paired,
+                familySupport=(dict(rostered=len(set(plan['families'].values())),withQuote=len(priced_families),
+                                    withMeasuredTruth=len(measured_families),withPairedForecast=len(paired_families)) if plan else None))
 
 
 def parse_json(raw):
