@@ -10,6 +10,8 @@
 
 固定同一主体、同一真实落盘来源和七份 ACK，在静态及动态托管安装各运行只读 CLI。完整条目且身份匹配时核对通过；仅改安装或仅改 host、缺安装或 host、只给旧清单片段均须非零退出且无盘点输出。身份正确而来源集合不符时仍应报告缺失/多余数，不能当作全部确认。指定 worker 的两种路径及相邻托管回归共 8/8；本批清单输入为夹具，不代表已逐设备分发真实 SQL 快照，不验证原实时会话仍有效。
 
+D335r 补上生成器到正式消费者的联验：固定 `MeteredPeerMySqlTest` 中 `liveDiscussionDrainsEveryFrozenRevisionBeforeSessionRelease`（一份来源通过）、`registeredSecondDiscussionMissingFromDeviceCannotDrain`（已登记未落盘的第二来源必须阻止通过）、`fixedMultiTaskRosterSeparatesOriginalInstallationsAndRejectsRepinnedInputs`（两安装、拒绝变更）。前两项先冻结 SQL 名册和摘要，再投递、用正式 CLI 验私有完整条目、复取 SQL 核对同一摘要；不使用内部扫描函数代替 CLI。真实 MySQL 与文件、隔离 HTTP peer、测试身份和合成执行，没有生产会话或真实业务真值。
+
 ### 非生产浏览器复验：手选、同版本刷新与版本冲突（详设 §4.4.1）
 
 用独立测试事项、已认证非零环境用户、可见的两名候选：一人无有效报价基线或路由，一人有已知样本及参考价。浏览器网络面板只统计本事项的报价 POST 状态；不要保存令牌、请求正文或整份 HAR。每轮使用本轮自有资源，不确认承办，不在生产注入版本变化。
