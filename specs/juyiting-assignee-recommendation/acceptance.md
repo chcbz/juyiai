@@ -149,3 +149,17 @@ API固定a14425f79e1fbcc56f399f3732d98809b6639984，配置修复不重建：新�
 - 基准首次派发/赞助结算、独立校准与费用真实数据、性能验收、受控恢复及FULL仍未完成。
 
 内部证据：`calibration-disclosure-1125-01/REPORT.md`及同目录摘要清单（任务区按TTL保留，不作为公开资源）。
+
+## 2026-11-25 基准赞助资金原语（未部署）
+
+- API commit `ff07269857a35e4e82914646f32553f930d7b7b8`，tree `3c98b7b20aa64070c2c4aa7a72593f70fd8cde5c`。
+- 指定SSH worker必要测试109项通过，0失败/错误/跳过；其中9项新增真实MySQL赞助事务测试。validateLayering与fresh JAR通过。
+- 本批构建+回传174.069秒；准备22.319秒独立记录。JAR SHA `e19e044c6f5cebedac09a1339955863fc3bae961562c2a8637127fffad5a0d76`；包SHA `450cad67a664f24d2074218ddd8e7dcb7badcc6d0c385f9eddaa18c047e8d66a`。
+- 已实现：独立维护批准记录、不可变任务/case/派发/首动作承诺、同任务根事务下赞助激活及样本登记、原状态重放、撤回阻止新激活、验收/取消互斥及回滚、拒绝普通charge并存、拒绝追溯赞助及缺登记ACTIVE。保持case→sample锁顺序。不创建quote/0元/LEGACY_FREE，不转账或将样本升级READY。
+- Owner自检第一候选后发现追溯激活和锁顺序应收紧，修复为当前候选并新增测试；第一候选108项通过记录保留，不冒充当前109项。
+- 两个准备失败批次01/03保留；服务端sshd MaxStartups导致连接丢弃。最后批次仅加客户端私有ControlMaster复用，严格host key/认证/预算不变，结束关闭自己的连接；未改服务端或其他会话。
+- 全库文档检查未通过：99项缺引用，包含独立root工作区空组件目录和历史证据缺失；未改写历史或扩大例外。详见同批父目录benchmark-sponsorship-docs.log。
+- **未安装：**生产仍为API `3ccda06a8bb6ebc0693626a861aca7dd30913bd0`。本批无生产迁移、批准、派发或模型请求，没有恢复普通受理。
+- **未完成：**Agent首次准备/派发，原首动作及验收取消接入，真实Chat/Runtime执行闭包；独立校准/真实费用数据、性能、核心业务及生产FULL。不能将该原语说成完整基准功能或整体上线完成。
+
+内部证据：`benchmark-sponsorship-1125-04/REPORT.md`、`sponsorship-tests.json`及摘要清单。
