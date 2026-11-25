@@ -28,6 +28,15 @@ class BudgetCoverageTest(unittest.TestCase):
         self.case('mixed',['0',None],['NOT_EXECUTED','NOT_ACCEPTED']);self.case('full',['100'],['MEASURED']);self.case('unavailable',[None],['MEASURED']);self.case('failed',[None],['CANCELLED'],503);self.case('no-response',[None],['EVIDENCE_UNAVAILABLE'],None)
         r=self.score();self.assertEqual(2/5,r['anyQuoteRequestCoverage']['value']);self.assertEqual(1/5,r['fullQuoteRequestCoverage']['value']);self.assertEqual(2/6,r['candidateQuoteCoverage']['value']);self.assertEqual((1,1),(r['quotedWithTruth'],r['quotedWithoutTruth']));self.assertEqual(4/6,r['missingTruthRate']['value']);self.assertEqual({s:1 for s in ('FULL','MIXED','UNAVAILABLE','HTTP_ERROR','NO_RESPONSE')},r['requestStates'])
 
+    def test_unquoted_denominator_separates_business_reasons_from_no_response_and_truth(self):
+        self.case('mixed',['0',None,None,None],['MEASURED','NOT_EXECUTED','NOT_EXECUTED','CANCELLED'])
+        quotes=self.run['results'][0]['data']['quotes'];quotes[2]['unavailableReason']='PRICE_MISSING';quotes[3]['unavailableReason']='private-future-reason'
+        self.case('error',[None,None],['EVIDENCE_UNAVAILABLE']*2,503);self.case('late',[None],['USAGE_INCOMPLETE'],None)
+        r=self.score();self.assertEqual({'NO_BASELINE':1,'PRICE_MISSING':1,'OTHER':1},r['unavailableCandidateReasons'])
+        self.assertEqual({'HTTP_ERROR':2,'NO_RESPONSE':1},r['noResultCandidateReasons'])
+        self.assertEqual(r['candidateRequests'],r['candidateQuoteCoverage']['numerator']+sum(r['unavailableCandidateReasons'].values())+sum(r['noResultCandidateReasons'].values()))
+        self.assertNotIn('private-future-reason',json.dumps(r))
+
     def test_no_omission_no_replay_as_extra_intent_no_foreign_task(self):
         self.case('k',['1',None],['MEASURED','USAGE_INCOMPLETE']);a,b,c=copy.deepcopy((self.roster,self.run,self.truth))
         for alter in (lambda:self.run['results'].clear(),lambda:self.truth['outcomes'][0]['candidates'].pop(),lambda:self.run['results'].append(b['results'][0]),lambda:self.roster['requests'].append(a['requests'][0]),lambda:self.run['results'][0]['data'].update(taskId='foreign'),lambda:self.run['results'][0]['data']['quotes'][1].update(recommendationId='other'),lambda:self.truth.update(observationsSha256='b'*64)):

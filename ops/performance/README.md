@@ -101,7 +101,7 @@ python3.11 ops/performance/recommendation_holdout.py labels.json run.json \
 2. **查看真值前**冻结观察：`{format:"budget-forecast-observations-v1", rosterSha256, results:[{intentRef,httpStatus,data,evidenceSha256}]}`。`data` 为原成功业务对象（`taskId,taskVersion,quotes`）；整请求失败用实际 HTTP 错误码、`data:null`，截止未观察到响应则 `httpStatus:null`。未收到响应不等于服务器没提交；禁止据此重放或改账。`evidenceSha256` 指向采集责任方保留的原始私有观测。
 3. 最后独立核对结果：`{format:"budget-truth-inventory-v1", observationsSha256, outcomes:[{intentRef,candidates:[{agentId,reason,evidenceSha256,wholeTaskTruthSha256}]}]}`。`MEASURED` 仅限 Economy 已核同一事项、候选及参考价的完整真值；给出对应工件摘要，不能把另一个候选的执行移用。其余原因 `NOT_EXECUTED / NOT_ACCEPTED / CANCELLED / USAGE_INCOMPLETE / REFERENCE_PRICE_MISSING / EVIDENCE_UNAVAILABLE`，真值指针为空。已有真实执行但计量不完整不当作零。证据的真实性、独立冻结时序、源到指针的核对归采集/真值责任方；哈希只防换件，不证明这些前提。
 
-报告分别列请求有任一报价、请求全部有报价、候选报价覆盖；HTTP 错误和无响应保留在分母。另列候选取价缺真值率、原因和「有报价且有真值」交集，不按可测子集重算覆盖。原 Economy 整事项参考价重算、分族留出与误差算法不复制到该工具；此报告不能单独证明 WAPE/P90 或许可上线。只对事前固定范围/观察截止点解释结果，原件和标识符不随汇总报告输出。
+报告分别列请求有任一报价、请求全部有报价、候选报价覆盖；HTTP 错误和无响应保留在分母。 分解未报价候选时，`unavailableCandidateReasons` 仅计成功信封内的业务原因（未知非空值归 OTHER，不披露原文）；`noResultCandidateReasons` 按未取得业务结果的候选数计 HTTP_ERROR / NO_RESPONSE，不推断这些候选本来是否可报。两组计数加实际已报价候选数应等于全部候选请求数；不得与缺真值原因混用。另列候选取价缺真值率、原因和「有报价且有真值」交集，不按可测子集重算覆盖。原 Economy 整事项参考价重算、分族留出与误差算法不复制到该工具；此报告不能单独证明 WAPE/P90 或许可上线。只对事前固定范围/观察截止点解释结果，原件和标识符不随汇总报告输出。
 
 **从传输观测生成第 2 份工件，而不是手填 HTTP 状态。** 在查看成本真值之前执行：
 

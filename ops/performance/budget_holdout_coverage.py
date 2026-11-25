@@ -43,6 +43,10 @@ def rate(n, d):
 MISSING = {'NOT_EXECUTED', 'NOT_ACCEPTED', 'CANCELLED', 'USAGE_INCOMPLETE', 'REFERENCE_PRICE_MISSING', 'EVIDENCE_UNAVAILABLE'}
 
 
+# Public TaskQuoteBatches.Reason values only; never aggregate private free-form text as a report key.
+QUOTE_REASONS = {'NO_BASELINE', 'OUT_OF_DISTRIBUTION', 'USAGE_INCOMPLETE', 'BILLING_ROUTE_MISSING', 'PRICE_MISSING'}
+
+
 def available(row):
     require(text(row['recommendationId']), 'missing batch identity')
     if row['state'] == 'UNAVAILABLE':
@@ -66,7 +70,7 @@ def assess(roster, observations, truth, roster_sha, observations_sha):
     requests=rows_by(roster['requests'],'intentRef'); results=rows_by(observations['results'],'intentRef'); outcomes=rows_by(truth['outcomes'],'intentRef')
     require(requests and requests.keys()==results.keys()==outcomes.keys(), 'incomplete or surplus request observation')
     items=quoted=any_quote=full_quote=missing=paired=0
-    states=Counter(); reasons=Counter()
+    states=Counter(); reasons=Counter(); unavailable=Counter(); no_result=Counter()
     for key, req in requests.items():
         ids=req['agentIds']; require(isinstance(ids,list) and ids and all(map(text,ids)) and len(ids)==len(set(ids)) and text(req['taskId']) and text(req['taskVersion']), 'invalid request scope')
         result=results[key]; status=result['httpStatus']; data=result.get('data'); present=set()
@@ -75,11 +79,14 @@ def assess(roster, observations, truth, roster_sha, observations_sha):
             require(isinstance(data,dict) and data['taskId']==req['taskId'] and data['taskVersion']==req['taskVersion'], 'result scope mismatch')
             rows=rows_by(data['quotes'],'agentId'); require(set(ids)==rows.keys(), 'partial or surplus quote result')
             present={agent for agent,row in rows.items() if available(row)}
+            for agent in rows.keys()-present:
+                reason=rows[agent]['unavailableReason']; unavailable[reason if reason in QUOTE_REASONS else 'OTHER']+=1
             require(len({r['recommendationId'] for r in rows.values()})==1, 'mixed quote batches')
             state='FULL' if len(present)==len(ids) else 'MIXED' if present else 'UNAVAILABLE'
         else:
             require(data is None and (status is None or type(status) is int and 400<=status<=599), 'invalid failed request observation')
             state='NO_RESPONSE' if status is None else 'HTTP_ERROR'
+            no_result[state]+=len(ids)
         states[state]+=1; items+=len(ids); quoted+=len(present); any_quote+=bool(present); full_quote+=len(present)==len(ids)
         facts=rows_by(outcomes[key]['candidates'],'agentId'); require(facts.keys()==set(ids), 'partial or surplus truth inventory')
         for agent, fact in facts.items():
@@ -91,7 +98,8 @@ def assess(roster, observations, truth, roster_sha, observations_sha):
                 require(reason in MISSING and fact.get('wholeTaskTruthSha256') is None, 'ambiguous missing truth'); missing+=1; reasons[reason]+=1
     return dict(format='budget-coverage-report-v1', requests=len(requests), candidateRequests=items, requestStates=dict(states),
                 anyQuoteRequestCoverage=rate(any_quote,len(requests)), fullQuoteRequestCoverage=rate(full_quote,len(requests)),
-                candidateQuoteCoverage=rate(quoted,items), missingTruthRate=rate(missing,items), missingTruthReasons=dict(reasons),
+                candidateQuoteCoverage=rate(quoted,items), unavailableCandidateReasons=dict(unavailable),
+                noResultCandidateReasons=dict(no_result), missingTruthRate=rate(missing,items), missingTruthReasons=dict(reasons),
                 quotedWithTruth=paired, quotedWithoutTruth=quoted-paired)
 
 
