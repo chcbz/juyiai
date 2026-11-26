@@ -60,6 +60,13 @@ def available(row):
     return True
 
 
+def offer_method(row):
+    # Contract names only. A valid GROUP_MEAN may itself cost 1 WEN; never infer from the price.
+    summary = row.get('estimateSummary')
+    method = summary.get('method') if isinstance(summary, dict) else None
+    return method if method in ('GROUP_MEAN', 'FIXED_FALLBACK', 'MEASURED_NEIGHBORS') else 'UNCLASSIFIED'
+
+
 class ObservedQuoteIdentities:
     """One immutable batch per logical intent, one priced item per quote, within a frozen study."""
     def __init__(self):
@@ -92,6 +99,7 @@ def assess(roster, observations, truth, roster_sha, observations_sha):
     identities = ObservedQuoteIdentities()
     plan=bootstrap_plan(roster)
     priced_families=set(); measured_families=set(); paired_families=set()
+    methods=Counter(); methods_with_truth=Counter()
     states=Counter(); reasons=Counter(); unavailable=Counter(); no_result=Counter()
     for key, req in requests.items():
         ids=req['agentIds']; require(isinstance(ids,list) and ids and all(map(text,ids)) and len(ids)==len(set(ids)) and text(req['taskId']) and text(req['taskVersion']), 'invalid request scope')
@@ -101,6 +109,7 @@ def assess(roster, observations, truth, roster_sha, observations_sha):
             require(isinstance(data,dict) and data['taskId']==req['taskId'] and data['taskVersion']==req['taskVersion'], 'result scope mismatch')
             rows=rows_by(data['quotes'],'agentId'); require(set(ids)==rows.keys(), 'partial or surplus quote result')
             present={agent for agent,row in rows.items() if available(row)}
+            methods.update(offer_method(rows[agent]) for agent in present)
             for agent in rows.keys()-present:
                 reason=rows[agent]['unavailableReason']; unavailable[reason if reason in QUOTE_REASONS else 'OTHER']+=1
             identities.record(rows.values())
@@ -121,11 +130,14 @@ def assess(roster, observations, truth, roster_sha, observations_sha):
                 if plan:
                     measured_families.add(family)
                     if agent in present:paired_families.add(family)
+                if agent in present:methods_with_truth[offer_method(rows[agent])]+=1
                 paired+=agent in present
             else:
                 require(reason in MISSING and fact.get('wholeTaskTruthSha256') is None, 'ambiguous missing truth'); missing+=1; reasons[reason]+=1
     return dict(format='budget-coverage-report-v1', requests=len(requests), candidateRequests=items, requestStates=dict(states),
                 anyQuoteRequestCoverage=rate(any_quote,len(requests)), fullQuoteRequestCoverage=rate(full_quote,len(requests)),
+                candidateMethodCounts=dict(methods), candidateMethodsWithTruth=dict(methods_with_truth),
+                groupMeanCandidateCoverage=rate(methods['GROUP_MEAN'],items),
                 candidateQuoteCoverage=rate(quoted,items), unavailableCandidateReasons=dict(unavailable),
                 noResultCandidateReasons=dict(no_result), missingTruthRate=rate(missing,items), missingTruthReasons=dict(reasons),
                 quotedWithTruth=paired, quotedWithoutTruth=quoted-paired,
@@ -217,7 +229,7 @@ def reconcile_offers(roster, observations, manifest, roster_sha, observations_sh
             require(data['taskId']==req['taskId'] and data['taskVersion']==req['taskVersion'],'wrong observed task')
             quotes=rows_by(data['quotes'],'agentId');require(quotes.keys()==set(ids),'incomplete observed candidates')
             for agent,q in quotes.items():
-                if not available(q):continue
+                if not available(q) or offer_method(q)=='FIXED_FALLBACK':continue
                 qid=q['quoteId']; require(qid in candidates, 'missing published offer'); pin=candidates[qid]['offerSha256'];require(sha(pin),'invalid offer pin')
                 if pin not in used:used[pin]=get_object(pin)
                 o=used[pin]; original=o['original'];require(original==dict(taskId=req['taskId'],ownerJiacn=scope['ownerJiacn'],scope={k:scope[k] for k in ('tenantId','clientId')})

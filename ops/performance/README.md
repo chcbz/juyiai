@@ -118,6 +118,8 @@ python3.11 ops/performance/recommendation_holdout.py labels.json run.json \
 
 报告分别列请求有任一报价、请求全部有报价、候选报价覆盖；HTTP 错误和无响应保留在分母。 分解未报价候选时，`unavailableCandidateReasons` 仅计成功信封内的业务原因（未知非空值归 OTHER，不披露原文）；`noResultCandidateReasons` 按未取得业务结果的候选数计 HTTP_ERROR / NO_RESPONSE，不推断这些候选本来是否可报。两组计数加实际已报价候选数应等于全部候选请求数；不得与缺真值原因混用。另列候选取价缺真值率、原因和「有报价且有真值」交集，不按可测子集重算覆盖。原 Economy 整事项参考价重算、分族留出与误差算法不复制到该工具；此报告不能单独证明 WAPE/P90 或许可上线。只对事前固定范围/观察截止点解释结果，原件和标识符不随汇总报告输出。
 
+`candidateQuoteCoverage` 统计用户是否拿到价格，含固定价；`groupMeanCandidateCoverage` 只计明确标注 `GROUP_MEAN` 的报价，分母同为预冻结的全部候选请求。`candidateMethodCounts`、`candidateMethodsWithTruth` 按报价方法分别列总数和有整单真值的交集；历史无标记或未知方法归 `UNCLASSIFIED`，不从金额或报价 ID 猜测。固定 1 文和实算 1 文不能混同。固定报价仍在覆盖率、缺真值和候选名册中保留，但不作为 Economy 算法预测写入 `offerSha256`；给固定项强配预测的 manifest 不予接受。
+
 若名册事前固定了 `bootstrap.families`，`familySupport` 分别统计名册总族数、有报价的族数、有完整真值的族数、至少有一条同意图同候选的报价和真值配对的族数。一个族内反复取价不增加族数；报价和真值出现在同族的不同观测上不能充当配对。未冻结分族时此项为 `null`。只读聚合计数，不列族名，不取代 Economy 按唯一事项计算的误差。例如三族中只有一族有配对，即使该族误差很低，也不能推论到另外两族。
 
 **从传输观测生成第 2 份工件，而不是手填 HTTP 状态。** 在查看成本真值之前执行：

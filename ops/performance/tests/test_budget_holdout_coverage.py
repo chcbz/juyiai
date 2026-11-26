@@ -28,6 +28,26 @@ class BudgetCoverageTest(unittest.TestCase):
         self.case('mixed',['0',None],['NOT_EXECUTED','NOT_ACCEPTED']);self.case('full',['100'],['MEASURED']);self.case('unavailable',[None],['MEASURED']);self.case('failed',[None],['CANCELLED'],503);self.case('no-response',[None],['EVIDENCE_UNAVAILABLE'],None)
         r=self.score();self.assertEqual(2/5,r['anyQuoteRequestCoverage']['value']);self.assertEqual(1/5,r['fullQuoteRequestCoverage']['value']);self.assertEqual(2/6,r['candidateQuoteCoverage']['value']);self.assertEqual((1,1),(r['quotedWithTruth'],r['quotedWithoutTruth']));self.assertEqual(4/6,r['missingTruthRate']['value']);self.assertEqual({s:1 for s in ('FULL','MIXED','UNAVAILABLE','HTTP_ERROR','NO_RESPONSE')},r['requestStates'])
 
+    def test_group_mean_is_not_price_availability_and_fixed_is_not_a_study_offer(self):
+        self.case('mixed',['1','1','1','1',None],['MEASURED','MEASURED','NOT_ACCEPTED','MEASURED','NOT_EXECUTED'])
+        self.case('no-response',[None],['EVIDENCE_UNAVAILABLE'],None)
+        rows=self.run['results'][0]['data']['quotes']
+        for row,method in zip(rows,['FIXED_FALLBACK','GROUP_MEAN','MEASURED_NEIGHBORS','private-unrecognized']):
+            row['estimateSummary']={'method':method}
+        report=self.score();self.assertEqual(tool.rate(1,6),report['groupMeanCandidateCoverage'])
+        self.assertEqual(tool.rate(4,6),report['candidateQuoteCoverage'])
+        self.assertEqual(dict(FIXED_FALLBACK=1,GROUP_MEAN=1,MEASURED_NEIGHBORS=1,UNCLASSIFIED=1),report['candidateMethodCounts'])
+        self.assertEqual(dict(FIXED_FALLBACK=1,GROUP_MEAN=1,UNCLASSIFIED=1),report['candidateMethodsWithTruth']);self.assertNotIn('private-unrecognized',json.dumps(report))
+        self.case('only-fixed',['1'],['MEASURED']);self.run['results'][-1]['data']['quotes'][0]['estimateSummary']={'method':'FIXED_FALLBACK'}
+        # Isolate the fixed-only study; all inventory rows survive but no accuracy pair can be invented.
+        for obj,key in ((self.roster,'requests'),(self.run,'results'),(self.truth,'outcomes')):obj[key]=obj[key][-1:]
+        manifest=dict(format='budget-offer-manifest-v1',observationsSha256=self.h,scope=dict(tenantId='t',clientId='c',ownerJiacn='o'),offers=[])
+        fail=lambda _:self.fail('fixed price must not load an estimator offer')
+        out=tool.evaluation_roster(self.roster,self.run,manifest,self.truth,self.h,self.h,self.h,self.h,fail)
+        self.assertEqual(1,len(out['rows']));self.assertIsNone(out['rows'][0]['offerSha256']);self.assertEqual('MEASURED',out['rows'][0]['reason'])
+        manifest['offers']=[dict(quoteId='only-fixed-q0',offerSha256=self.h)]
+        with self.assertRaisesRegex(tool.Invalid,'unobserved offer'):tool.reconcile_offers(self.roster,self.run,manifest,self.h,self.h,fail)
+
     def test_family_support_keeps_unquoted_and_unpaired_families_in_view(self):
         self.case('a',['2'],['MEASURED']);self.case('b',['3'],['MEASURED'])
         self.case('c',['3'],['NOT_EXECUTED']);self.case('d',[None],['MEASURED'],503)
